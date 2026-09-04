@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<title>PaqRap en Ruta</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/></svg>
+      </div>
+      <div class="brand-text">
+        <b>PaqRap</b>
+        <span>Centro de operaciones</span>
+      </div>
+    </div>
+
+    <select class="mod-select" id="modSelect" title="Cambiar de módulo">
+      <option value="mapa">Mapa / simulación</option>
+      <option value="pedidos">Registro de pedidos</option>
+      <option value="incidencias">Incidencias</option>
+    </select>
+    <span class="duration-chip" id="escenarioTag">Sin escenario</span>
+
+    <div class="hdr-sep"></div>
+
+    <div class="sim-controls">
+      <button class="startstop-btn" id="btnStartStop">
+        <span id="startStopIcon">▶</span><span id="startStopLabel">Iniciar</span>
+      </button>
+      <div class="duration-chip" title="Tiempo real transcurrido desde que se inició la ejecución">
+        Dur.: <b id="durationLabel">00:00:00</b>
+      </div>
+      <button class="reset-btn" id="btnReiniciar" title="Detener y volver a elegir escenario, flota y fecha de inicio">
+        <span>↺</span><span>Reiniciar</span>
+      </button>
+    </div>
+
+    <div class="clock-block">
+      <span class="day" id="dateLabel">01/09/2026</span>
+      <span class="time" id="timeLabel">00:00</span>
+      <span class="day" id="dayLabel">Día 1</span>
+    </div>
+
+    <div class="shift-chip">
+      <span class="label">Turno actual</span>
+      <span class="value"><span class="shift-swatch" id="shiftSwatch"></span><span id="shiftLabel">—</span></span>
+    </div>
+    <div id="mealTag" class="meal-tag" style="display:none;">Refrigerio en curso</div>
+
+    <div class="cfg-wrap">
+      <button class="data-btn" id="dataBtn" title="Cargar archivos de pedidos y bloqueos">Datos de entrada</button>
+      <div class="data-panel" id="dataPanel">
+        <div class="data-field">
+          <div class="dt">Archivo de pedidos (ventas)</div>
+          <div class="dd">Histórico y proyectado, formato mensual. Un registro por línea:</div>
+          <div class="dfmt">##d##h##m:posX,posY,cIdCliente,qq,hl<br>11d13h31m:45,43,c9167,12,36</div>
+          <input type="file" id="fileVentas" accept=".txt">
+          <div class="data-status" id="statusVentas"></div>
+        </div>
+        <div class="data-field">
+          <div class="dt">Archivo de calles bloqueadas</div>
+          <div class="dd">Un registro por línea, polígono abierto de nodos:</div>
+          <div class="dfmt">##d##h##m-##d##h##m:x1,y1,x2,y2,...<br>01d06h00m-01d15h00m:31,21,34,21</div>
+          <input type="file" id="fileBloqueos" accept=".txt">
+          <div class="data-status" id="statusBloqueos"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cfg-wrap">
+      <button class="cfg-btn" id="cfgBtn" title="Configurar semáforo" aria-label="Configurar semáforo">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
+      <div class="cfg-panel" id="cfgPanel">
+        <div class="cfg-title">Semáforo de cumplimiento e inventario</div>
+        <div class="cfg-desc">Define los umbrales (%) que colorean pedidos, almacenes e indicadores en el mapa y el panel de KPIs.</div>
+        <div class="cfg-field">
+          <label>Verde si el valor es ≥ <b id="cfgGreenVal">70</b>%</label>
+          <input type="range" id="cfgGreen" min="30" max="95" value="70" step="1">
+        </div>
+        <div class="cfg-field">
+          <label>Ámbar si el valor es ≥ <b id="cfgAmberVal">35</b>%</label>
+          <input type="range" id="cfgAmber" min="5" max="65" value="35" step="1">
+        </div>
+        <div class="cfg-legend">
+          <span><i style="background:var(--good)"></i>Bien</span>
+          <span><i style="background:var(--warning)"></i>En riesgo</span>
+          <span><i style="background:var(--critical)"></i>Crítico</span>
+        </div>
+      </div>
+    </div>
+
+    <button class="data-btn" id="searchToggle" title="Buscar unidad / filtrar por tipo">🔎 Buscar</button>
+    <button class="data-btn" id="sidebarToggle" title="Mostrar/ocultar panel de indicadores">📊 Indicadores</button>
+  </header>
+
+  <main>
+    <div class="map-wrap">
+      <div class="map-canvas-area">
+      <canvas id="mapCanvas"></canvas>
+
+      <div class="map-overlay map-title">
+        <b>Retícula urbana</b>
+        <div>70 km × 50 km · nodos cada 1 km</div>
+      </div>
+
+      <div class="map-overlay search-ctl" id="searchCtl">
+        <input type="text" id="vehSearch" placeholder="Buscar unidad, ej. A3">
+        <div class="found" id="vehSearchFound"></div>
+        <div class="type-filters">
+          <button class="active" data-type="auto"><span class="ic">🚗</span>Auto</button>
+          <button class="active" data-type="moto"><span class="ic">🏍️</span>Moto</button>
+          <button class="active" data-type="bici"><span class="ic">🚲</span>Bici</button>
+        </div>
+      </div>
+
+      <div class="map-overlay scale-bar">
+        <i id="scaleBarLine"></i>
+        <span>5 km</span>
+      </div>
+
+      <div class="zoom-ctl">
+        <button id="zoomIn" title="Acercar" aria-label="Acercar">+</button>
+        <div class="zdiv"></div>
+        <button id="zoomOut" title="Alejar" aria-label="Alejar">–</button>
+        <div class="zdiv"></div>
+        <button id="zoomReset" title="Restablecer vista" aria-label="Restablecer vista">⟳</button>
+      </div>
+
+      <div class="selection-panel" id="selectionPanel">
+        <div class="sel-top">
+          <div class="sel-title">
+            <span class="sel-swatch" id="selSwatch"></span>
+            <div>
+              <div class="sel-name" id="selName">—</div>
+              <div class="sel-sub" id="selSub">—</div>
+            </div>
+          </div>
+          <button class="sel-close" id="selClose" aria-label="Cerrar">✕</button>
+        </div>
+        <div id="selBody"></div>
+      </div>
+      </div>
+
+      <div class="legend-bar">
+        <span class="lb-item">🚗 <b id="legCarCount">0/6</b></span>
+        <span class="lb-item">🏍️ <b id="legMotoCount">0/10</b></span>
+        <span class="lb-item">🚲 <b id="legBikeCount">0/8</b></span>
+        <span class="lb-sep"></span>
+        <span class="lb-item"><b id="legPackages">0</b> paquetes en tránsito</span>
+        <span class="lb-sep"></span>
+        <span class="lb-item">🟢🟠🔴 cumplimiento del pedido</span>
+        <span class="lb-item">┄ ruta asignada</span>
+        <span class="lb-item">▬ calle bloqueada</span>
+      </div>
+    </div>
+
+    <aside class="sidebar" id="sidebarPanel">
+      <div class="sel-top" style="padding:12px 16px 0;">
+        <span class="sb-heading" style="margin:0;">Panel de indicadores</span>
+        <button class="sel-close" id="sidebarClose" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="sidebar-body">
+      <div class="sb-section">
+        <div class="sb-heading">Desempeño</div>
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <span class="kpi-label">Pedidos activos</span>
+            <span class="kpi-value" id="kpiActive">0</span>
+            <span class="kpi-sub" id="kpiActiveSub">en tránsito</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Cumplimiento SLA</span>
+            <span class="kpi-value good" id="kpiOnTime">—</span>
+            <span class="kpi-sub" id="kpiOnTimeSub">entregas a tiempo</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Entregados hoy</span>
+            <span class="kpi-value" id="kpiToday">0</span>
+            <span class="kpi-sub" id="kpiTodaySub">día en curso</span>
+          </div>
+          <div class="kpi-card wide">
+            <span class="kpi-label">Incidencias activas</span>
+            <span class="kpi-value warning" id="kpiIncidents">0</span>
+            <span class="kpi-sub" id="kpiIncidentsSub">bloqueos y averías en curso</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="sb-section">
+        <div class="sb-heading">Cumplimiento por prioridad</div>
+        <div id="prioRows"></div>
+      </div>
+
+      <div class="sb-section">
+        <div class="sb-heading">Almacenes</div>
+        <div class="wh-card">
+          <div class="wh-top"><span class="wh-name">Almacén Central</span><span class="wh-inf">stock ilimitado · nodo (25,15)</span></div>
+          <div class="wh-gauge"><i style="width:100%;background:var(--accent);"></i></div>
+        </div>
+        <div class="wh-card">
+          <div class="wh-top"><span class="wh-name" id="whNoroesteName">Nor-Oeste</span><span class="wh-val" id="whNoroesteVal">0 / 1000</span></div>
+          <div class="wh-gauge"><i id="whNoroesteBar" style="width:0%;"></i></div>
+        </div>
+        <div class="wh-card">
+          <div class="wh-top"><span class="wh-name" id="whEsteName">Este</span><span class="wh-val" id="whEsteVal">0 / 1000</span></div>
+          <div class="wh-gauge"><i id="whEsteBar" style="width:0%;"></i></div>
+        </div>
+      </div>
+
+      <div class="sb-section" style="padding-bottom:0;">
+        <div class="sb-heading">Registro de eventos</div>
+      </div>
+      <div class="log-list" id="logList"></div>
+      </div>
+    </aside>
+
+    <div class="module-panel" id="modIncidencias">
+      <h2>Módulo: incidencias</h2>
+      <div class="msub">Registrar averías y bloqueos manualmente, y ver el historial de incidencias de la ejecución.</div>
+
+      <div class="inc-form">
+        <div class="ifield">
+          <label>Unidad</label>
+          <select id="incVehSelect"></select>
+        </div>
+        <div class="ifield">
+          <label>Tipo de avería</label>
+          <select id="incTipoSelect"></select>
+        </div>
+        <button id="btnRegistrarAveria">Registrar avería</button>
+      </div>
+
+      <div class="inc-form">
+        <div class="ifield" style="flex:1 1 260px;">
+          <label>Nodos del bloqueo (x1,y1,x2,y2,...)</label>
+          <input type="text" id="incBloqueoNodos" placeholder="31,21,34,21">
+        </div>
+        <div class="ifield">
+          <label>Duración (horas)</label>
+          <input type="number" id="incBloqueoHoras" value="4" min="1" max="72" style="width:80px;">
+        </div>
+        <button id="btnRegistrarBloqueo">Registrar bloqueo</button>
+      </div>
+
+      <div class="inc-table-wrap">
+        <table class="inc-table">
+          <thead><tr><th>Tipo</th><th>Detalle</th><th>Desde</th><th>Hasta</th></tr></thead>
+          <tbody id="incTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="module-panel" id="modPedidos">
+      <h2>Módulo: registro de pedidos</h2>
+      <div class="msub" id="pedidosMsub">Registro manual y masivo de pedidos, con las mismas validaciones que aplica la simulación.</div>
+
+      <div class="inc-form" id="pedidoForm">
+        <div class="ifield"><label>Cliente</label><input type="text" id="pedCliente" placeholder="c1001" style="width:110px;"></div>
+        <div class="ifield"><label>Cantidad (1-24)</label><input type="number" id="pedCantidad" min="1" max="24" style="width:80px;"></div>
+        <div class="ifield">
+          <label>Modalidad</label>
+          <select id="pedModalidad"></select>
+        </div>
+        <div class="ifield"><label>Destino X (0-70)</label><input type="number" id="pedX" min="0" max="70" style="width:80px;"></div>
+        <div class="ifield"><label>Destino Y (0-50)</label><input type="number" id="pedY" min="0" max="50" style="width:80px;"></div>
+        <button id="btnRegistrarPedido">Registrar pedido</button>
+      </div>
+      <div class="modal-alert" id="pedAlert" style="display:none;background:color-mix(in srgb, var(--critical) 12%, transparent);color:var(--critical);border-radius:8px;padding:10px 12px;font-size:12.5px;margin-bottom:14px;"></div>
+
+      <div class="inc-form">
+        <div class="ifield" style="flex:1 1 300px;">
+          <label>Carga masiva (una línea por pedido: cliente,cantidad,modalidad,x,y — modalidad: 36/18/12/8/4)</label>
+          <textarea id="pedMasivoTexto" rows="3" style="width:100%;font-family:'IBM Plex Mono',monospace;font-size:12px;padding:7px 9px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--ink);resize:vertical;" placeholder="c2001,10,36,20,20&#10;c2002,5,8,40,30"></textarea>
+        </div>
+        <button id="btnRegistrarMasivo">Cargar lote</button>
+      </div>
+      <div class="msub" id="masivoResultado"></div>
+
+      <div class="inc-form" style="padding:10px 16px;">
+        <div class="ifield">
+          <label>Buscar por cliente</label>
+          <input type="text" id="pedBuscarCliente" placeholder="c1001">
+        </div>
+        <div class="ifield">
+          <label>Filtrar por estado</label>
+          <select id="pedFiltroEstado">
+            <option value="">Todos</option>
+            <option value="registrado">Registrado</option>
+            <option value="en ruta">En ruta</option>
+            <option value="entregado">Entregado</option>
+            <option value="no cumplido">No cumplido</option>
+          </select>
+        </div>
+        <div class="ifield">
+          <label>Filtrar por modalidad</label>
+          <select id="pedFiltroModalidad">
+            <option value="">Todas</option>
+            <option value="36">Regular (36h)</option>
+            <option value="18">Priorizada 18h</option>
+            <option value="12">Priorizada 12h</option>
+            <option value="8">Priorizada 8h</option>
+            <option value="4">Priorizada 4h</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="inc-table-wrap">
+        <table class="inc-table">
+          <thead><tr><th>ID</th><th>Cliente</th><th>Cant.</th><th>Modalidad</th><th>Destino</th><th>Hora límite</th><th>Estado</th></tr></thead>
+          <tbody id="pedTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="modal-backdrop" id="startGateModal">
+  <div class="modal">
+    <h3>Configurar inicio de la ejecución</h3>
+    <div class="modal-sub">Antes de iniciar, elige el escenario a correr.</div>
+    <div class="mfield">
+      <label>Escenario</label>
+      <select id="gateEscenario">
+        <option value="diaria">Operación diaria</option>
+        <option value="5d">Simulación 5 días</option>
+        <option value="colapso">Simulación hasta el colapso</option>
+      </select>
+    </div>
+    <div id="gateFechaRow" class="mrow">
+      <div class="mfield"><label>Fecha inicial</label><input type="date" id="gateFecha" value="2026-09-01"></div>
+      <div class="mfield"><label>Hora inicial</label><input type="time" id="gateHora" value="07:00"></div>
+    </div>
+    <div class="mfield">
+      <label>Composición de la flota</label>
+      <div class="mrow">
+        <div class="mfield"><label style="font-weight:400;">🚗 Autos</label><input type="number" id="gateAutos" min="0" max="30" value="6"></div>
+        <div class="mfield"><label style="font-weight:400;">🏍️ Motos</label><input type="number" id="gateMotos" min="0" max="40" value="10"></div>
+        <div class="mfield"><label style="font-weight:400;">🚲 Bicis</label><input type="number" id="gateBicis" min="0" max="40" value="8"></div>
+      </div>
+    </div>
+    <div class="mfield">
+      <label>Capacidad de almacenes (paquetes)</label>
+      <div class="mrow">
+        <div class="mfield"><label style="font-weight:400;">Nor-Oeste</label><input type="number" id="gateCapNoroeste" min="100" max="5000" step="50" value="1000"></div>
+        <div class="mfield"><label style="font-weight:400;">Este</label><input type="number" id="gateCapEste" min="100" max="5000" step="50" value="1000"></div>
+      </div>
+      <div class="modal-sub" style="margin:4px 0 0;">El Almacén Central siempre tiene stock infinito.</div>
+    </div>
+    <div class="mfield">
+      <label>Horarios de cambio de turno (turnos de 8 h)</label>
+      <div class="mrow">
+        <div class="mfield"><label style="font-weight:400;">Turno 1</label><input type="time" id="gateTurno1" value="07:00"></div>
+        <div class="mfield"><label style="font-weight:400;">Turno 2</label><input type="time" id="gateTurno2" value="15:00"></div>
+        <div class="mfield"><label style="font-weight:400;">Turno 3</label><input type="time" id="gateTurno3" value="23:00"></div>
+      </div>
+    </div>
+    <div class="modal-sub" id="gateDesc"></div>
+    <div class="modal-actions">
+      <button id="btnGateConfirm">Continuar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="pedConfirmModal">
+  <div class="modal">
+    <h3>Confirmar pedido</h3>
+    <div class="modal-sub">Revisa los datos antes de registrarlo.</div>
+    <div class="confirm-rows">
+      <div class="confirm-row"><span>Cliente</span><b id="pcCliente"></b></div>
+      <div class="confirm-row"><span>Cantidad</span><b id="pcCantidad"></b></div>
+      <div class="confirm-row"><span>Modalidad</span><b id="pcModalidad"></b></div>
+      <div class="confirm-row"><span>Destino</span><b id="pcDestino"></b></div>
+    </div>
+    <div class="modal-actions" style="justify-content:space-between;">
+      <button id="btnPedConfirmCancel" class="btn-secondary">Cancelar</button>
+      <button id="btnPedConfirmOk">Confirmar registro</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="masivoConfirmModal">
+  <div class="modal">
+    <h3>Confirmar carga masiva</h3>
+    <div class="modal-sub">Vas a registrar <b id="mcCantidad">0</b> pedido(s). Se validará cada línea igual que en el alta manual.</div>
+    <div class="confirm-preview" id="mcPreview"></div>
+    <div class="modal-actions" style="justify-content:space-between;">
+      <button id="btnMasivoConfirmCancel" class="btn-secondary">Cancelar</button>
+      <button id="btnMasivoConfirmOk">Confirmar carga</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="resetConfirmModal">
+  <div class="modal">
+    <h3>¿Reiniciar la simulación?</h3>
+    <div class="modal-sub">Se detiene la ejecución actual y se pierden los pedidos, vehículos e incidencias en curso. Después podrás elegir de nuevo el escenario, la flota y la fecha de inicio.</div>
+    <div class="modal-actions" style="justify-content:space-between;">
+      <button id="btnResetCancel" class="btn-secondary">Cancelar</button>
+      <button id="btnResetOk">Reiniciar</button>
+    </div>
+  </div>
+</div>
+
+  <!--
+    Los scripts se cargan como <script> clásicos (no type="module") EN ESTE ORDEN
+    a propósito: cada archivo declara const/let/function de nivel superior que el
+    siguiente script ya puede usar (comparten el mismo entorno léxico global del
+    documento), igual que antes cuando todo vivía en un único IIFE. Si cambias el
+    orden de estas etiquetas, revisa que ningún archivo use algo que el siguiente
+    todavía no haya declarado.
+  -->
+  <script src="js/core/config.js"></script>
+  <script src="js/core/state.js"></script>
+  <script src="js/core/time.js"></script>
+  <script src="js/core/grid.js"></script>
+  <script src="js/data/file-io.js"></script>
+  <script src="js/core/log.js"></script>
+  <script src="js/sim/orders.js"></script>
+  <script src="js/sim/blockages.js"></script>
+  <script src="js/sim/incidents.js"></script>
+  <script src="js/sim/vehicles.js"></script>
+  <script src="js/sim/shift-restock.js"></script>
+  <script src="js/sim/sim-step.js"></script>
+  <script src="js/ui/render.js"></script>
+  <script src="js/ui/dom-update.js"></script>
+  <script src="js/ui/selection-panel.js"></script>
+  <script src="js/ui/map-input.js"></script>
+  <script src="js/ui/config-panel.js"></script>
+  <script src="js/ui/data-panel.js"></script>
+  <script src="js/ui/run-controls.js"></script>
+  <script src="js/ui/modules-nav.js"></script>
+  <script src="js/ui/incidencias-module.js"></script>
+  <script src="js/ui/search-filter.js"></script>
+  <script src="js/ui/pedidos-module.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
