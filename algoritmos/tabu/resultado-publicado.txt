@@ -1,0 +1,252 @@
+Perfil: referencias publicadas 2026-09-09
+Central: (27,14); referencias sin recarga en MVP: NO=(12,38), E=(57,27)
+Datos cargados: 19 pedidos, 16650 bloqueos, 888 mantenimientos
+========== TABU SEARCH ==========
+
+Estado: FACTIBLE
+Tiempo simulado: 2026-09-09 00:00:00
+Sa: 30 min
+K: 4
+Sc: 120 min
+Ventana de pedidos: [2026-09-09 00:00:00, 2026-09-09 02:00:00]
+Maximo de iteraciones: 100
+Tenencia tabu: 7
+Deadline evaluado en: LLEGADA
+Servicio: 60 min; bloqueo: NODOS (calles incidentes)
+Velocidad TA: 20.000 km/h
+Velocidad TM: 40.000 km/h
+Velocidad TB: 14.000 km/h
+
+--- RUTAS ---
+
+TA01 | TA (Auto)
+Orden: V202609-L01282 -> V202609-L01284
+Coordenadas de visita (con regreso): (27,14) -> (37,2) -> (34,16) -> (27,14)
+Salida: 2026-09-09 00:16:00 | Regreso: 2026-09-09 04:40:00
+Distancia: 48.00 km
+Tiempo estimado: 4.4000 h
+Costo: S/ 384.00
+Capacidad: 13/24 (54.17 %)
+  V202609-L01282 cliente=c1484 (37,2) | cantidad=10 | llegada=2026-09-09 01:22:00 | atencion=2026-09-09 01:22:00 a 2026-09-09 02:22:00 | deadline=2026-09-09 08:07:00 | A TIEMPO
+  V202609-L01284 cliente=c1544 (34,16) | cantidad=3 | llegada=2026-09-09 03:13:00 | atencion=2026-09-09 03:13:00 a 2026-09-09 04:13:00 | deadline=2026-09-09 04:16:00 | A TIEMPO
+
+TA02 | TA (Auto)
+Orden: V202609-L01288 -> V202609-L01285 -> V202609-L01293
+Coordenadas de visita (con regreso): (27,14) -> (30,12) -> (65,4) -> (57,11) -> (27,14)
+Salida: 2026-09-09 01:13:00 | Regreso: 2026-09-09 09:01:00
+Distancia: 96.00 km
+Tiempo estimado: 7.8000 h
+Costo: S/ 768.00
+Capacidad: 20/24 (83.33 %)
+  V202609-L01288 cliente=c8474 (30,12) | cantidad=2 | llegada=2026-09-09 01:28:00 | atencion=2026-09-09 01:28:00 a 2026-09-09 02:28:00 | deadline=2026-09-09 08:41:00 | A TIEMPO
+  V202609-L01285 cliente=c7161 (65,4) | cantidad=9 | llegada=2026-09-09 04:37:00 | atencion=2026-09-09 04:37:00 a 2026-09-09 05:37:00 | deadline=2026-09-09 08:26:00 | A TIEMPO
+  V202609-L01293 cliente=c6551 (57,11) | cantidad=9 | llegada=2026-09-09 06:22:00 | atencion=2026-09-09 06:22:00 a 2026-09-09 07:22:00 | deadline=2026-09-09 09:13:00 | A TIEMPO
+
+TA03 | TA (Auto)
+Orden: V202609-L01286 -> V202609-L01294 -> V202609-L01295
+Coordenadas de visita (con regreso): (27,14) -> (23,8) -> (22,6) -> (12,10) -> (27,14)
+Salida: 2026-09-09 01:26:00 | Regreso: 2026-09-09 06:44:00
+Distancia: 46.00 km
+Tiempo estimado: 5.3000 h
+Costo: S/ 368.00
+Capacidad: 20/24 (83.33 %)
+  V202609-L01286 cliente=c5891 (23,8) | cantidad=5 | llegada=2026-09-09 01:56:00 | atencion=2026-09-09 01:56:00 a 2026-09-09 02:56:00 | deadline=2026-09-10 12:33:00 | A TIEMPO
+  V202609-L01294 cliente=c9719 (22,6) | cantidad=9 | llegada=2026-09-09 03:05:00 | atencion=2026-09-09 03:05:00 a 2026-09-09 04:05:00 | deadline=2026-09-09 09:24:00 | A TIEMPO
+  V202609-L01295 cliente=c1066 (12,10) | cantidad=6 | llegada=2026-09-09 04:47:00 | atencion=2026-09-09 04:47:00 a 2026-09-09 05:47:00 | deadline=2026-09-09 19:26:00 | A TIEMPO
+
+TA04 | TA (Auto)
+Orden: V202609-L01281 -> V202609-L01290 -> V202609-L01289
+Coordenadas de visita (con regreso): (27,14) -> (13,37) -> (36,39) -> (39,20) -> (27,14)
+Salida: 2026-09-09 01:03:00 | Regreso: 2026-09-09 09:59:00
+Distancia: 102.00 km
+Tiempo estimado: 8.9333 h
+Costo: S/ 816.00
+Capacidad: 24/24 (100.00 %)
+  V202609-L01281 cliente=c0614 (13,37) | cantidad=9 | llegada=2026-09-09 02:54:00 | atencion=2026-09-09 02:54:00 a 2026-09-09 03:54:00 | deadline=2026-09-10 12:04:00 | A TIEMPO
+  V202609-L01290 cliente=c3908 (36,39) | cantidad=6 | llegada=2026-09-09 05:09:00 | atencion=2026-09-09 05:09:00 a 2026-09-09 06:09:00 | deadline=2026-09-09 19:03:00 | A TIEMPO
+  V202609-L01289 cliente=c3660 (39,20) | cantidad=9 | llegada=2026-09-09 08:05:00 | atencion=2026-09-09 08:05:00 a 2026-09-09 09:05:00 | deadline=2026-09-09 18:56:00 | A TIEMPO
+
+TA05 | TA (Auto)
+Orden: V202609-L01287 -> V202609-L01298 -> V202609-L01283
+Coordenadas de visita (con regreso): (27,14) -> (31,35) -> (48,41) -> (37,46) -> (27,14)
+Salida: 2026-09-09 01:47:00 | Regreso: 2026-09-09 10:05:00
+Distancia: 106.00 km
+Tiempo estimado: 8.3000 h
+Costo: S/ 848.00
+Capacidad: 24/24 (100.00 %)
+  V202609-L01287 cliente=c9265 (31,35) | cantidad=5 | llegada=2026-09-09 03:02:00 | atencion=2026-09-09 03:02:00 a 2026-09-09 04:02:00 | deadline=2026-09-09 12:37:00 | A TIEMPO
+  V202609-L01298 cliente=c3137 (48,41) | cantidad=9 | llegada=2026-09-09 05:11:00 | atencion=2026-09-09 05:11:00 a 2026-09-09 06:11:00 | deadline=2026-09-10 13:47:00 | A TIEMPO
+  V202609-L01283 cliente=c8699 (37,46) | cantidad=10 | llegada=2026-09-09 06:59:00 | atencion=2026-09-09 06:59:00 a 2026-09-09 07:59:00 | deadline=2026-09-10 12:07:00 | A TIEMPO
+
+TA06 | TA (Auto)
+Orden: V202609-L01296 -> V202609-L01297 -> V202609-L01291 -> V202609-L01280
+Coordenadas de visita (con regreso): (27,14) -> (23,36) -> (52,47) -> (70,49) -> (49,25) -> (27,14)
+Salida: 2026-09-09 01:32:00 | Regreso: 2026-09-09 14:34:00
+Distancia: 164.00 km
+Tiempo estimado: 13.0333 h
+Costo: S/ 1312.00
+Capacidad: 24/24 (100.00 %)
+  V202609-L01296 cliente=c0081 (23,36) | cantidad=5 | llegada=2026-09-09 03:40:00 | atencion=2026-09-09 03:40:00 a 2026-09-09 04:40:00 | deadline=2026-09-09 05:32:00 | A TIEMPO
+  V202609-L01297 cliente=c0775 (52,47) | cantidad=2 | llegada=2026-09-09 06:40:00 | atencion=2026-09-09 06:40:00 a 2026-09-09 07:40:00 | deadline=2026-09-10 13:32:00 | A TIEMPO
+  V202609-L01291 cliente=c2100 (70,49) | cantidad=10 | llegada=2026-09-09 08:40:00 | atencion=2026-09-09 08:40:00 a 2026-09-09 09:40:00 | deadline=2026-09-09 13:06:00 | A TIEMPO
+  V202609-L01280 cliente=c4286 (49,25) | cantidad=7 | llegada=2026-09-09 11:55:00 | atencion=2026-09-09 11:55:00 a 2026-09-09 12:55:00 | deadline=2026-09-09 18:03:00 | A TIEMPO
+
+TA07 | TA (Auto)
+Sin pedidos | Distancia: 0 km | Tiempo: 0 h | Costo: S/ 0.00
+Capacidad: 0/24 (0.00 %)
+
+TA08 | TA (Auto)
+Sin pedidos | Distancia: 0 km | Tiempo: 0 h | Costo: S/ 0.00
+Capacidad: 0/24 (0.00 %)
+
+TA09 | TA (Auto)
+Sin pedidos | Distancia: 0 km | Tiempo: 0 h | Costo: S/ 0.00
+Capacidad: 0/24 (0.00 %)
+
+TA10 | TA (Auto)
+Sin pedidos | Distancia: 0 km | Tiempo: 0 h | Costo: S/ 0.00
+Capacidad: 0/24 (0.00 %)
+
+TM01 | TM (Moto)
+Sin pedidos | Distancia: 0 km | Tiempo: 0 h | Costo: S/ 0.00
+Capacidad: 0/8 (0.00 %)
+
+TM02 | TM (Moto)
+Sin pedidos | Distancia: 0 km | Tiempo: 0 h | Costo: S/ 0.00
+Capacidad: 0/8 (0.00 %)
+
+TM03 | TM (Moto)
+Sin pedidos | Distancia: 0 km | Tiempo: 0 h | Costo: S/ 0.00
+Capacidad: 0/8 (0.00 %)
+
+TM04 | TM (Moto)
+Sin pedidos | Distancia: 0 km | Tiempo: 0 h | Costo: S/ 0.00
+Capacidad: 0/8 (0.00 %)
+
+TM05 | TM (Moto)
+Sin pedidos | Distancia: 0 km | Tiempo: 0 h | Costo: S/ 0.00
+Capacidad: 0/8 (0.00 %)
+
+TM06 | TM (Moto)
+Sin pedidos | Distancia: 0 km | Tiempo: 0 h | Costo: S/ 0.00
+Capacidad: 0/8 (0.00 %)
+
+TM07 | TM (Moto)
+Sin pedidos | Distancia: 0 km | Tiempo: 0 h | Costo: S/ 0.00
+Capacidad: 0/8 (0.00 %)
+
+TM08 | TM (Moto)
+Sin pedidos | Distancia: 0 km | Tiempo: 0 h | Costo: S/ 0.00
+Capacidad: 0/8 (0.00 %)
+
+TM09 | TM (Moto)
+Sin pedidos | Distancia: 0 km | Tiempo: 0 h | Costo: S/ 0.00
+Capacidad: 0/8 (0.00 %)
+
+TM10 | TM (Moto)
+Sin pedidos | Distancia: 0 km | Tiempo: 0 h | Costo: S/ 0.00
+Capacidad: 0/8 (0.00 %)
+
+TM11 | TM (Moto)
+Sin pedidos | Distancia: 0 km | Tiempo: 0 h | Costo: S/ 0.00
+Capacidad: 0/8 (0.00 %)
+
+TM12 | TM (Moto)
+Sin pedidos | Distancia: 0 km | Tiempo: 0 h | Costo: S/ 0.00
+Capacidad: 0/8 (0.00 %)
+
+TM13 | TM (Moto)
+Sin pedidos | Distancia: 0 km | Tiempo: 0 h | Costo: S/ 0.00
+Capacidad: 0/8 (0.00 %)
+
+TM14 | TM (Moto)
+Sin pedidos | Distancia: 0 km | Tiempo: 0 h | Costo: S/ 0.00
+Capacidad: 0/8 (0.00 %)
+
+TM15 | TM (Moto)
+Sin pedidos | Distancia: 0 km | Tiempo: 0 h | Costo: S/ 0.00
+Capacidad: 0/8 (0.00 %)
+
+TB01 | TB (Bicicleta)
+Orden: V202609-L01292
+Coordenadas de visita (con regreso): (27,14) -> (19,34) -> (27,14)
+Salida: 2026-09-09 01:11:00 | Regreso: 2026-09-09 06:42:34
+Distancia: 56.00 km
+Tiempo estimado: 5.5262 h
+Costo: S/ 168.00
+Capacidad: 2/4 (50.00 %)
+  V202609-L01292 cliente=c4711 (19,34) | cantidad=2 | llegada=2026-09-09 03:42:34 | atencion=2026-09-09 03:42:34 a 2026-09-09 04:42:34 | deadline=2026-09-10 13:11:00 | A TIEMPO
+
+TB02 | TB (Bicicleta)
+Sin pedidos | Distancia: 0 km | Tiempo: 0 h | Costo: S/ 0.00
+Capacidad: 0/4 (0.00 %)
+
+TB03 | TB (Bicicleta)
+Sin pedidos | Distancia: 0 km | Tiempo: 0 h | Costo: S/ 0.00
+Capacidad: 0/4 (0.00 %)
+
+TB04 | TB (Bicicleta)
+Sin pedidos | Distancia: 0 km | Tiempo: 0 h | Costo: S/ 0.00
+Capacidad: 0/4 (0.00 %)
+
+TB05 | TB (Bicicleta)
+Sin pedidos | Distancia: 0 km | Tiempo: 0 h | Costo: S/ 0.00
+Capacidad: 0/4 (0.00 %)
+
+TB06 | TB (Bicicleta)
+Sin pedidos | Distancia: 0 km | Tiempo: 0 h | Costo: S/ 0.00
+Capacidad: 0/4 (0.00 %)
+
+TB07 | TB (Bicicleta)
+Sin pedidos | Distancia: 0 km | Tiempo: 0 h | Costo: S/ 0.00
+Capacidad: 0/4 (0.00 %)
+
+TB08 | TB (Bicicleta)
+Sin pedidos | Distancia: 0 km | Tiempo: 0 h | Costo: S/ 0.00
+Capacidad: 0/4 (0.00 %)
+
+TB09 | TB (Bicicleta)
+Sin pedidos | Distancia: 0 km | Tiempo: 0 h | Costo: S/ 0.00
+Capacidad: 0/4 (0.00 %)
+
+TB10 | TB (Bicicleta)
+Sin pedidos | Distancia: 0 km | Tiempo: 0 h | Costo: S/ 0.00
+Capacidad: 0/4 (0.00 %)
+
+TB11 | TB (Bicicleta)
+Sin pedidos | Distancia: 0 km | Tiempo: 0 h | Costo: S/ 0.00
+Capacidad: 0/4 (0.00 %)
+
+TB12 | TB (Bicicleta)
+Sin pedidos | Distancia: 0 km | Tiempo: 0 h | Costo: S/ 0.00
+Capacidad: 0/4 (0.00 %)
+
+--- METRICAS ---
+Ta: 2813.091 ms
+Iteraciones: 100
+Candidatos evaluados: 37170
+Candidatos factibles: 30964
+Movimientos tabu rechazados: 680
+Aspiraciones aplicadas: 0
+Mejor solucion encontrada en iteracion: 11
+Inserciones iniciales evaluadas: 388
+Motivo de parada: MAXIMO_ITERACIONES
+Costo de solucion inicial: S/ 5962.00
+
+Pedidos considerados: 19
+Pedidos asignados: 19
+Pedidos no asignados: 0
+Pedidos dentro del plazo: 19
+Cumplimiento: 100.00 %
+
+Vehiculos utilizados: 7
+Distancia total: 618.00 km
+Tiempo total estimado de rutas: 53.2929 h
+Costo total: S/ 4664.00
+Utilizacion promedio de capacidad (vehiculos utilizados): 81.55 %
+Distancia promedio por vehiculo utilizado: 88.29 km
+
+--- DISTRIBUCION POR TIPO ---
+TA (Auto): 6 utilizados | 562.00 km | S/ 4496.00
+TM (Moto): 0 utilizados | 0.00 km | S/ 0.00
+TB (Bicicleta): 1 utilizados | 56.00 km | S/ 168.00

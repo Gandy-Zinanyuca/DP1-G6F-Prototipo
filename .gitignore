@@ -1,0 +1,32 @@
+# ── Java: artefactos de build ──────────────────────────────
+**/out/
+**/target/
+*.class
+*.jar
+*.log
+# sources.txt lo regenera compilar.sh en cada compilación
+**/sources.txt
+
+# ── Datos del curso (grandes, provistos aparte; no se versionan) ──
+# El proyecto Tabú los trae para poder ejecutarlo local, pero como el
+# de ALNS los espera fuera del repo, aquí tampoco se versionan.
+algoritmos/tabu/datos/ventas/
+algoritmos/tabu/datos/bloqueos/
+
+# ── Editores de oficina / bloqueos temporales ─────────────
+.~lock.*#
+~$*
+
+# ── Sistema operativo ─────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Editores / IDE ───────────────────────────────────────
+.idea/
+.vscode/
+*.iml
+*.swp
+
+# ── Empaquetados que no deben versionarse ────────────────
+*.zip

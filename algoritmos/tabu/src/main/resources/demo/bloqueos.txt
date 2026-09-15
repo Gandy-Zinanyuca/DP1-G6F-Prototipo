@@ -1,0 +1,3 @@
+# El primero empieza antes de T y debe seguir aplicandose.
+11d13h00m-11d18h00m:1,0,4,0,4,2
+11d17h00m-11d20h00m:5,3,5,5,8,5

@@ -1,123 +1,134 @@
-# PaqRap en Ruta
+# PaqRap — DP1 · Equipo 6F
 
-Prototipo del sistema de planificación y monitoreo de entregas **PaqRap**,
-para el curso Desarrollo de Proyectos 1 (DP1) — equipo **H983-Eq6F**.
+Solución informática para **PaqRap**, empresa de reparto del producto «P», del curso
+Desarrollo de Proyectos 1 (1INF54, PUCP, 2026-2).
 
-PaqRap organiza en tiempo real qué vehículo entrega qué pedido, desde qué
-almacén, y dentro de qué plazo — incluso cuando una avería o un bloqueo de
-calle obliga a replanificar sobre la marcha.
+PaqRap organiza en tiempo real qué unidad entrega qué pedido, desde qué almacén y dentro
+de qué plazo, y **replanifica** cuando una avería o un bloqueo de calle lo obliga.
 
-▶ **Demo en vivo:** https://claude.ai/code/artifact/8c1a4e23-c13f-4706-b3ba-516103fa5b7b
+Este repositorio tiene dos partes independientes:
+
+| Carpeta        | Qué es                                                        | Lenguaje |
+| -------------- | ----------------------------------------------------------- | -------- |
+| `Prototipo/`   | Visualizador y simulador de las operaciones (mapa en vivo)  | HTML/CSS/JS |
+| `algoritmos/`  | Componente planificador: metaheurísticas de ruteo           | Java 11+ |
 
 ## Equipo
 
-| Integrante         | Módulos a cargo                                 |
+| Integrante         | A cargo de                                      |
 | ------------------ | ----------------------------------------------- |
 | Gandy Zinanyuca    | Escenarios e indicadores, flota y configuración |
 | Eliezer Villarreal | Registro de pedidos, planificador de rutas      |
 | Yaser Fernandez    | Almacenes e inventario, visualizador            |
 | Lucas Alvites      | Detección de incidencias, replanificación       |
 
-## Qué simula el prototipo
+---
 
-Tres escenarios, seleccionables al iniciar cualquier ejecución:
+## `Prototipo/` — visualizador
 
-- **Operación diaria** — registro manual de pedidos, uno por uno; el reloj
-  de simulación no arranca hasta que se registra el primer pedido.
-- **Simulación de 5 días** — permite carga masiva de pedidos y bloqueos
-  desde archivo, pide fecha y hora de inicio, corre un ciclo fijo de 5 días.
-- **Simulación hasta el colapso** — corre sin límite de tiempo hasta que un
-  primer pedido incumple su plazo comprometido; ahí la ejecución se detiene
-  y reporta el colapso.
+Retícula urbana de 70×50 km (nodos cada 1 km), los 3 almacenes en posición fija, unidades en
+ruta, bloqueos y averías señalados en el mapa, y un panel de indicadores con pestañas
+(KPIs / registro de eventos).
 
-Antes de iniciar cualquiera de los tres, el modal de inicio permite
-configurar como **parámetros**: la composición de la flota (autos, motos,
-bicicletas), la capacidad de los almacenes intermedios, y los horarios de
-cambio de turno (por defecto 07:00 / 15:00 / 23:00, turnos de 8 h).
+Tres escenarios, elegibles en el modal de inicio, todos con la flota, la capacidad de los
+almacenes intermedios y los turnos como parámetros:
 
-## Módulos del prototipo
+- **Operación día a día** — alta manual de pedidos (individual y masiva); el reloj no arranca
+  hasta el primer pedido.
+- **Simulación de 5 días** — pedidos, bloqueos, averías y plan de mantenimiento **por archivo**;
+  pide fecha/hora de inicio; corre un ciclo fijo de 5 días.
+- **Hasta el colapso** — igual entrada por archivo; corre sin límite hasta el primer
+  incumplimiento de plazo.
 
-- **Mapa / simulación** — retícula urbana de 70×50 km (nodos cada 1 km),
-  con los 3 almacenes en posiciones fijas, vehículos en ruta, bloqueos y
-  averías señalados gráficamente, semáforo de cumplimiento configurable,
-  búsqueda de unidad por código y filtro por tipo de vehículo.
-- **Registro de pedidos** — alta manual y carga masiva, ambas con modal de
-  confirmación antes de guardar, búsqueda por cliente, y filtros por estado
-  y modalidad de entrega (regular 36 h / priorizada 4-18 h).
-- **Incidencias** — registro manual de averías (tipo 1/2/3) y bloqueos de
-  tramos de calle, con tabla en vivo de incidencias activas.
-- **Panel de indicadores** — pedidos activos, cumplimiento de SLA, entregas
-  del día, incumplimientos, cumplimiento por prioridad, y estado de cada
-  almacén.
+Módulos (rail lateral): **Mapa · Pedidos · Flota · Averías · Mantenimiento · Bloqueos**.
+Las unidades se identifican `TTNN` (`TA` autos, `TB` bicicletas, `TM` motos).
 
-Controles de cabecera: **Iniciar/Detener** la ejecución y **Reiniciar**
-(vuelve al modal de inicio para configurar una corrida nueva).
+### Cómo ejecutarlo
 
-## Cómo ejecutarlo
-
-El proyecto usa rutas relativas (`css/styles.css`, `js/...`), así que ábrelo
-con un servidor local en vez de doble clic:
+Usa rutas relativas, así que ábrelo con un servidor local:
 
 ```bash
-cd paqrap-en-ruta
+cd Prototipo
 python -m http.server 8000
+# http://localhost:8000/
 ```
 
-y entra a `http://localhost:8000/`.
+Cada `.js` empieza con dos líneas de comentario (`// qué hace` / `// Depende de:`). Los scripts
+se cargan como `<script>` clásicos en el orden exacto de `index.html` y comparten el entorno
+global; si reordenas esas etiquetas, revisa las dependencias.
 
-## Estructura del proyecto
+### Relación con la demo publicada
 
-```
-paqrap-en-ruta/
-├─ index.html            estructura de la página (cabecera, mapa, modales) + carga los scripts
-├─ css/
-│  └─ styles.css         todos los estilos (tokens de color claro/oscuro, layout, componentes)
-└─ js/
-   ├─ core/              piezas base que usa casi todo lo demás
-   │  ├─ config.js          constantes: velocidad de simulación, retícula, tipos de vehículo, almacenes...
-   │  ├─ state.js            estado mutable global (reloj, pedidos, flota, flags de escenario) + buildFleet()
-   │  ├─ time.js              turnos, refrigerio, formato de hora
-   │  ├─ grid.js               geometría de la retícula y pathfinding (BFS)
-   │  └─ log.js                bitácora de eventos (addLog)
-   ├─ data/
-   │  └─ file-io.js         parseo de los archivos de ventas y bloqueos (formato del curso)
-   ├─ sim/                el "motor" de la simulación
-   │  ├─ orders.js           ciclo de vida de un pedido
-   │  ├─ blockages.js         bloqueos de tramos de calle
-   │  ├─ incidents.js          averías e incidencias
-   │  ├─ vehicles.js            movimiento de vehículos
-   │  ├─ shift-restock.js        refrigerios y recarga diaria de almacenes
-   │  └─ sim-step.js              un paso de simulación + resetSimulation()
-   └─ ui/                 todo lo que dibuja o reacciona a la interfaz
-      ├─ render.js           dibujo del mapa en <canvas>
-      ├─ dom-update.js        refresco periódico de textos/KPIs
-      ├─ selection-panel.js    panel de detalle (clic en vehículo/almacén)
-      ├─ map-input.js           zoom / paneo / clic sobre el mapa
-      ├─ config-panel.js         umbrales del semáforo
-      ├─ data-panel.js            carga de archivos de ventas/bloqueos
-      ├─ run-controls.js           start/stop, modal de inicio, Reiniciar
-      ├─ modules-nav.js             desplegable mapa/pedidos/incidencias
-      ├─ incidencias-module.js       registro manual de averías y bloqueos
-      ├─ search-filter.js             buscar unidad / filtrar por tipo
-      └─ pedidos-module.js             alta manual, carga masiva y sus modales de confirmación
-   └─ main.js             bucle de animación + arranque de la app (se carga último)
+> ▶ **Demo:** https://claude.ai/code/artifact/8c1a4e23-c13f-4706-b3ba-516103fa5b7b
+
+La demo es **un único HTML autocontenido** (lo exige la plataforma). El código de `Prototipo/`
+es la versión dividida por responsabilidad; la sincronización con la demo es **manual** y hoy
+la demo va por delante (códigos `TTNN`, pestañas del panel, carga de averías/mantenimiento por
+archivo, plan de mantenimiento preventivo). Ver `../../prototipos/checklist-paqrap-revision.md`.
+
+---
+
+## `algoritmos/` — componente planificador
+
+RNF01 exige **dos soluciones metaheurísticas en Java**, comparadas por experimentación
+numérica sobre la misma función objetivo y las mismas estructuras.
+
+- `algoritmos/DISENO-ALGORITMOS.md` — formulación (MDVRPTW dinámico), función objetivo,
+  pseudocódigo y trazabilidad con la Lista de Exigencias.
+- `algoritmos/alns/` — **ALNS** (primera solución). Java 11, `javac` puro sin dependencias;
+  paquete `pe.pucp.paqrap`. Se compila con `compilar.sh` / `.bat`. Ver su `README.md`.
+- `algoritmos/tabu/` — **Búsqueda Tabú** (segunda solución). Java 17, **Maven** + JUnit 5;
+  paquete `pe.logistica`. Traducción del pseudocódigo de la §5.1 de la ISA. Ver su `README.md`
+  y `REFERENCIAS.md`.
+
+```bash
+# ALNS
+cd algoritmos/alns && ./compilar.sh      # .class en out/ (ignorado)
+java -cp out pe.pucp.paqrap.DemoPlanificador <ventas.txt> <bloqueos.txt> <mant.txt> --dia 1 --hora 6
+
+# Tabú
+cd algoritmos/tabu && mvn -q package     # target/ y el .jar están ignorados
+java -jar target/planificador-tabu-1.0.0.jar --config config/referencia-20260909.properties
 ```
 
-Cada archivo `.js` empieza con un comentario de dos líneas (`// qué hace` /
-`// Depende de:`) a modo de documentación. Los scripts se cargan como
-`<script>` clásicos, en el orden exacto en que aparecen en `index.html`, y
-comparten el mismo entorno global. Si reordenas esas etiquetas, revisa que
-ningún archivo use algo que el siguiente todavía no haya declarado.
+> **Nota:** hoy son dos bases de código independientes (distinto paquete, distinto build). El
+> `DISENO-ALGORITMOS.md` plantea que compartan estructuras y función objetivo para que la
+> comparación de la experimentación numérica sea válida — esa unificación está **pendiente**.
+> Los datos de curso voluminosos (`algoritmos/tabu/datos/ventas/` y `.../bloqueos/`) **no se
+> versionan** (van aparte, igual que en ALNS); sí se conservan `inventario.json`,
+> `mant.preventivo.09.10.txt` y los `resultado-*.txt` publicados.
 
-**Siguiente paso natural** (no hecho todavía para no arriesgar romper nada):
-convertir estos scripts a módulos ES (`type="module"`, `import`/`export`
-explícitos) para que la dependencia entre archivos la garantice el
-navegador y no solo el comentario.
+---
 
-## Relación con la demo publicada
+## Estructura
 
-El link de demo de arriba es **un solo archivo HTML autocontenido** (así lo
-exige la plataforma donde está publicado). Este repositorio es el código
-fuente real, dividido por responsabilidad; cuando hay cambios de fondo en la
-simulación, se replican a mano en esa versión de archivo único antes de
-volver a publicarla.
+```
+DP1-G6F-Prototipo/
+├─ .gitattributes           normaliza fin de línea a LF
+├─ .gitignore               out/, target/, *.class, *.jar, sources.txt, locks…
+├─ README.md
+├─ Documento de Vision/     doc. de visión del producto (PDF)
+├─ Prototipo/
+│  ├─ index.html            cabecera, mapa, modales + carga de scripts
+│  ├─ css/styles.css        tokens de color claro/oscuro, layout, componentes
+│  └─ js/
+│     ├─ core/   config · state · time · grid (BFS) · log
+│     ├─ data/   file-io (parseo de archivos del curso)
+│     ├─ sim/    orders · blockages · incidents · vehicles · shift-restock · sim-step
+│     ├─ ui/     render · dom-update · selection-panel · map-input · config-panel ·
+│     │          data-panel · run-controls · modules-nav · incidencias-module ·
+│     │          search-filter · pedidos-module
+│     └─ main.js  bucle de animación + arranque (último)
+└─ algoritmos/
+   ├─ DISENO-ALGORITMOS.md
+   ├─ alns/                 ALNS · javac · paquete pe.pucp.paqrap
+   │  ├─ README.md · DISENO-ALGORITMOS.md · compilar.sh / .bat
+   │  └─ src/pe/pucp/paqrap/  DemoPlanificador · PruebaPlanificador ·
+   │                          alns/ · datos/ · mapa/ · modelo/ · planificador/ · solucion/
+   └─ tabu/                 Búsqueda Tabú · Maven + JUnit 5 · paquete pe.logistica
+      ├─ README.md · REFERENCIAS.md · pom.xml
+      ├─ config/            referencia-20260909.properties
+      ├─ datos/             inventario.json · mant.preventivo.09.10.txt  (ventas/ y bloqueos/ ignorados)
+      ├─ resultado-*.txt    salidas publicadas 09/09/2026
+      └─ src/{main,test}/java/pe/logistica/
+```

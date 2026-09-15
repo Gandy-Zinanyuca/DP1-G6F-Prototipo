@@ -1,0 +1,93 @@
+Perfil: demo sintetica original
+Central: (0,0); referencias sin recarga en MVP: NO=(12,38), E=(57,27)
+Datos cargados: 10 pedidos, 2 bloqueos, 1 mantenimientos
+========== TABU SEARCH ==========
+
+Estado: FACTIBLE
+Tiempo simulado: 2026-09-11 13:30:00
+Sa: 30 min
+K: 4
+Sc: 120 min
+Ventana de pedidos: [2026-09-11 13:30:00, 2026-09-11 15:30:00]
+Maximo de iteraciones: 100
+Tenencia tabu: 7
+Deadline evaluado en: FIN_SERVICIO
+Servicio: 60 min; bloqueo: CALLES
+Velocidad TA: 40.000 km/h
+Velocidad TM: 25.000 km/h
+Velocidad TB: 12.000 km/h
+
+--- RUTAS ---
+
+TA01 | TA (Auto)
+Orden: P003 -> P005 -> P004 -> P001
+Coordenadas de visita (con regreso): (0,0) -> (5,5) -> (9,5) -> (7,2) -> (5,0) -> (0,0)
+Salida: 2026-09-11 14:15:00 | Regreso: 2026-09-11 18:57:00
+Distancia: 28.00 km
+Tiempo estimado: 4.7000 h
+Costo: S/ 224.00
+Capacidad: 23/24 (95.83 %)
+  P003 cliente=P003 (5,5) | cantidad=5 | llegada=2026-09-11 14:30:00 | atencion=2026-09-11 14:30:00 a 2026-09-11 15:30:00 | deadline=2026-09-12 01:40:00 | A TIEMPO
+  P005 cliente=P005 (9,5) | cantidad=2 | llegada=2026-09-11 15:36:00 | atencion=2026-09-11 15:36:00 a 2026-09-11 16:36:00 | deadline=2026-09-12 02:15:00 | A TIEMPO
+  P004 cliente=P004 (7,2) | cantidad=4 | llegada=2026-09-11 16:43:30 | atencion=2026-09-11 16:43:30 a 2026-09-11 17:43:30 | deadline=2026-09-12 02:00:00 | A TIEMPO
+  P001 cliente=P001 (5,0) | cantidad=12 | llegada=2026-09-11 17:49:30 | atencion=2026-09-11 17:49:30 a 2026-09-11 18:49:30 | deadline=2026-09-12 01:30:00 | A TIEMPO
+
+TA02 | TA (Auto)
+Sin pedidos | Distancia: 0 km | Tiempo: 0 h | Costo: S/ 0.00
+Capacidad: 0/24 (0.00 %)
+
+TM01 | TM (Moto)
+Orden: P008 -> P007 -> P006
+Coordenadas de visita (con regreso): (0,0) -> (6,4) -> (3,5) -> (1,1) -> (0,0)
+Salida: 2026-09-11 15:30:00 | Regreso: 2026-09-11 19:22:48
+Distancia: 22.00 km
+Tiempo estimado: 3.8800 h
+Costo: S/ 132.00
+Capacidad: 8/8 (100.00 %)
+  P008 cliente=P008 (6,4) | cantidad=2 | llegada=2026-09-11 15:54:00 | atencion=2026-09-11 15:54:00 a 2026-09-11 16:54:00 | deadline=2026-09-12 03:30:00 | A TIEMPO
+  P007 cliente=P007 (3,5) | cantidad=4 | llegada=2026-09-11 17:03:36 | atencion=2026-09-11 17:03:36 a 2026-09-11 18:03:36 | deadline=2026-09-12 03:00:00 | A TIEMPO
+  P006 cliente=P006 (1,1) | cantidad=2 | llegada=2026-09-11 18:18:00 | atencion=2026-09-11 18:18:00 a 2026-09-11 19:18:00 | deadline=2026-09-12 02:30:00 | A TIEMPO
+
+TM02 | TM (Moto)
+Sin pedidos | Distancia: 0 km | Tiempo: 0 h | Costo: S/ 0.00
+Capacidad: 0/8 (0.00 %)
+
+TB01 | TB (Bicicleta)
+Orden: P002
+Coordenadas de visita (con regreso): (0,0) -> (2,4) -> (0,0)
+Salida: 2026-09-11 13:35:00 | Regreso: 2026-09-11 15:35:00
+Distancia: 12.00 km
+Tiempo estimado: 2.0000 h
+Costo: S/ 36.00
+Capacidad: 3/4 (75.00 %)
+  P002 cliente=P002 (2,4) | cantidad=3 | llegada=2026-09-11 14:05:00 | atencion=2026-09-11 14:05:00 a 2026-09-11 15:05:00 | deadline=2026-09-12 01:35:00 | A TIEMPO
+
+--- METRICAS ---
+Ta: 200.008 ms
+Iteraciones: 100
+Candidatos evaluados: 2682
+Candidatos factibles: 1882
+Movimientos tabu rechazados: 542
+Aspiraciones aplicadas: 0
+Mejor solucion encontrada en iteracion: 1
+Inserciones iniciales evaluadas: 38
+Motivo de parada: MAXIMO_ITERACIONES
+Costo de solucion inicial: S/ 408.00
+
+Pedidos considerados: 8
+Pedidos asignados: 8
+Pedidos no asignados: 0
+Pedidos dentro del plazo: 8
+Cumplimiento: 100.00 %
+
+Vehiculos utilizados: 3
+Distancia total: 62.00 km
+Tiempo total estimado de rutas: 10.5800 h
+Costo total: S/ 392.00
+Utilizacion promedio de capacidad (vehiculos utilizados): 90.28 %
+Distancia promedio por vehiculo utilizado: 20.67 km
+
+--- DISTRIBUCION POR TIPO ---
+TA (Auto): 1 utilizados | 28.00 km | S/ 224.00
+TM (Moto): 1 utilizados | 22.00 km | S/ 132.00
+TB (Bicicleta): 1 utilizados | 12.00 km | S/ 36.00
