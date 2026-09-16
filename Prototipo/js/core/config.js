@@ -22,9 +22,9 @@
   const PRIORITY_BUCKETS = [4, 8, 12, 18, 36];
 
   const FALLA_TYPES = [
-    { tipo:1, label:'tipo 1 (leve)',     minMin:20, maxMin:40,  color:'--warning', icon:'🟡' },
-    { tipo:2, label:'tipo 2 (moderada)', minMin:45, maxMin:80,  color:'--accent-2', icon:'🟠' },
-    { tipo:3, label:'tipo 3 (grave)',    minMin:90, maxMin:150, color:'--critical', icon:'🔴' },
+    { tipo:1, label:'tipo 1 (leve)',     minMin:20, maxMin:40,  color:'--warning' },
+    { tipo:2, label:'tipo 2 (moderada)', minMin:45, maxMin:80,  color:'--accent-2' },
+    { tipo:3, label:'tipo 3 (grave)',    minMin:90, maxMin:150, color:'--critical' },
   ];
 
   const SHIFT_DUR = 8*60; // cada turno dura 8 horas (fijo); solo la hora de inicio es configurable

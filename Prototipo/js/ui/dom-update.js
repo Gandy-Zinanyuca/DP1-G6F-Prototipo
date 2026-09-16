@@ -12,6 +12,7 @@
   const legMotoCount = document.getElementById('legMotoCount');
   const legBikeCount = document.getElementById('legBikeCount');
   const legPackages = document.getElementById('legPackages');
+  const legAlerts = document.getElementById('legAlerts');
   const shiftLabel = document.getElementById('shiftLabel');
   const shiftSwatch = document.getElementById('shiftSwatch');
   const mealTag = document.getElementById('mealTag');
@@ -47,7 +48,7 @@
     const shift = currentShift();
     shiftLabel.textContent = shift.label.split(' · ')[0] + ' · ' + shift.label.split('· ')[1];
     const meal = inMeal(shift);
-    mealTag.style.display = meal ? 'inline-block' : 'none';
+    mealTag.style.visibility = meal ? 'visible' : 'hidden';
     shiftSwatch.style.background = meal ? css('--warning') : css('--accent');
 
     const activeOrders = orders.filter(o=>o.status!=='delivered');
@@ -86,6 +87,7 @@
     const flt = incidents.filter(i=>i.type==='falla').length;
     kpiIncidents.textContent = blq + flt; // el mantenimiento es planificado, no cuenta como incidencia
     kpiIncidentsSub.textContent = `${blq} bloqueo(s) · ${flt} avería(s)`;
+    legAlerts.textContent = blq + flt;
 
     // conteo de flota por tipo, para la leyenda siempre visible del mapa y para el panel de indicadores —
     // coloreado por disponibilidad (semáforo), con el mismo desglose en ambos lugares

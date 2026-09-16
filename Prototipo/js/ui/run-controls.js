@@ -125,6 +125,22 @@
     resetConfirmModal.classList.add('open');
   }
   btnReiniciar.addEventListener('click', ()=> openResetConfirm(null));
+
+  // ---- claro / oscuro: recuerda la preferencia del usuario en este navegador ----
+  const themeToggle = document.getElementById('themeToggle');
+  function isDarkNow(){
+    const t = document.documentElement.getAttribute('data-theme');
+    if(t) return t==='dark';
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+  let savedTheme = null;
+  try{ savedTheme = localStorage.getItem('paqrap-theme'); }catch(e){}
+  if(savedTheme==='light' || savedTheme==='dark') document.documentElement.setAttribute('data-theme', savedTheme);
+  themeToggle.addEventListener('click', ()=>{
+    const next = isDarkNow() ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try{ localStorage.setItem('paqrap-theme', next); }catch(e){}
+  });
   document.getElementById('btnResetCancel').addEventListener('click', ()=>{
     pendingScenarioAfterReset = null;
     resetConfirmModal.classList.remove('open');

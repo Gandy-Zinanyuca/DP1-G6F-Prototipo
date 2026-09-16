@@ -110,7 +110,7 @@
     return out;
   }
   function previewAverias(parsed){
-    const T = {1:'🟡 leve', 2:'🟠 moderada', 3:'🔴 grave'};
+    const T = {1:'leve', 2:'moderada', 3:'grave'};
     const rows = parsed.slice(0,6).map(r=>{
       const day = Math.floor(r.atMin/1440)+1;
       return `D${day} ${fmtTime(r.atMin)} · ${r.vehicleId} · ${T[r.tipo] || ('tipo '+r.tipo)}`;

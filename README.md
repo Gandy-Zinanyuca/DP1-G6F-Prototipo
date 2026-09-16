@@ -62,7 +62,7 @@ global; si reordenas esas etiquetas, revisa las dependencias.
 > ▶ **Demo:** https://claude.ai/code/artifact/8c1a4e23-c13f-4706-b3ba-516103fa5b7b
 
 La demo es **un único HTML autocontenido** (lo exige la plataforma). El código de `Prototipo/`
-es esa misma versión dividida por responsabilidad, re-sincronizada el 2026-09-15. La
+es esa misma versión dividida por responsabilidad, re-sincronizada el 2026-09-16. La
 sincronización sigue siendo **manual**: cuando haya cambios de fondo en la demo, hay que
 volver a repartirlos entre los archivos de `js/` (o volver a generarlos con el mismo criterio:
 un archivo por sección `/* === … === */` del `<script>` de la demo). Ver

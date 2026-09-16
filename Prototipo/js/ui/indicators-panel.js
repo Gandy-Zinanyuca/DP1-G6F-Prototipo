@@ -32,3 +32,27 @@
   }
   sbTabMetrics.addEventListener('click', ()=> setSidebarTab('metrics'));
   sbTabLog.addEventListener('click', ()=> setSidebarTab('log'));
+
+  // Marca eventos nuevos con un badge en la pestaña Registro, cuando no se está viendo.
+  function noteNewLog(){
+    if(sidebarActiveTab==='log' && sidebarPanel.classList.contains('open')) return;
+    unseenLogCount++;
+    const label = unseenLogCount > 99 ? '99+' : String(unseenLogCount);
+    logBadge.textContent = label;
+    logBadge.style.display = 'inline-block';
+  }
+
+  const searchCtl = document.getElementById('searchCtl');
+  document.getElementById('searchToggle').addEventListener('click', e=>{
+    e.stopPropagation();
+    searchCtl.classList.toggle('open');
+    sidebarPanel.classList.remove('open');
+  });
+  document.addEventListener('click', e=>{
+    if(sidebarPanel.classList.contains('open') && !sidebarPanel.contains(e.target) && e.target.id!=='sidebarToggle'){
+      sidebarPanel.classList.remove('open');
+    }
+    if(searchCtl.classList.contains('open') && !searchCtl.contains(e.target) && e.target.id!=='searchToggle'){
+      searchCtl.classList.remove('open');
+    }
+  });

@@ -42,7 +42,7 @@
     averiasTbody.innerHTML = !list.length
       ? `<tr><td colspan="4" class="inc-empty">Sin averías registradas por ahora.</td></tr>`
       : list.slice().reverse().map(inc=>
-          `<tr data-vehicle="${inc.vehicleId}" style="cursor:pointer;" title="Ver esta unidad en el mapa"><td>${inc.vehicleId}</td><td><span style="color:var(${inc.falla.color})">${inc.falla.icon} ${inc.falla.label}</span></td><td>${fmtTime(inc.since)}</td><td>${fmtTime(inc.until)}</td></tr>`
+          `<tr data-vehicle="${inc.vehicleId}" style="cursor:pointer;" title="Ver esta unidad en el mapa"><td>${inc.vehicleId}</td><td><span style="display:inline-flex;align-items:center;gap:6px;"><i style="width:7px;height:7px;border-radius:50%;background:var(${inc.falla.color});display:inline-block;flex:0 0 auto;"></i>${inc.falla.label}</span></td><td>${fmtTime(inc.since)}</td><td>${fmtTime(inc.until)}</td></tr>`
         ).join('');
 
     averiasTbody.querySelectorAll('tr[data-vehicle]').forEach(tr=>{

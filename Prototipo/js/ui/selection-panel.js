@@ -112,15 +112,15 @@
           ${items.slice(0,6).map(renderItem).join('')}
         </div>
       </div>`;
-    selBody.innerHTML += listHtml('📦 Pedidos que salen', salenPedidos, o=>`#${o.id} · ${o.clientId} · ${o.qty} uds.`);
-    selBody.innerHTML += listHtml('🚚 Unidades que salen', salenUnidades, v=>`${v.id} (${VEHICLE_TYPES[v.type].label})`);
-    selBody.innerHTML += listHtml('↩️ Unidades que arriban', arribanUnidades, v=>`${v.id} (${VEHICLE_TYPES[v.type].label}) — ${etaText(v)}`);
+    selBody.innerHTML += listHtml('Pedidos que salen', salenPedidos, o=>`#${o.id} · ${o.clientId} · ${o.qty} uds.`);
+    selBody.innerHTML += listHtml('Unidades que salen', salenUnidades, v=>`${v.id} (${VEHICLE_TYPES[v.type].label})`);
+    selBody.innerHTML += listHtml('Unidades que arriban', arribanUnidades, v=>`${v.id} (${VEHICLE_TYPES[v.type].label}) — ${etaText(v)}`);
   }
 
   function renderBloqueoDetail(inc){
     selSwatch.style.background = css('--critical');
     selSwatch.style.borderRadius = '3px';
-    selName.textContent = '🚧 Bloqueo';
+    selName.textContent = 'Bloqueo';
     const a = inc.nodes[0], b = inc.nodes[inc.nodes.length-1];
     selSub.textContent = `(${a.x},${a.y}) → (${b.x},${b.y})`;
     const restante = Math.max(0, inc.until - simMin);

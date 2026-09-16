@@ -240,7 +240,7 @@
       // etiqueta explícita "Bloqueo" en el punto medio del tramo — no solo un color, un texto
       const mid = inc.nodes[Math.floor(inc.nodes.length/2)];
       const pm = S(mid);
-      const label = '🚧 Bloqueo';
+      const label = 'Bloqueo';
       ctx.save();
       ctx.font = "600 10.5px 'Sora', sans-serif";
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -320,12 +320,13 @@
         ctx.beginPath(); ctx.arc(p.x, p.y, 14, 0, Math.PI*2); ctx.stroke();
         ctx.setLineDash([]);
 
-        // ícono de tipo de avería, junto al vehículo, para diferenciar tipo 1/2/3 de un vistazo
+        // insignia de tipo de avería, junto al vehículo, para diferenciar tipo 1/2/3 de un vistazo
         if(v.state==='broken'){
           const inc = incidents.find(i=>i.type==='falla' && i.vehicleId===v.id);
           if(inc){
-            ctx.font = '11px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
-            ctx.fillText(inc.falla.icon, p.x+12, p.y-12);
+            ctx.beginPath(); ctx.arc(p.x+12, p.y-12, 5, 0, Math.PI*2);
+            ctx.fillStyle = css(inc.falla.color); ctx.fill();
+            ctx.lineWidth = 1.5; ctx.strokeStyle = css('--surface'); ctx.stroke();
           }
         }
       }
