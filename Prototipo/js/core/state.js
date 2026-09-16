@@ -1,10 +1,11 @@
-// Estado mutable global de la simulación (reloj, pedidos, flota, incidentes, stats, flags de escenario) + buildFleet().
+// Estado mutable global de la simulación (reloj, pedidos, flota, incidentes, colas de archivo, stats, flags de escenario) + buildFleet().
 // Depende de: core/config.js
 "use strict";
   /* =================== STATE =================== */
   let CYCLE_DAYS_5D = 5;
   let scenario = '5d';            // '5d' | 'diaria' — elegido por el usuario antes de iniciar
   let simMin = 7*60;               // start at 07:00 on day 1
+  let runStartSimMin = 7*60;       // simMin al momento de arrancar la corrida actual — para el contador de tiempo simulado transcurrido
   let cycleDay = 1;
   let lastTs = null;
   let running = false;             // el usuario controla inicio/detención explícitamente
@@ -15,6 +16,8 @@
   let ventasQueue = null;   // null = generación aleatoria; array = registro masivo cargado desde archivo
   let ventasPtr = 0;
   let bloqueosQueue = null; // null = generación aleatoria; array = bloqueos programados desde archivo
+  let averiasQueue = null;  // null = disparo aleatorio; array = averías programadas desde archivo (5D / colapso)
+  let mantenimientoQueue = null; // null = sin archivo; array = mantenimientos programados desde archivo (5D / colapso)
 
   let orderSeq = 1000;
   let orders = [];        // pending / assigned / atClient
@@ -32,6 +35,7 @@
   let camera = { scale:1, cx:0.5, cy:0.5 };
   let selected = null;   // {type:'vehicle'|'warehouse'|'zone', ...} for the detail panel
   let typeFilter = { auto:true, moto:true, bici:true }; // visibilidad por tipo en el mapa
+  let showRoutes = true; // mostrar/ocultar la línea de ruta asignada de cada vehículo (LE checklist #33)
   let gateConfirmed = false; // se vuelve true tras la primera confirmación del modal de inicio
   let diariaWaiting = false; // 'operación diaria': true hasta que se registre el primer pedido
   let colapsoTriggered = false; // 'colapso': true en cuanto la primera entrega incumple su plazo
@@ -66,7 +70,7 @@
       const t = VEHICLE_TYPES[typeKey];
       for(let i=0;i<counts[typeKey];i++){
         vehicles.push({
-          id: typeKey[0].toUpperCase() + (i+1),
+          id: ({auto:'TA', moto:'TM', bici:'TB'})[typeKey] + String(i+1).padStart(2,'0'),
           type: typeKey,
           capacity: t.capacity,
           speed: t.speed,
@@ -83,4 +87,3 @@
       }
     });
   }
-

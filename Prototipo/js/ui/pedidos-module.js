@@ -1,5 +1,5 @@
-// Módulo de registro de pedidos: alta manual, carga masiva, sus modales de confirmación y la tabla filtrable.
-// Depende de: sim/orders.js, core/state.js
+// Módulo Pedidos: alta manual, carga masiva (con sus modales de confirmación) — solo día a día —, carga por archivo de ventas en 5D/Colapso, y la tabla filtrable.
+// Depende de: sim/orders.js, ui/file-upload.js, core/state.js
 "use strict";
   /* =================== MÓDULO: REGISTRO DE PEDIDOS =================== */
   const pedModalidad = document.getElementById('pedModalidad');
@@ -18,13 +18,13 @@
     if(![36,18,12,8,4].includes(hourLimit)) return {ok:false, motivo:'modalidad no reconocida'};
 
     let enRiesgo = false;
-    const distDirecta = Math.hypot(x-25, y-15); // referencia: distancia desde el almacén central
+    const distDirecta = Math.hypot(x-WAREHOUSES.central.pos.x, y-WAREHOUSES.central.pos.y); // referencia: distancia desde el almacén central
     const horasTraslado = distDirecta / VEHICLE_TYPES.auto.speed;
     if(hourLimit<36 && horasTraslado>=hourLimit) enRiesgo = true; // LE010: se marca en riesgo, no se rechaza
 
     orders.push({
       id: orderSeq++, clientId, pos:{x,y}, qty, priority:hourLimit,
-      createdAt: simMin, deadline: simMin+hourLimit*60, status:'pending', enRiesgo,
+      createdAt: simMin, deadline: simMin+hourLimit*60, status:'pending', enRiesgo, reprogramado:false,
     });
     if(scenario==='diaria' && diariaWaiting){
       diariaWaiting = false;
@@ -127,29 +127,49 @@
     return o.status; // 'entregado' | 'no cumplido' (solo aplica a orderHistory)
   }
 
+  // 'diaria' se registra pedido a pedido, como en la operación real; 5D y Colapso reciben los pedidos
+  // por el archivo de ventas — no tiene sentido "simular" un mes de pedidos escribiéndolos a mano
+  function updatePedidosInputMode(){
+    const isDiaria = scenario==='diaria';
+    document.getElementById('pedManualSection').style.display = isDiaria ? '' : 'none';
+    document.getElementById('pedArchivoSection').style.display = isDiaria ? 'none' : 'flex';
+  }
+
   function renderPedidosModule(){
+    updatePedidosInputMode();
     document.getElementById('pedidosMsub').textContent = scenario==='diaria' && diariaWaiting
       ? 'La operación diaria está en espera del primer pedido — regístralo abajo para que comience a correr.'
-      : 'Registro manual y masivo de pedidos, con las mismas validaciones que aplica la simulación.';
+      : scenario==='diaria'
+        ? 'Registro manual y masivo de pedidos, con las mismas validaciones que aplica la simulación.'
+        : 'Este escenario recibe los pedidos desde el archivo de ventas — el registro manual es solo para la Operación día a día.';
 
     const fe = document.getElementById('pedFiltroEstado').value;
     const fm = document.getElementById('pedFiltroModalidad').value;
     const fc = document.getElementById('pedBuscarCliente').value.trim().toLowerCase();
-    const live = orders.map(o=>({id:o.id, clientId:o.clientId, qty:o.qty, priority:o.priority, pos:o.pos, deadline:o.deadline, estado:estadoDeOrder(o)}));
-    const hist = orderHistory.map(o=>({id:o.id, clientId:o.clientId, qty:o.qty, priority:o.priority, pos:o.pos, deadline:o.deadline, estado:o.estadoFinal}));
+    const live = orders.map(o=>({id:o.id, clientId:o.clientId, qty:o.qty, priority:o.priority, pos:o.pos, deadline:o.deadline, estado:estadoDeOrder(o), vehicleId:o.vehicleId}));
+    const hist = orderHistory.map(o=>({id:o.id, clientId:o.clientId, qty:o.qty, priority:o.priority, pos:o.pos, deadline:o.deadline, estado:o.estadoFinal, vehicleId:o.vehicleId}));
     let rows = live.concat(hist).sort((a,b)=>b.id-a.id);
     if(fe) rows = rows.filter(r=>r.estado===fe);
     if(fm) rows = rows.filter(r=>String(r.priority)===fm);
     if(fc) rows = rows.filter(r=>r.clientId.toLowerCase().includes(fc));
 
     const tbody = document.getElementById('pedTbody');
-    if(!rows.length){ tbody.innerHTML = `<tr><td colspan="7" class="inc-empty">Sin pedidos que coincidan con el filtro.</td></tr>`; return; }
+    if(!rows.length){ tbody.innerHTML = `<tr><td colspan="8" class="inc-empty">Sin pedidos que coincidan con el filtro.</td></tr>`; return; }
     const badgeClass = { 'registrado':'good', 'en ruta':'warning', 'entregado':'good', 'no cumplido':'critical' };
-    tbody.innerHTML = rows.slice(0,200).map(r=>`
-      <tr><td>#${r.id}</td><td>${r.clientId}</td><td>${r.qty}</td>
+    tbody.innerHTML = rows.slice(0,200).map(r=>{
+      const clicable = r.vehicleId ? ' style="cursor:pointer;" title="Ver la ruta de esta unidad en el mapa"' : '';
+      return `
+      <tr data-vehicle="${r.vehicleId||''}"${clicable}><td>#${r.id}</td><td>${r.clientId}</td><td>${r.qty}</td>
       <td>${r.priority<36?'Priorizada '+r.priority+'h':'Regular 36h'}</td>
       <td>(${r.pos.x},${r.pos.y})</td><td>${fmtTime(r.deadline)}</td>
-      <td><span class="legend-live" style="color:var(--${badgeClass[r.estado]||'ink-3'})">${r.estado}</span></td></tr>
-    `).join('');
-  }
+      <td><span class="legend-live" style="color:var(--${badgeClass[r.estado]||'ink-3'})">${r.estado}</span></td>
+      <td>${r.vehicleId || '—'}</td></tr>
+    `;
+    }).join('');
 
+    tbody.querySelectorAll('tr[data-vehicle]').forEach(tr=>{
+      const vid = tr.dataset.vehicle;
+      if(!vid) return;
+      tr.addEventListener('click', ()=> selectVehicleAndCenter(vid));
+    });
+  }

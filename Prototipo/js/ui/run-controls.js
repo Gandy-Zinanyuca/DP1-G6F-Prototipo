@@ -1,12 +1,10 @@
-// Start/Stop, modal de inicio (escenario, flota, almacenes, turnos) y botón Reiniciar.
+// Tabs de escenario, Start/Stop, modal de inicio (escenario, flota, almacenes, turnos) y botón Reiniciar.
 // Depende de: core/*, sim/sim-step.js
 "use strict";
   /* =================== CONTROLES DE EJECUCIÓN: módulo, start/stop, modal de inicio =================== */
   const btnStartStop = document.getElementById('btnStartStop');
   const startStopIcon = document.getElementById('startStopIcon');
   const startStopLabel = document.getElementById('startStopLabel');
-  const modSelect = document.getElementById('modSelect');
-  const escenarioTag = document.getElementById('escenarioTag');
   const startGateModal = document.getElementById('startGateModal');
   const gateFecha = document.getElementById('gateFecha');
   const gateHora = document.getElementById('gateHora');
@@ -31,6 +29,16 @@
   gateEscenario.addEventListener('change', updateGateFieldsVisibility);
   updateGateFieldsVisibility();
 
+  // banner de estado, bien visible arriba de la pantalla — no depende de abrir el panel de indicadores
+  const toastBanner = document.getElementById('toastBanner');
+  let toastTimer = null;
+  function showToast(msg, kind){
+    toastBanner.textContent = msg;
+    toastBanner.className = 'toast-banner show' + (kind ? ' '+kind : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=>{ toastBanner.classList.remove('show'); }, 3200);
+  }
+
   function beginRun(){
     startedAtReal = performance.now();
     running = true;
@@ -38,20 +46,22 @@
     startStopIcon.textContent = '⏸'; startStopLabel.textContent = 'Detener';
     lastTs = null;
     addLog('Ejecución <b>iniciada</b>.', 'good');
+    showToast('▶ Ejecución iniciada', 'good');
   }
-  function stopRun(reason){
+  function stopRun(reason, kind){
     running = false;
     accumulatedRunMs += performance.now() - startedAtReal;
     btnStartStop.classList.remove('running');
     startStopIcon.textContent = '▶'; startStopLabel.textContent = 'Iniciar';
     addLog(reason || 'Ejecución <b>detenida</b>.', 'warning');
+    showToast('■ Ejecución detenida', kind || 'warning');
     lastTs = null;
   }
 
   document.getElementById('btnGateConfirm').addEventListener('click', ()=>{
     scenario = gateEscenario.value;
-    escenarioTag.textContent = ESCENARIO_LABEL[scenario];
     gateConfirmed = true;
+    updateScenarioTabsUI();
     startGateModal.classList.remove('open');
 
     fleetConfig = {
@@ -75,8 +85,6 @@
       parseHM('gateTurno3', 23*60),
     ];
     SHIFTS = buildShifts();
-
-    document.getElementById('dataBtn').parentElement.style.display = scenario==='diaria' ? 'none' : '';
 
     if(scenario==='diaria'){
       simEpochDate = new Date();
@@ -110,8 +118,17 @@
   /* =================== REINICIAR: detiene todo y vuelve al modal de inicio =================== */
   const btnReiniciar = document.getElementById('btnReiniciar');
   const resetConfirmModal = document.getElementById('resetConfirmModal');
-  btnReiniciar.addEventListener('click', ()=>{ resetConfirmModal.classList.add('open'); });
-  document.getElementById('btnResetCancel').addEventListener('click', ()=>{ resetConfirmModal.classList.remove('open'); });
+  let pendingScenarioAfterReset = null; // escenario a preseleccionar en el modal de inicio tras un reinicio pedido desde las tabs
+
+  function openResetConfirm(targetEscenario){
+    pendingScenarioAfterReset = targetEscenario || null;
+    resetConfirmModal.classList.add('open');
+  }
+  btnReiniciar.addEventListener('click', ()=> openResetConfirm(null));
+  document.getElementById('btnResetCancel').addEventListener('click', ()=>{
+    pendingScenarioAfterReset = null;
+    resetConfirmModal.classList.remove('open');
+  });
   document.getElementById('btnResetOk').addEventListener('click', ()=>{
     resetConfirmModal.classList.remove('open');
     if(running) stopRun('Ejecución detenida para reiniciar.');
@@ -119,9 +136,33 @@
     diariaWaiting = false;
     colapsoTriggered = false;
     accumulatedRunMs = 0;
-    escenarioTag.textContent = 'Sin escenario';
+    updateScenarioTabsUI();
     switchModule('mapa');
     addLog('Simulación <b>reiniciada</b> — elige de nuevo el escenario, la flota y la fecha de inicio.', 'warning');
+    if(pendingScenarioAfterReset){
+      gateEscenario.value = pendingScenarioAfterReset;
+      updateGateFieldsVisibility();
+      pendingScenarioAfterReset = null;
+    }
     startGateModal.classList.add('open');
   });
 
+  /* =================== TABS DE ESCENARIO: siempre visibles, reemplazan la elección única del modal =================== */
+  const scenarioTabEls = document.querySelectorAll('.scenario-tab');
+  function updateScenarioTabsUI(){
+    scenarioTabEls.forEach(btn=> btn.classList.toggle('active', gateConfirmed && btn.dataset.esc===scenario));
+  }
+  scenarioTabEls.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const target = btn.dataset.esc;
+      if(!gateConfirmed){
+        gateEscenario.value = target;
+        updateGateFieldsVisibility();
+        startGateModal.classList.add('open');
+        return;
+      }
+      if(target===scenario) return; // ya es el escenario activo
+      openResetConfirm(target);
+    });
+  });
+  updateScenarioTabsUI();

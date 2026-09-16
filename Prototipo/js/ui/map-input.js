@@ -42,4 +42,3 @@
   document.getElementById('zoomIn').addEventListener('click', ()=> zoomAt(W/2,H/2,1.4));
   document.getElementById('zoomOut').addEventListener('click', ()=> zoomAt(W/2,H/2,1/1.4));
   document.getElementById('zoomReset').addEventListener('click', ()=>{ camera.scale=1; camera.cx=0.5; camera.cy=0.5; });
-

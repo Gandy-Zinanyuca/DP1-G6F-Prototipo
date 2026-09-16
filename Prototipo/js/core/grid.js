@@ -66,4 +66,3 @@
     const sx = Math.floor(pos.x/10)*10, sy = Math.floor(pos.y/10)*10;
     return `Sector (${sx}-${sx+10}, ${sy}-${sy+10})`;
   }
-

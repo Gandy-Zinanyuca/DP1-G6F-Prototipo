@@ -1,4 +1,4 @@
-// Bloqueos de tramos de calle (cadenas de nodos) y su efecto sobre blockedEdges.
+// Bloqueos de tramos de calle (cadenas de nodos), su efecto sobre blockedEdges y la activación de los programados por archivo.
 // Depende de: core/state.js, core/grid.js
 "use strict";
   /* =================== BLOQUEOS (segmentos entre nodos, tipo polígono abierto) =================== */
@@ -46,4 +46,3 @@
       }
     });
   }
-

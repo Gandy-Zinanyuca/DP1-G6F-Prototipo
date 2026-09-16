@@ -21,4 +21,3 @@
       if(v.state==='break' && !meal) v.state='idle';
     });
   }
-

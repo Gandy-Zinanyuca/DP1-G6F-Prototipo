@@ -22,4 +22,3 @@
   }
   cfgGreen.addEventListener('input', applyThresholdInputs);
   cfgAmber.addEventListener('input', applyThresholdInputs);
-

@@ -1,4 +1,4 @@
-// Ciclo de vida de pedidos: creación aleatoria/desde archivo, asignación a vehículos, entrega/incumplimiento.
+// Ciclo de vida de pedidos: creación aleatoria/desde archivo, asignación a vehículos, validación del alta manual.
 // Depende de: core/*, sim/vehicles.js, core/log.js
 "use strict";
   /* =================== ORDERS / ASSIGNMENT =================== */
@@ -8,7 +8,7 @@
   function pushOrderFromRecord(rec){
     orders.push({
       id: orderSeq++, clientId: rec.clientId, pos: rec.pos, qty: rec.qty, priority: rec.hourLimit,
-      createdAt: simMin, deadline: simMin + rec.hourLimit*60, status:'pending',
+      createdAt: simMin, deadline: simMin + rec.hourLimit*60, status:'pending', reprogramado:false,
     });
   }
 
@@ -38,6 +38,7 @@
       createdAt: simMin,
       deadline: simMin + priority*60,
       status:'pending',
+      reprogramado:false,
     };
     orders.push(o);
   }
@@ -80,4 +81,3 @@
       addLog(`Pedido <b>#${o.id}</b> (${o.clientId} · ${o.qty} uds.) asignado a <b>${v.id}</b> desde ${wh.name}.`, 'accent');
     }
   }
-

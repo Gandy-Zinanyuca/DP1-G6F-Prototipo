@@ -25,6 +25,9 @@
     buildFleet();
     seedInitialBlockages();
     resizeCanvas();
+    // red de seguridad: si el primer layout todavía no estaba listo (contenedor a 0×0), se vuelve a medir
+    // en el siguiente frame para que el mapa nunca arranque en blanco
+    requestAnimationFrame(resizeCanvas);
     addLog('Simulación lista — presiona Iniciar para configurar la fecha, hora y escenario de arranque.', 'accent');
     startDomTimer();
     requestAnimationFrame(frame);

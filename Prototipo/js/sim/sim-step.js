@@ -28,6 +28,7 @@
 
   function resetSimulation(startMin){
     simMin = startMin!==undefined ? startMin : 7*60;
+    runStartSimMin = simMin;
     cycleDay = 1; lastDayNum = 1; lastRestockDay = -1;
     orders = []; flashes = []; incidents = []; blockedEdges = new Set(); orderHistory = [];
     stats = { deliveredTotal:0, deliveredToday:0, onTime:0, late:0, cost:0, byPriority:{}, bySector:{} };
@@ -37,11 +38,15 @@
     WAREHOUSES.este.stock = Math.round(WAREHOUSES.este.capacity * 0.84);
     Object.values(WAREHOUSES).forEach(w=>w.dispatchedToday=0);
     ventasPtr = 0;
+    if(averiasQueue) averiasQueue.forEach(r=>r.done=false);
+    if(mantenimientoQueue) mantenimientoQueue.forEach(r=>{ r.done=false; r.warned=false; });
     selected = null;
     hideSelection();
     buildFleet();
     seedInitialBlockages();
     if(bloqueosQueue) activateScheduledBlockages();
+    if(averiasQueue) activateScheduledAverias();
+    if(mantenimientoQueue) activateScheduledMantenimiento();
   }
 
   function seedInitialBlockages(){
@@ -52,4 +57,3 @@
       addBlockageChain(chain, simMin + 200 + Math.random()*400);
     }
   }
-

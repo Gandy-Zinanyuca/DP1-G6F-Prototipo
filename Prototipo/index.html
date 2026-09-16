@@ -11,6 +11,7 @@
 </head>
 <body>
 <div class="app">
+  <div class="toast-banner" id="toastBanner"></div>
   <header>
     <div class="brand">
       <div class="brand-mark">
@@ -22,12 +23,11 @@
       </div>
     </div>
 
-    <select class="mod-select" id="modSelect" title="Cambiar de módulo">
-      <option value="mapa">Mapa / simulación</option>
-      <option value="pedidos">Registro de pedidos</option>
-      <option value="incidencias">Incidencias</option>
-    </select>
-    <span class="duration-chip" id="escenarioTag">Sin escenario</span>
+    <div class="scenario-tabs" id="scenarioTabs">
+      <button class="scenario-tab" data-esc="diaria">Operación día a día</button>
+      <button class="scenario-tab" data-esc="5d">Simulación 5D</button>
+      <button class="scenario-tab" data-esc="colapso">Hasta el colapso</button>
+    </div>
 
     <div class="hdr-sep"></div>
 
@@ -43,10 +43,21 @@
       </button>
     </div>
 
-    <div class="clock-block">
-      <span class="day" id="dateLabel">01/09/2026</span>
-      <span class="time" id="timeLabel">00:00</span>
-      <span class="day" id="dayLabel">Día 1</span>
+    <div class="hdr-cluster">
+      <div class="clock-block" title="Fecha y hora del momento que se está simulando">
+        <span class="day" id="dateLabel">01/09/2026</span>
+        <span class="time" id="timeLabel">00:00:00</span>
+        <span class="day" id="dayLabel">Día 1</span>
+      </div>
+      <div class="hdr-cluster-div"></div>
+      <div class="duration-chip" title="Tiempo simulado transcurrido desde el inicio de la corrida (dd hh:mm:ss)">
+        Sim.: <b id="simElapsedLabel">00d 00:00:00</b>
+      </div>
+      <div class="hdr-cluster-div"></div>
+      <div class="clock-block" title="Fecha y hora reales de tu equipo (no simuladas)">
+        <span class="day">Hora real</span>
+        <span class="time" id="realTimeLabel">00:00:00</span>
+      </div>
     </div>
 
     <div class="shift-chip">
@@ -55,54 +66,44 @@
     </div>
     <div id="mealTag" class="meal-tag" style="display:none;">Refrigerio en curso</div>
 
-    <div class="cfg-wrap">
-      <button class="data-btn" id="dataBtn" title="Cargar archivos de pedidos y bloqueos">Datos de entrada</button>
-      <div class="data-panel" id="dataPanel">
-        <div class="data-field">
-          <div class="dt">Archivo de pedidos (ventas)</div>
-          <div class="dd">Histórico y proyectado, formato mensual. Un registro por línea:</div>
-          <div class="dfmt">##d##h##m:posX,posY,cIdCliente,qq,hl<br>11d13h31m:45,43,c9167,12,36</div>
-          <input type="file" id="fileVentas" accept=".txt">
-          <div class="data-status" id="statusVentas"></div>
-        </div>
-        <div class="data-field">
-          <div class="dt">Archivo de calles bloqueadas</div>
-          <div class="dd">Un registro por línea, polígono abierto de nodos:</div>
-          <div class="dfmt">##d##h##m-##d##h##m:x1,y1,x2,y2,...<br>01d06h00m-01d15h00m:31,21,34,21</div>
-          <input type="file" id="fileBloqueos" accept=".txt">
-          <div class="data-status" id="statusBloqueos"></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="cfg-wrap">
-      <button class="cfg-btn" id="cfgBtn" title="Configurar semáforo" aria-label="Configurar semáforo">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1z"/></svg>
-      </button>
-      <div class="cfg-panel" id="cfgPanel">
-        <div class="cfg-title">Semáforo de cumplimiento e inventario</div>
-        <div class="cfg-desc">Define los umbrales (%) que colorean pedidos, almacenes e indicadores en el mapa y el panel de KPIs.</div>
-        <div class="cfg-field">
-          <label>Verde si el valor es ≥ <b id="cfgGreenVal">70</b>%</label>
-          <input type="range" id="cfgGreen" min="30" max="95" value="70" step="1">
-        </div>
-        <div class="cfg-field">
-          <label>Ámbar si el valor es ≥ <b id="cfgAmberVal">35</b>%</label>
-          <input type="range" id="cfgAmber" min="5" max="65" value="35" step="1">
-        </div>
-        <div class="cfg-legend">
-          <span><i style="background:var(--good)"></i>Bien</span>
-          <span><i style="background:var(--warning)"></i>En riesgo</span>
-          <span><i style="background:var(--critical)"></i>Crítico</span>
+    <div class="hdr-cluster" style="border-radius:10px;padding:3px;gap:3px;">
+      <div class="cfg-wrap">
+        <button class="cfg-btn" id="cfgBtn" title="Configurar semáforo" aria-label="Configurar semáforo">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1z"/></svg>
+        </button>
+        <div class="cfg-panel" id="cfgPanel">
+          <div class="cfg-title">Semáforo de cumplimiento e inventario</div>
+          <div class="cfg-desc">Define los umbrales (%) que colorean pedidos, almacenes e indicadores en el mapa y el panel de KPIs.</div>
+          <div class="cfg-field">
+            <label>Verde si el valor es ≥ <b id="cfgGreenVal">70</b>%</label>
+            <input type="range" id="cfgGreen" min="30" max="95" value="70" step="1">
+          </div>
+          <div class="cfg-field">
+            <label>Ámbar si el valor es ≥ <b id="cfgAmberVal">35</b>%</label>
+            <input type="range" id="cfgAmber" min="5" max="65" value="35" step="1">
+          </div>
+          <div class="cfg-legend">
+            <span><i style="background:var(--good)"></i>Bien</span>
+            <span><i style="background:var(--warning)"></i>En riesgo</span>
+            <span><i style="background:var(--critical)"></i>Crítico</span>
+          </div>
         </div>
       </div>
+      <button class="data-btn" id="searchToggle" title="Buscar unidad / filtrar por tipo" style="border:none;background:transparent;">🔎 Buscar</button>
+      <button class="data-btn" id="sidebarToggle" title="Mostrar/ocultar panel de indicadores y registro de eventos" style="border:none;background:transparent;">📊 Indicadores y Registro de Eventos</button>
     </div>
-
-    <button class="data-btn" id="searchToggle" title="Buscar unidad / filtrar por tipo">🔎 Buscar</button>
-    <button class="data-btn" id="sidebarToggle" title="Mostrar/ocultar panel de indicadores">📊 Indicadores</button>
   </header>
 
   <main>
+    <nav class="nav-rail" id="navRail">
+      <button class="nav-item active" data-mod="mapa"><span class="ic">🗺️</span>Mapa</button>
+      <button class="nav-item" data-mod="pedidos"><span class="ic">📦</span>Pedidos</button>
+      <button class="nav-item" data-mod="flota"><span class="ic">🚚</span>Flota</button>
+      <button class="nav-item" data-mod="averias"><span class="ic">🛠️</span>Averías</button>
+      <button class="nav-item" data-mod="mantenimiento"><span class="ic">🧰</span>Manten.</button>
+      <button class="nav-item" data-mod="incidencias"><span class="ic">🚧</span>Bloqueos</button>
+    </nav>
+    <div class="main-content">
     <div class="map-wrap">
       <div class="map-canvas-area">
       <canvas id="mapCanvas"></canvas>
@@ -113,13 +114,16 @@
       </div>
 
       <div class="map-overlay search-ctl" id="searchCtl">
-        <input type="text" id="vehSearch" placeholder="Buscar unidad, ej. A3">
+        <input type="text" id="vehSearch" placeholder="Buscar unidad, ej. TA03">
         <div class="found" id="vehSearchFound"></div>
         <div class="type-filters">
           <button class="active" data-type="auto"><span class="ic">🚗</span>Auto</button>
           <button class="active" data-type="moto"><span class="ic">🏍️</span>Moto</button>
           <button class="active" data-type="bici"><span class="ic">🚲</span>Bici</button>
         </div>
+        <input type="text" id="whSearch" placeholder="Buscar almacén, ej. Este" style="margin-top:8px;">
+        <div class="found" id="whSearchFound"></div>
+        <button id="toggleRoutes" class="active" style="width:100%;margin-top:4px;font-size:10.5px;font-weight:600;padding:6px;border-radius:7px;border:1px solid var(--border);background:var(--accent-soft);color:var(--accent);cursor:pointer;font-family:'Sora',sans-serif;">┄ Mostrar rutas asignadas</button>
       </div>
 
       <div class="map-overlay scale-bar">
@@ -165,10 +169,14 @@
 
     <aside class="sidebar" id="sidebarPanel">
       <div class="sel-top" style="padding:12px 16px 0;">
-        <span class="sb-heading" style="margin:0;">Panel de indicadores</span>
+        <span class="sb-heading" style="margin:0;">Panel de Indicadores y Registro de Eventos</span>
         <button class="sel-close" id="sidebarClose" aria-label="Cerrar">✕</button>
       </div>
-      <div class="sidebar-body">
+      <div class="sidebar-tabs" role="tablist">
+        <button class="sidebar-tab active" id="sbTabMetrics" data-tab="metrics" role="tab" aria-selected="true">📊 Indicadores</button>
+        <button class="sidebar-tab" id="sbTabLog" data-tab="log" role="tab" aria-selected="false">🗒️ Registro<span class="badge" id="logBadge" style="display:none;">0</span></button>
+      </div>
+      <div class="sidebar-scroll active" data-tabpanel="metrics">
       <div class="sb-section">
         <div class="sb-heading">Desempeño</div>
         <div class="kpi-grid">
@@ -196,94 +204,83 @@
       </div>
 
       <div class="sb-section">
+        <div class="sb-heading">Pedidos por tipo</div>
+        <div id="pedTipoRows"></div>
+      </div>
+
+      <div class="sb-section">
+        <div class="sb-heading">Flota</div>
+        <div id="flotaRows"></div>
+      </div>
+
+      <div class="sb-section">
         <div class="sb-heading">Cumplimiento por prioridad</div>
         <div id="prioRows"></div>
       </div>
 
       <div class="sb-section">
         <div class="sb-heading">Almacenes</div>
-        <div class="wh-card">
-          <div class="wh-top"><span class="wh-name">Almacén Central</span><span class="wh-inf">stock ilimitado · nodo (25,15)</span></div>
+        <div class="wh-card" data-wh="central" style="cursor:pointer;" title="Ver en el mapa">
+          <div class="wh-top"><span class="wh-name">Almacén Central</span><span class="wh-inf">stock ilimitado · nodo (27,14)</span></div>
           <div class="wh-gauge"><i style="width:100%;background:var(--accent);"></i></div>
         </div>
-        <div class="wh-card">
+        <div class="wh-card" data-wh="noroeste" style="cursor:pointer;" title="Ver en el mapa">
           <div class="wh-top"><span class="wh-name" id="whNoroesteName">Nor-Oeste</span><span class="wh-val" id="whNoroesteVal">0 / 1000</span></div>
           <div class="wh-gauge"><i id="whNoroesteBar" style="width:0%;"></i></div>
+          <div class="wh-inf" style="margin-top:4px;">nodo (12,38)</div>
         </div>
-        <div class="wh-card">
+        <div class="wh-card" data-wh="este" style="cursor:pointer;" title="Ver en el mapa">
           <div class="wh-top"><span class="wh-name" id="whEsteName">Este</span><span class="wh-val" id="whEsteVal">0 / 1000</span></div>
           <div class="wh-gauge"><i id="whEsteBar" style="width:0%;"></i></div>
+          <div class="wh-inf" style="margin-top:4px;">nodo (57,27)</div>
         </div>
       </div>
 
-      <div class="sb-section" style="padding-bottom:0;">
-        <div class="sb-heading">Registro de eventos</div>
       </div>
-      <div class="log-list" id="logList"></div>
+      <div class="sidebar-log" data-tabpanel="log">
+        <div class="sb-heading">Registro de eventos</div>
+        <div class="log-list" id="logList"></div>
       </div>
     </aside>
 
-    <div class="module-panel" id="modIncidencias">
-      <h2>Módulo: incidencias</h2>
-      <div class="msub">Registrar averías y bloqueos manualmente, y ver el historial de incidencias de la ejecución.</div>
-
-      <div class="inc-form">
-        <div class="ifield">
-          <label>Unidad</label>
-          <select id="incVehSelect"></select>
-        </div>
-        <div class="ifield">
-          <label>Tipo de avería</label>
-          <select id="incTipoSelect"></select>
-        </div>
-        <button id="btnRegistrarAveria">Registrar avería</button>
-      </div>
-
-      <div class="inc-form">
-        <div class="ifield" style="flex:1 1 260px;">
-          <label>Nodos del bloqueo (x1,y1,x2,y2,...)</label>
-          <input type="text" id="incBloqueoNodos" placeholder="31,21,34,21">
-        </div>
-        <div class="ifield">
-          <label>Duración (horas)</label>
-          <input type="number" id="incBloqueoHoras" value="4" min="1" max="72" style="width:80px;">
-        </div>
-        <button id="btnRegistrarBloqueo">Registrar bloqueo</button>
-      </div>
-
-      <div class="inc-table-wrap">
-        <table class="inc-table">
-          <thead><tr><th>Tipo</th><th>Detalle</th><th>Desde</th><th>Hasta</th></tr></thead>
-          <tbody id="incTbody"></tbody>
-        </table>
-      </div>
-    </div>
-
     <div class="module-panel" id="modPedidos">
-      <h2>Módulo: registro de pedidos</h2>
+      <div class="module-head"><span class="mh-ic">📦</span><h2>Registro de pedidos</h2></div>
       <div class="msub" id="pedidosMsub">Registro manual y masivo de pedidos, con las mismas validaciones que aplica la simulación.</div>
 
-      <div class="inc-form" id="pedidoForm">
-        <div class="ifield"><label>Cliente</label><input type="text" id="pedCliente" placeholder="c1001" style="width:110px;"></div>
-        <div class="ifield"><label>Cantidad (1-24)</label><input type="number" id="pedCantidad" min="1" max="24" style="width:80px;"></div>
-        <div class="ifield">
-          <label>Modalidad</label>
-          <select id="pedModalidad"></select>
+      <div id="pedManualSection">
+        <div class="inc-form" id="pedidoForm">
+          <div class="ifield"><label>Cliente</label><input type="text" id="pedCliente" placeholder="c1001" style="width:110px;"></div>
+          <div class="ifield"><label>Cantidad (1-24)</label><input type="number" id="pedCantidad" min="1" max="24" style="width:80px;"></div>
+          <div class="ifield">
+            <label>Modalidad</label>
+            <select id="pedModalidad"></select>
+          </div>
+          <div class="ifield"><label>Destino X (0-70)</label><input type="number" id="pedX" min="0" max="70" style="width:80px;"></div>
+          <div class="ifield"><label>Destino Y (0-50)</label><input type="number" id="pedY" min="0" max="50" style="width:80px;"></div>
+          <button id="btnRegistrarPedido">Registrar pedido</button>
         </div>
-        <div class="ifield"><label>Destino X (0-70)</label><input type="number" id="pedX" min="0" max="70" style="width:80px;"></div>
-        <div class="ifield"><label>Destino Y (0-50)</label><input type="number" id="pedY" min="0" max="50" style="width:80px;"></div>
-        <button id="btnRegistrarPedido">Registrar pedido</button>
-      </div>
-      <div class="modal-alert" id="pedAlert" style="display:none;background:color-mix(in srgb, var(--critical) 12%, transparent);color:var(--critical);border-radius:8px;padding:10px 12px;font-size:12.5px;margin-bottom:14px;"></div>
+        <div class="modal-alert" id="pedAlert" style="display:none;background:color-mix(in srgb, var(--critical) 12%, transparent);color:var(--critical);border-radius:8px;padding:10px 12px;font-size:12.5px;margin-bottom:14px;"></div>
 
-      <div class="inc-form">
-        <div class="ifield" style="flex:1 1 300px;">
-          <label>Carga masiva (una línea por pedido: cliente,cantidad,modalidad,x,y — modalidad: 36/18/12/8/4)</label>
-          <textarea id="pedMasivoTexto" rows="3" style="width:100%;font-family:'IBM Plex Mono',monospace;font-size:12px;padding:7px 9px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--ink);resize:vertical;" placeholder="c2001,10,36,20,20&#10;c2002,5,8,40,30"></textarea>
+        <div class="inc-form">
+          <div class="ifield" style="flex:1 1 300px;">
+            <label>Carga masiva (una línea por pedido: cliente,cantidad,modalidad,x,y — modalidad: 36/18/12/8/4)</label>
+            <textarea id="pedMasivoTexto" rows="3" style="width:100%;font-family:'IBM Plex Mono',monospace;font-size:12px;padding:7px 9px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--ink);resize:vertical;" placeholder="c2001,10,36,20,20&#10;c2002,5,8,40,30"></textarea>
+          </div>
+          <button id="btnRegistrarMasivo">Cargar lote</button>
         </div>
-        <button id="btnRegistrarMasivo">Cargar lote</button>
+        <div class="msub" id="masivoResultado"></div>
       </div>
-      <div class="msub" id="masivoResultado"></div>
+
+      <div id="pedArchivoSection" class="inc-form" style="flex-direction:column;align-items:stretch;">
+        <div class="data-field" style="margin-bottom:0;">
+          <div class="dt">Este escenario recibe los pedidos por archivo de ventas</div>
+          <div class="dd">Histórico y proyectado, formato mensual. Un registro por línea:</div>
+          <div class="dfmt">##d##h##m:posX,posY,cIdCliente,qq,hl<br>11d13h31m:45,43,c9167,12,36</div>
+          <label class="upload-btn" for="fileVentas"><span class="ic">📤</span>Subir archivo de ventas</label>
+          <input type="file" id="fileVentas" accept=".txt" hidden>
+          <div class="data-status" id="statusVentas"></div>
+        </div>
+      </div>
 
       <div class="inc-form" style="padding:10px 16px;">
         <div class="ifield">
@@ -315,10 +312,143 @@
 
       <div class="inc-table-wrap">
         <table class="inc-table">
-          <thead><tr><th>ID</th><th>Cliente</th><th>Cant.</th><th>Modalidad</th><th>Destino</th><th>Hora límite</th><th>Estado</th></tr></thead>
+          <thead><tr><th>ID</th><th>Cliente</th><th>Cant.</th><th>Modalidad</th><th>Destino</th><th>Hora límite</th><th>Estado</th><th>Unidad</th></tr></thead>
           <tbody id="pedTbody"></tbody>
         </table>
       </div>
+    </div>
+
+    <div class="module-panel" id="modFlota">
+      <div class="module-head"><span class="mh-ic">🚚</span><h2>Flota</h2></div>
+      <div class="msub">Lista completa de la flota configurada y el estado actual de cada unidad.</div>
+      <div class="inc-table-wrap">
+        <table class="inc-table">
+          <thead><tr><th>Unidad</th><th>Tipo</th><th>Estado</th><th>Pedido actual</th><th>Carga</th><th>Últimos pedidos</th><th>Posición</th></tr></thead>
+          <tbody id="flotaTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="module-panel" id="modAverias">
+      <div class="module-head"><span class="mh-ic">🛠️</span><h2>Averías</h2></div>
+      <div class="msub" id="averiasMsub">Registrar una avería manualmente sobre una unidad en ruta, y ver el historial de averías de la ejecución.</div>
+
+      <div id="averiasManualSection">
+        <div class="inc-form">
+          <div class="ifield">
+            <label>Unidad</label>
+            <select id="incVehSelect"></select>
+          </div>
+          <div class="ifield">
+            <label>Tipo de avería</label>
+            <select id="incTipoSelect"></select>
+          </div>
+          <button id="btnRegistrarAveria">Registrar avería</button>
+        </div>
+      </div>
+
+      <div id="averiasArchivoSection" class="inc-form" style="flex-direction:column;align-items:stretch;">
+        <div class="data-field" style="margin-bottom:0;">
+          <div class="dt">Este escenario también admite averías por archivo</div>
+          <div class="dd">Una avería por línea, programada a su hora de simulación (unidad TTNN, tipo 1/2/3):</div>
+          <div class="dfmt">##d##h##m:TTNN,tipo<br>01d09h30m:TA01,2</div>
+          <label class="upload-btn" for="fileAverias"><span class="ic">📤</span>Subir archivo de averías</label>
+          <input type="file" id="fileAverias" accept=".txt" hidden>
+          <div class="data-status" id="statusAverias"></div>
+        </div>
+      </div>
+
+      <div class="inc-form" style="padding:10px 16px;">
+        <div class="ifield">
+          <label>Filtrar por tipo</label>
+          <select id="averiasFiltroTipo">
+            <option value="">Todos los tipos</option>
+            <option value="1">🟡 Tipo 1 (leve)</option>
+            <option value="2">🟠 Tipo 2 (moderada)</option>
+            <option value="3">🔴 Tipo 3 (grave)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="inc-table-wrap">
+        <table class="inc-table">
+          <thead><tr><th>Unidad</th><th>Tipo</th><th>Desde</th><th>Hasta</th></tr></thead>
+          <tbody id="averiasTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="module-panel" id="modMantenimiento">
+      <div class="module-head"><span class="mh-ic">🧰</span><h2>Mantenimiento</h2></div>
+      <div class="msub" id="manMsub">Programar mantenimiento preventivo para una unidad disponible, y ver las ventanas de mantenimiento de la ejecución.</div>
+
+      <div id="manManualSection">
+        <div class="inc-form">
+          <div class="ifield">
+            <label>Unidad</label>
+            <select id="manVehSelect"></select>
+          </div>
+          <div class="ifield">
+            <label>Duración (horas)</label>
+            <input type="number" id="manHoras" value="2" min="1" max="24" style="width:80px;">
+          </div>
+          <button id="btnRegistrarMantenimiento">Programar mantenimiento</button>
+        </div>
+      </div>
+
+      <div id="manArchivoSection" class="inc-form" style="flex-direction:column;align-items:stretch;">
+        <div class="data-field" style="margin-bottom:0;">
+          <div class="dt">Este escenario recibe el plan de mantenimiento preventivo por archivo</div>
+          <div class="dd">Archivo <code>mant.preventivo.m1.m2</code> (bimensual). Un registro por línea — <code>aaaammdd:TTNN</code>. La unidad queda fuera de ruta de las 00:00 a las 23:59 de esa fecha:</div>
+          <div class="dfmt">aaaammdd:TTNN<br>20260908:TB03</div>
+          <label class="upload-btn" for="fileMantenimiento"><span class="ic">📤</span>Subir plan de mantenimiento</label>
+          <input type="file" id="fileMantenimiento" accept=".txt" hidden>
+          <div class="data-status" id="statusMantenimiento"></div>
+        </div>
+      </div>
+
+      <div class="inc-table-wrap">
+        <table class="inc-table">
+          <thead><tr><th>Unidad</th><th>Duración</th><th>Desde</th><th>Hasta</th></tr></thead>
+          <tbody id="manTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="module-panel" id="modIncidencias">
+      <div class="module-head"><span class="mh-ic">🚧</span><h2>Bloqueos</h2></div>
+      <div class="msub">Registrar un bloqueo de calle manualmente, y ver el historial de bloqueos de la ejecución.</div>
+
+      <div class="inc-form">
+        <div class="ifield" style="flex:1 1 260px;">
+          <label>Nodos del bloqueo (x1,y1,x2,y2,...)</label>
+          <input type="text" id="incBloqueoNodos" placeholder="31,21,34,21">
+        </div>
+        <div class="ifield">
+          <label>Duración (horas)</label>
+          <input type="number" id="incBloqueoHoras" value="4" min="1" max="72" style="width:80px;">
+        </div>
+        <button id="btnRegistrarBloqueo">Registrar bloqueo</button>
+      </div>
+
+      <div class="inc-form" style="flex-direction:column;align-items:stretch;">
+        <div class="data-field" style="margin-bottom:0;">
+          <div class="dt">O cargar un archivo de bloqueos</div>
+          <div class="dd">Un registro por línea, polígono abierto de nodos:</div>
+          <div class="dfmt">##d##h##m-##d##h##m:x1,y1,x2,y2,...<br>01d06h00m-01d15h00m:31,21,34,21</div>
+          <label class="upload-btn" for="fileBloqueos"><span class="ic">📤</span>Subir archivo de bloqueos</label>
+          <input type="file" id="fileBloqueos" accept=".txt" hidden>
+          <div class="data-status" id="statusBloqueos"></div>
+        </div>
+      </div>
+
+      <div class="inc-table-wrap">
+        <table class="inc-table">
+          <thead><tr><th>Tramo</th><th>Desde</th><th>Hasta</th></tr></thead>
+          <tbody id="incTbody"></tbody>
+        </table>
+      </div>
+    </div>
     </div>
   </main>
 </div>
@@ -399,6 +529,18 @@
   </div>
 </div>
 
+<div class="modal-backdrop" id="fileConfirmModal">
+  <div class="modal">
+    <h3 id="fcTitle">Confirmar carga de archivo</h3>
+    <div class="modal-sub">Vas a cargar <b id="fcCantidad">0</b> registro(s) desde el archivo. Revisa el adelanto antes de aplicarlos a la simulación.</div>
+    <div class="confirm-preview" id="fcPreview"></div>
+    <div class="modal-actions" style="justify-content:space-between;">
+      <button id="btnFileConfirmCancel" class="btn-secondary">Cancelar</button>
+      <button id="btnFileConfirmOk">Confirmar carga</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="resetConfirmModal">
   <div class="modal">
     <h3>¿Reiniciar la simulación?</h3>
@@ -435,11 +577,15 @@
   <script src="js/ui/selection-panel.js"></script>
   <script src="js/ui/map-input.js"></script>
   <script src="js/ui/config-panel.js"></script>
-  <script src="js/ui/data-panel.js"></script>
+  <script src="js/ui/file-upload.js"></script>
   <script src="js/ui/run-controls.js"></script>
-  <script src="js/ui/modules-nav.js"></script>
-  <script src="js/ui/incidencias-module.js"></script>
+  <script src="js/ui/nav-rail.js"></script>
+  <script src="js/ui/averias-module.js"></script>
+  <script src="js/ui/bloqueos-module.js"></script>
+  <script src="js/ui/flota-module.js"></script>
+  <script src="js/ui/mantenimiento-module.js"></script>
   <script src="js/ui/search-filter.js"></script>
+  <script src="js/ui/indicators-panel.js"></script>
   <script src="js/ui/pedidos-module.js"></script>
   <script src="js/main.js"></script>
 </body>

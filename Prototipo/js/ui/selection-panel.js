@@ -1,4 +1,4 @@
-// Panel de detalle al hacer clic en un vehículo/almacén sobre el mapa.
+// Panel de detalle al hacer clic en un vehículo/almacén/bloqueo sobre el mapa, y los helpers de selección compartidos con las tablas de los módulos.
 // Depende de: core/*, ui/render.js
 "use strict";
   /* =================== SELECTION / DETAIL PANEL =================== */
@@ -37,6 +37,7 @@
       case 'atClient': return 'Entregando en destino';
       case 'returning': return 'Retornando a recargar';
       case 'broken': return 'Avería — en espera de reasignación';
+      case 'maintenance': return 'En mantenimiento';
       default: return 'Disponible';
     }
   }
@@ -56,6 +57,11 @@
       const inc = incidents.find(i=>i.type==='falla' && i.vehicleId===v.id);
       rows += `<div class="sel-row"><span>Tipo de avería</span><span>${inc ? inc.falla.label : '—'}</span></div>
         <div class="sel-row"><span>Se repara</span><span>${inc ? fmtTime(inc.until) : '—'}</span></div>`;
+    }
+    if(v.state==='maintenance'){
+      const inc = incidents.find(i=>i.type==='mantenimiento' && i.vehicleId===v.id);
+      rows += `<div class="sel-row"><span>Mantenimiento</span><span>${inc ? inc.horas+' h' : '—'}</span></div>
+        <div class="sel-row"><span>Disponible desde</span><span>${inc ? fmtTime(inc.until) : '—'}</span></div>`;
     }
     if(order){
       rows += `<div class="sel-row"><span>Pedido</span><span>#${order.id}</span></div>
@@ -94,6 +100,35 @@
     rows += `<div class="sel-row"><span>Vehículos con base aquí</span><span>${homeCount}</span></div>
       <div class="sel-row"><span>Despachados hoy</span><span>${wh.dispatchedToday||0}</span></div>`;
     selBody.innerHTML = rows;
+
+    // listas de detalle: pedidos que salen, unidades que salen y unidades que arriban a este almacén
+    const salenPedidos = orders.filter(o=>o.warehouseId===wh.id && o.status==='assigned');
+    const salenUnidades = vehicles.filter(v=>v.home===wh.id && v.state==='toClient');
+    const arribanUnidades = vehicles.filter(v=>v.state==='returning' && v.returnTarget===wh.id);
+    const listHtml = (title, items, renderItem)=> !items.length ? '' : `
+      <div class="sel-row" style="border-top:1px solid var(--border);flex-direction:column;align-items:flex-start;gap:4px;padding-top:8px;">
+        <span style="font-weight:600;color:var(--ink);">${title} (${items.length})</span>
+        <div style="width:100%;display:flex;flex-direction:column;gap:2px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-2);">
+          ${items.slice(0,6).map(renderItem).join('')}
+        </div>
+      </div>`;
+    selBody.innerHTML += listHtml('📦 Pedidos que salen', salenPedidos, o=>`#${o.id} · ${o.clientId} · ${o.qty} uds.`);
+    selBody.innerHTML += listHtml('🚚 Unidades que salen', salenUnidades, v=>`${v.id} (${VEHICLE_TYPES[v.type].label})`);
+    selBody.innerHTML += listHtml('↩️ Unidades que arriban', arribanUnidades, v=>`${v.id} (${VEHICLE_TYPES[v.type].label}) — ${etaText(v)}`);
+  }
+
+  function renderBloqueoDetail(inc){
+    selSwatch.style.background = css('--critical');
+    selSwatch.style.borderRadius = '3px';
+    selName.textContent = '🚧 Bloqueo';
+    const a = inc.nodes[0], b = inc.nodes[inc.nodes.length-1];
+    selSub.textContent = `(${a.x},${a.y}) → (${b.x},${b.y})`;
+    const restante = Math.max(0, inc.until - simMin);
+    selBody.innerHTML = `<div class="sel-row"><span>Tramos afectados</span><span>${inc.nodes.length-1}</span></div>
+      <div class="sel-row"><span>Desde</span><span>${fmtTime(inc.since)}</span></div>
+      <div class="sel-row"><span>Hasta</span><span>${fmtTime(inc.until)}</span></div>
+      <div class="sel-row"><span>Se despeja en</span><span>${Math.round(restante)} min</span></div>
+      <div class="sel-row"><span>Origen</span><span>${inc.fromFile ? 'archivo de bloqueos' : 'registro manual / aleatorio'}</span></div>`;
   }
 
   function renderZoneDetail(name){
@@ -117,6 +152,9 @@
       renderVehicleDetail(v);
     } else if(selected.type==='warehouse'){
       renderWarehouseDetail(WAREHOUSES[selected.id]);
+    } else if(selected.type==='bloqueo'){
+      if(!incidents.includes(selected.ref)){ selected=null; hideSelection(); return; }
+      renderBloqueoDetail(selected.ref);
     } else if(selected.type==='zone'){
       renderZoneDetail(selected.name);
     }
@@ -139,6 +177,16 @@
       }
     }
     if(!hit){
+      for(const inc of incidents){
+        if(inc.type!=='bloqueo') continue;
+        for(let i=0;i<inc.nodes.length-1;i++){
+          const a = S(inc.nodes[i]), b = S(inc.nodes[i+1]);
+          if(distToSegment(sx,sy, a.x,a.y, b.x,b.y) < 9){ hit={type:'bloqueo', ref:inc}; break; }
+        }
+        if(hit) break;
+      }
+    }
+    if(!hit){
       const world = screenToWorld(sx, sy);
       if(world.x>=0 && world.x<=GRID_W && world.y>=0 && world.y<=GRID_H){
         hit = {type:'zone', name: sectorOf(world)};
@@ -146,4 +194,12 @@
     }
     if(hit){ selected = hit; refreshSelectionPanel(); } else { selected=null; hideSelection(); }
   }
-
+  // distancia de un punto a un segmento (para el hit-test de bloqueos en el mapa)
+  function distToSegment(px,py, ax,ay, bx,by){
+    const dx=bx-ax, dy=by-ay;
+    const len2 = dx*dx+dy*dy;
+    let t = len2 ? ((px-ax)*dx+(py-ay)*dy)/len2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    const cx = ax+t*dx, cy = ay+t*dy;
+    return Math.hypot(px-cx, py-cy);
+  }

@@ -1,10 +1,11 @@
-// Movimiento de vehículos a lo largo de su ruta, cambios de estado (idle/toClient/atClient/returning/broken).
+// Movimiento de vehículos a lo largo de su ruta, cambios de estado (idle/toClient/atClient/returning/broken/maintenance).
 // Depende de: core/*, core/grid.js, sim/orders.js
 "use strict";
   /* =================== VEHICLE MOVEMENT =================== */
   function advanceVehicle(v, dtMin){
     if(v.state==='idle') return;
     if(v.state==='broken') return;
+    if(v.state==='maintenance') return;
 
     if(v.state==='atClient'){
       // "se congela" una hora en el cliente antes de quedar libre para el siguiente pedido
@@ -31,7 +32,7 @@
           if(!onTime && scenario==='colapso' && !colapsoTriggered){
             colapsoTriggered = true;
             const pendientes = orders.length;
-            stopRun(`<b>Colapso logístico</b>: el pedido #${order.id} (nodo ${order.pos.x},${order.pos.y}) no se entregó dentro de su plazo. ${pendientes} pedido(s) quedaron sin atender. Ejecución detenida.`);
+            stopRun(`<b>Colapso logístico</b>: el pedido #${order.id} (nodo ${order.pos.x},${order.pos.y}) no se entregó dentro de su plazo. ${pendientes} pedido(s) quedaron sin atender. Ejecución detenida.`, 'critical');
           }
         }
         const wh = pickReturnWarehouse(v.pos);
@@ -77,4 +78,3 @@
       if(v.trail.length > 18) v.trail.shift();
     }
   }
-

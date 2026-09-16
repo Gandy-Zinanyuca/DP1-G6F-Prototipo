@@ -62,9 +62,11 @@ global; si reordenas esas etiquetas, revisa las dependencias.
 > ▶ **Demo:** https://claude.ai/code/artifact/8c1a4e23-c13f-4706-b3ba-516103fa5b7b
 
 La demo es **un único HTML autocontenido** (lo exige la plataforma). El código de `Prototipo/`
-es la versión dividida por responsabilidad; la sincronización con la demo es **manual** y hoy
-la demo va por delante (códigos `TTNN`, pestañas del panel, carga de averías/mantenimiento por
-archivo, plan de mantenimiento preventivo). Ver `../../prototipos/checklist-paqrap-revision.md`.
+es esa misma versión dividida por responsabilidad, re-sincronizada el 2026-09-15. La
+sincronización sigue siendo **manual**: cuando haya cambios de fondo en la demo, hay que
+volver a repartirlos entre los archivos de `js/` (o volver a generarlos con el mismo criterio:
+un archivo por sección `/* === … === */` del `<script>` de la demo). Ver
+`../../prototipos/checklist-paqrap-revision.md`.
 
 ---
 
@@ -113,11 +115,14 @@ DP1-G6F-Prototipo/
 │  ├─ css/styles.css        tokens de color claro/oscuro, layout, componentes
 │  └─ js/
 │     ├─ core/   config · state · time · grid (BFS) · log
-│     ├─ data/   file-io (parseo de archivos del curso)
-│     ├─ sim/    orders · blockages · incidents · vehicles · shift-restock · sim-step
+│     ├─ data/   file-io (parsea ventas, bloqueos, averías y plan de mantenimiento)
+│     ├─ sim/    orders · blockages · incidents (averías + mantenimiento) · vehicles ·
+│     │          shift-restock · sim-step
 │     ├─ ui/     render · dom-update · selection-panel · map-input · config-panel ·
-│     │          data-panel · run-controls · modules-nav · incidencias-module ·
-│     │          search-filter · pedidos-module
+│     │          file-upload (genérico, con modal de confirmación) · run-controls ·
+│     │          nav-rail · averias-module · bloqueos-module · flota-module ·
+│     │          mantenimiento-module · search-filter · indicators-panel ·
+│     │          pedidos-module
 │     └─ main.js  bucle de animación + arranque (último)
 └─ algoritmos/
    ├─ DISENO-ALGORITMOS.md

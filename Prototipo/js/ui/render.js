@@ -1,4 +1,4 @@
-// Dibuja el mapa en <canvas> (fondo, calles, almacenes, vehículos, pedidos, bloqueos, selección).
+// Dibuja el mapa en <canvas> (fondo, calles, almacenes, vehículos, pedidos, bloqueos, rutas, selección).
 // Depende de: core/*, sim/*
 "use strict";
   /* =================== CANVAS RENDER =================== */
@@ -110,47 +110,63 @@
   function drawWarehouses(){
     Object.values(WAREHOUSES).forEach(wh=>{
       const p = S(wh.pos);
-      const r = wh.infinite ? 11 : 9.5;
+      const r = wh.infinite ? 13 : 11.5;
+      const levelColor = css('--'+warehouseLevel(wh));
+      const headCy = p.y - r*1.7;
+
+      // halo de fondo, para que el almacén contraste con las calles/manzanas y se note desde lejos
+      ctx.beginPath(); ctx.arc(p.x, headCy, r+7, 0, Math.PI*2);
+      ctx.fillStyle = color_mix_fallback('--surface', 0.9); ctx.fill();
+
+      // anillo semáforo: verde/ámbar/rojo según el nivel de stock (infinito = siempre verde)
+      ctx.beginPath(); ctx.arc(p.x, headCy, r+4, 0, Math.PI*2);
+      ctx.strokeStyle = levelColor; ctx.lineWidth = 3; ctx.stroke();
 
       ctx.save();
-      ctx.shadowColor = 'rgba(0,0,0,.28)'; ctx.shadowBlur = 5; ctx.shadowOffsetY = 2;
+      ctx.shadowColor = 'rgba(0,0,0,.3)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 2;
       pinPath(ctx, p.x, p.y, r);
       ctx.fillStyle = css('--accent');
       ctx.fill();
       ctx.restore();
 
-      ctx.strokeStyle = css('--surface'); ctx.lineWidth = 1.6;
+      ctx.strokeStyle = css('--surface'); ctx.lineWidth = 1.8;
       pinPath(ctx, p.x, p.y, r);
       ctx.stroke();
 
-      // package glyph inside the pin head
-      ctx.strokeStyle = css('--surface'); ctx.lineWidth = 1.3;
-      ctx.beginPath();
-      const cy = p.y - r*1.7;
-      ctx.moveTo(p.x-3.5, cy-2.4); ctx.lineTo(p.x, cy-4.2); ctx.lineTo(p.x+3.5, cy-2.4);
-      ctx.lineTo(p.x+3.5, cy+2); ctx.lineTo(p.x, cy+3.6); ctx.lineTo(p.x-3.5, cy+2); ctx.closePath();
-      ctx.stroke();
+      // ícono de almacén (estantería) dentro de la cabeza del pin — distinto del glifo genérico de paquete
+      ctx.strokeStyle = css('--surface'); ctx.lineWidth = 1.4; ctx.lineJoin='round';
+      ctx.strokeRect(p.x-4.5, headCy-4.5, 9, 9);
+      ctx.beginPath(); ctx.moveTo(p.x-4.5, headCy); ctx.lineTo(p.x+4.5, headCy); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(p.x, headCy-4.5); ctx.lineTo(p.x, headCy+4.5); ctx.stroke();
 
-      if(!wh.infinite){
-        const pct = wh.stock/wh.capacity;
-        const gw = 26, gx = p.x-gw/2, gy = p.y+7;
-        ctx.fillStyle = css('--surface');
-        roundedRect(gx, gy, gw, 4, 2); ctx.fill();
-        ctx.fillStyle = css('--'+warehouseLevel(wh));
-        roundedRect(gx, gy, gw*pct, 4, 2); ctx.fill();
-      }
-
-      ctx.font = "600 11px 'Sora', sans-serif";
+      ctx.font = "700 11px 'Sora', sans-serif";
       ctx.fillStyle = css('--ink');
       ctx.textAlign = 'center';
-      ctx.fillText(wh.name, p.x, p.y - r*3.1);
+      ctx.fillText(wh.name, p.x, p.y - r*3.35);
+
+      // etiqueta con el stock, visible siempre en el mapa (no solo al pasar el mouse)
+      const stockLabel = wh.infinite ? 'Stock ∞' : `${wh.stock} / ${wh.capacity}`;
+      ctx.font = "600 10px 'IBM Plex Mono', monospace";
+      const stockY = p.y - r*2.15;
+      const stockW = ctx.measureText(stockLabel).width + 10;
+      ctx.fillStyle = levelColor;
+      if(ctx.roundRect){ ctx.beginPath(); ctx.roundRect(p.x-stockW/2, stockY-8, stockW, 16, 4); ctx.fill(); }
+      else ctx.fillRect(p.x-stockW/2, stockY-8, stockW, 16);
+      ctx.fillStyle = '#fff'; ctx.textBaseline = 'middle';
+      ctx.fillText(stockLabel, p.x, stockY);
+      ctx.textBaseline = 'alphabetic';
 
       if(selected && selected.type==='warehouse' && selected.id===wh.id){
         ctx.strokeStyle = css('--accent'); ctx.lineWidth = 2; ctx.setLineDash([3,3]);
-        ctx.beginPath(); ctx.arc(p.x, p.y-r*1.7, r+7, 0, Math.PI*2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(p.x, headCy, r+11, 0, Math.PI*2); ctx.stroke();
         ctx.setLineDash([]);
       }
     });
+  }
+  // aproximación de color-mix para <canvas> (color-mix() de CSS no aplica a fillStyle de canvas)
+  function color_mix_fallback(varName, alpha){
+    const hex = css(varName);
+    return hex + Math.round(alpha*255).toString(16).padStart(2,'0');
   }
 
   function priorityColor(o){
@@ -196,15 +212,46 @@
   function drawBlockages(){
     incidents.forEach(inc=>{
       if(inc.type!=='bloqueo') return;
-      ctx.strokeStyle = css('--critical'); ctx.lineWidth = 4; ctx.lineCap = 'round';
+      if(selected && selected.type==='bloqueo' && selected.ref===inc){
+        ctx.save();
+        ctx.strokeStyle = css('--accent'); ctx.lineWidth = 9; ctx.lineCap='round'; ctx.globalAlpha=0.35;
+        ctx.beginPath();
+        inc.nodes.forEach((n,i)=>{ const p=S(n); if(i===0) ctx.moveTo(p.x,p.y); else ctx.lineTo(p.x,p.y); });
+        ctx.stroke();
+        ctx.restore();
+      }
+      ctx.strokeStyle = css('--critical'); ctx.lineWidth = 5; ctx.lineCap = 'round';
       ctx.beginPath();
       inc.nodes.forEach((n,i)=>{ const p=S(n); if(i===0) ctx.moveTo(p.x,p.y); else ctx.lineTo(p.x,p.y); });
       ctx.stroke();
+      // franja diagonal tipo "cinta de peligro", para que el tramo se lea como bloqueo y no solo como una calle roja
+      ctx.save();
+      ctx.strokeStyle = css('--surface'); ctx.lineWidth = 1.4; ctx.setLineDash([4,5]);
+      ctx.beginPath();
+      inc.nodes.forEach((n,i)=>{ const p=S(n); if(i===0) ctx.moveTo(p.x,p.y); else ctx.lineTo(p.x,p.y); });
+      ctx.stroke();
+      ctx.restore();
       ctx.fillStyle = css('--critical');
       [inc.nodes[0], inc.nodes[inc.nodes.length-1]].forEach(n=>{
         const p = S(n);
-        ctx.beginPath(); ctx.arc(p.x,p.y,3.5,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(p.x,p.y,4,0,Math.PI*2); ctx.fill();
       });
+
+      // etiqueta explícita "Bloqueo" en el punto medio del tramo — no solo un color, un texto
+      const mid = inc.nodes[Math.floor(inc.nodes.length/2)];
+      const pm = S(mid);
+      const label = '🚧 Bloqueo';
+      ctx.save();
+      ctx.font = "600 10.5px 'Sora', sans-serif";
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const padX = 6, labelY = pm.y - 20;
+      const labelW = ctx.measureText(label).width + padX*2;
+      ctx.fillStyle = css('--critical');
+      if(ctx.roundRect){ ctx.beginPath(); ctx.roundRect(pm.x-labelW/2, labelY-9, labelW, 18, 5); ctx.fill(); }
+      else ctx.fillRect(pm.x-labelW/2, labelY-9, labelW, 18);
+      ctx.fillStyle = '#fff';
+      ctx.fillText(label, pm.x, labelY);
+      ctx.restore();
     });
   }
 
@@ -231,13 +278,24 @@
       if(!v.path || v.pathIdx>=v.path.length-1 || !typeFilter[v.type]) return;
       if(v.state!=='toClient' && v.state!=='returning') return;
       const col = css(VEHICLE_TYPES[v.type].color);
-      ctx.strokeStyle = col; ctx.lineWidth = 1.4; ctx.globalAlpha = 0.45;
-      ctx.setLineDash([1,5]); ctx.lineCap = 'round';
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      const p0 = S(v.pos);
+      const pathPts = [p0];
+      for(let i=v.pathIdx+1; i<v.path.length; i++) pathPts.push(S(v.path[i]));
+
+      // halo claro debajo, para que la línea de color se distinga del fondo de la calle
+      ctx.strokeStyle = css('--surface'); ctx.lineWidth = 4.5; ctx.globalAlpha = 0.85;
       ctx.beginPath();
-      const p0 = S(v.pos); ctx.moveTo(p0.x,p0.y);
-      for(let i=v.pathIdx+1; i<v.path.length; i++){ const p=S(v.path[i]); ctx.lineTo(p.x,p.y); }
+      pathPts.forEach((p,i)=> i===0 ? ctx.moveTo(p.x,p.y) : ctx.lineTo(p.x,p.y));
       ctx.stroke();
-      ctx.setLineDash([]); ctx.globalAlpha = 1;
+
+      // línea de ruta en el color del tipo de vehículo, bien sólida y visible
+      ctx.strokeStyle = col; ctx.lineWidth = 2.6; ctx.globalAlpha = 1;
+      ctx.setLineDash([7,4]);
+      ctx.beginPath();
+      pathPts.forEach((p,i)=> i===0 ? ctx.moveTo(p.x,p.y) : ctx.lineTo(p.x,p.y));
+      ctx.stroke();
+      ctx.setLineDash([]);
     });
   }
 
@@ -249,28 +307,88 @@
       const t = VEHICLE_TYPES[v.type];
       const col = css(t.color);
 
-      if((selected && selected.type==='vehicle' && selected.id===v.id) || v.state==='broken'){
-        ctx.strokeStyle = css(v.state==='broken' ? '--critical' : '--accent');
+      if((selected && selected.type==='vehicle' && selected.id===v.id) || v.state==='broken' || v.state==='maintenance'){
+        let ringColor = '--accent';
+        if(v.state==='broken'){
+          const inc = incidents.find(i=>i.type==='falla' && i.vehicleId===v.id);
+          ringColor = (inc && inc.falla.color) || '--critical'; // color propio de cada tipo de avería (1/2/3)
+        } else if(v.state==='maintenance'){
+          ringColor = '--ink-3';
+        }
+        ctx.strokeStyle = css(ringColor);
         ctx.lineWidth = 2; ctx.setLineDash([3,3]);
         ctx.beginPath(); ctx.arc(p.x, p.y, 14, 0, Math.PI*2); ctx.stroke();
         ctx.setLineDash([]);
+
+        // ícono de tipo de avería, junto al vehículo, para diferenciar tipo 1/2/3 de un vistazo
+        if(v.state==='broken'){
+          const inc = incidents.find(i=>i.type==='falla' && i.vehicleId===v.id);
+          if(inc){
+            ctx.font = '11px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+            ctx.fillText(inc.falla.icon, p.x+12, p.y-12);
+          }
+        }
       }
+
+      // disco de fondo siempre opaco detrás del vehículo: nada (rutas, bloqueos, otros vehículos) debe
+      // restarle visibilidad — el vehículo en movimiento es el elemento más importante del mapa
+      ctx.beginPath(); ctx.arc(p.x, p.y, 9.5, 0, Math.PI*2);
+      ctx.fillStyle = css('--surface'); ctx.fill();
 
       ctx.save();
       ctx.shadowColor='rgba(0,0,0,.28)'; ctx.shadowBlur=3; ctx.shadowOffsetY=1;
       ctx.font = "16px sans-serif";
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(t.emoji, p.x, p.y);
+      // alinea el ícono con el tramo que recorre, sin dejarlo nunca "al revés": si la dirección apunta
+      // hacia la izquierda de la pantalla, se refleja en espejo en vez de rotar más allá de ±90°
+      if((v.state==='toClient' || v.state==='returning') && typeof v.heading==='number'){
+        let dx = Math.cos(v.heading), dy = -Math.sin(v.heading); // mundo (Y arriba) -> pantalla (Y abajo)
+        const flip = dx < 0;
+        if(flip) dx = -dx;
+        const screenAngle = Math.atan2(dy, dx); // siempre queda en (-90°, 90°]
+        ctx.translate(p.x, p.y);
+        if(flip) ctx.scale(-1, 1);
+        ctx.rotate(screenAngle);
+        ctx.fillText(t.emoji, 0, 0);
+      } else {
+        ctx.fillText(t.emoji, p.x, p.y);
+      }
       ctx.restore();
 
       if(v.order){
         const order = orders.find(o=>o.id===v.order);
         if(order){
           const frac = Math.min(1, order.qty / v.capacity);
+          const loadColor = css('--'+riskLevel(frac*100)); // semáforo de utilización de carga
           ctx.fillStyle = css('--surface');
           ctx.fillRect(p.x-8, p.y+9, 16, 3);
-          ctx.fillStyle = col;
+          ctx.fillStyle = loadColor;
           ctx.fillRect(p.x-8, p.y+9, 16*frac, 3);
+          // lectura numérica de la carga (paquetes / capacidad)
+          ctx.save();
+          ctx.font = "8px 'IBM Plex Mono', monospace";
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillStyle = css('--ink-2');
+          ctx.fillText(`${order.qty}/${v.capacity}`, p.x, p.y+18);
+          ctx.restore();
+
+          // código del pedido que se está atendiendo, visible encima del vehículo
+          const codeLabel = '#'+order.id;
+          ctx.save();
+          ctx.font = "9px 'IBM Plex Mono', monospace";
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          const labelY = p.y-15;
+          const labelW = ctx.measureText(codeLabel).width + 8;
+          ctx.fillStyle = css('--surface');
+          ctx.globalAlpha = 0.92;
+          if(ctx.roundRect){ ctx.beginPath(); ctx.roundRect(p.x-labelW/2, labelY-7, labelW, 14, 4); ctx.fill(); }
+          else ctx.fillRect(p.x-labelW/2, labelY-7, labelW, 14);
+          ctx.globalAlpha = 1;
+          ctx.strokeStyle = css('--border'); ctx.lineWidth = 1;
+          if(ctx.roundRect) ctx.stroke();
+          ctx.fillStyle = css('--ink');
+          ctx.fillText(codeLabel, p.x, labelY);
+          ctx.restore();
         }
       }
     });
@@ -287,7 +405,7 @@
     const v = viewRect();
     ctx.drawImage(bgCanvas, v.srcX*DPR, v.srcY*DPR, v.vw*DPR, v.vh*DPR, 0, 0, W, H);
     drawBlockages();
-    drawRoutes();
+    if(showRoutes) drawRoutes();
     drawTrails();
     drawWarehouses();
     drawOrders();
@@ -296,4 +414,3 @@
     updateScaleBar();
     if(selected) refreshSelectionPanel();
   }
-

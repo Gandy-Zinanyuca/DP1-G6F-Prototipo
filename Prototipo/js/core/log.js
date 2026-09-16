@@ -1,5 +1,5 @@
-// Bitácora de eventos in-app (addLog) que alimenta el panel de indicadores.
-// Depende de: core/state.js
+// Bitácora de eventos in-app (addLog) que alimenta el panel de indicadores y dispara el badge de la pestaña Registro.
+// Depende de: core/state.js, core/time.js
 "use strict";
   /* =================== LOG =================== */
   const logListEl = document.getElementById('logList');
@@ -11,5 +11,5 @@
     item.innerHTML = `<span class="log-dot" style="background:${color}"></span><span class="log-time">D${cycleDay} · ${fmtTime(simMin)}</span><span class="log-text">${text}</span>`;
     logListEl.appendChild(item);
     while(logListEl.children.length > 60){ logListEl.removeChild(logListEl.firstChild); }
+    if(typeof noteNewLog === 'function') noteNewLog();
   }
-
