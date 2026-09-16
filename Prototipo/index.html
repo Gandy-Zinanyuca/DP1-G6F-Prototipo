@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<title>PaqRap en Ruta</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="app">
+  <div class="toast-banner" id="toastBanner"></div>
+  <header>
+    <div class="header-row header-row-top">
+      <div class="brand">
+        <div class="brand-mark">
+          <svg viewBox="0 0 24 24"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/></svg>
+        </div>
+        <div class="brand-text">
+          <b>PaqRap</b>
+          <span>Centro de operaciones</span>
+        </div>
+      </div>
+
+      <div class="scenario-tabs" id="scenarioTabs">
+        <button class="scenario-tab" data-esc="diaria">Operación día a día</button>
+        <button class="scenario-tab" data-esc="5d">Simulación 5D</button>
+        <button class="scenario-tab" data-esc="colapso">Hasta el colapso</button>
+      </div>
+
+      <div class="header-spacer"></div>
+
+      <div class="sim-controls">
+        <button class="startstop-btn" id="btnStartStop">
+          <span id="startStopIcon">▶</span><span id="startStopLabel">Iniciar</span>
+        </button>
+        <button class="reset-btn" id="btnReiniciar" title="Detener y volver a elegir escenario, flota y fecha de inicio">
+          <span>↺</span><span>Reiniciar</span>
+        </button>
+        <button class="icon-btn theme-toggle" id="themeToggle" title="Cambiar entre modo claro y oscuro" aria-label="Cambiar entre modo claro y oscuro">
+          <svg class="btn-ic theme-ic-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2.5M12 19v2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M2.5 12H5M19 12h2.5M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8"/></svg>
+          <svg class="btn-ic theme-ic-moon" viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.7 6.7 0 0 0 10.5 10.5z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="header-row header-row-status">
+      <div class="hdr-cluster">
+        <div class="clock-block" title="Fecha y hora del momento que se está simulando">
+          <span class="day" id="dateLabel">01/09/2026</span>
+          <span class="time" id="timeLabel">00:00:00</span>
+          <span class="day" id="dayLabel">Día 1</span>
+        </div>
+        <div class="hdr-cluster-div"></div>
+        <div class="duration-chip" title="Tiempo simulado transcurrido desde el inicio de la corrida (dd hh:mm:ss)">
+          Sim.: <b id="simElapsedLabel">00d 00:00:00</b>
+        </div>
+      </div>
+
+      <div class="clock-real" title="Fecha y hora reales de tu equipo (no simuladas)">
+        Hora real <b id="realTimeLabel">00:00:00</b>
+      </div>
+
+      <div class="duration-chip" title="Tiempo real transcurrido desde que se inició la ejecución">
+        Dur.: <b id="durationLabel">00:00:00</b>
+      </div>
+
+      <div class="shift-chip">
+        <span class="label">Turno actual</span>
+        <span class="value"><span class="shift-swatch" id="shiftSwatch"></span><span id="shiftLabel">—</span></span>
+      </div>
+      <div id="mealTag" class="meal-tag" style="visibility:hidden;">Refrigerio en curso</div>
+
+      <div class="header-spacer"></div>
+
+      <div class="hrs-zone hrs-right">
+        <div class="hdr-cluster" style="border-radius:10px;padding:3px;gap:3px;">
+          <div class="cfg-wrap">
+            <button class="cfg-btn" id="cfgBtn" title="Configurar semáforo" aria-label="Configurar semáforo">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1z"/></svg>
+            </button>
+            <div class="cfg-panel" id="cfgPanel">
+              <div class="cfg-title">Semáforo de cumplimiento e inventario</div>
+              <div class="cfg-desc">Define los umbrales (%) que colorean pedidos, almacenes e indicadores en el mapa y el panel de KPIs.</div>
+              <div class="cfg-field">
+                <label>Verde si el valor es ≥ <b id="cfgGreenVal">70</b>%</label>
+                <input type="range" id="cfgGreen" min="30" max="95" value="70" step="1">
+              </div>
+              <div class="cfg-field">
+                <label>Ámbar si el valor es ≥ <b id="cfgAmberVal">35</b>%</label>
+                <input type="range" id="cfgAmber" min="5" max="65" value="35" step="1">
+              </div>
+              <div class="cfg-legend">
+                <span><i style="background:var(--good)"></i>Bien</span>
+                <span><i style="background:var(--warning)"></i>En riesgo</span>
+                <span><i style="background:var(--critical)"></i>Crítico</span>
+              </div>
+            </div>
+          </div>
+          <button class="data-btn" id="sidebarToggle" title="Mostrar/ocultar panel de indicadores y registro de eventos" style="border:none;background:transparent;"><svg class="btn-ic" viewBox="0 0 24 24"><rect x="3" y="12" width="4" height="8" rx="1"/><rect x="10" y="7" width="4" height="13" rx="1"/><rect x="17" y="3" width="4" height="17" rx="1"/></svg>Indicadores y Registro de Eventos</button>
+        </div>
+
+        <div class="user-chip" title="Sesión — PaqRap Centro de Operaciones">
+          <span class="avatar">GZ</span>
+          <span class="u-text">
+            <span class="u-name">Gandy Z.</span>
+            <span class="u-role">Operador</span>
+          </span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <nav class="nav-rail" id="navRail">
+      <button class="nav-item active" data-mod="mapa"><span class="ic"><svg viewBox="0 0 24 24"><path d="M9 4L3 6.5v14L9 18l6 2.5 6-2.5v-14L15 6.5 9 4z"/><path d="M9 4v14"/><path d="M15 6.5v14"/></svg></span>Mapa</button>
+      <button class="nav-item" data-mod="pedidos"><span class="ic"><svg viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v9l9 5 9-5V8"/><path d="M12 13v9"/></svg></span>Pedidos</button>
+      <button class="nav-item" data-mod="flota"><span class="ic"><svg viewBox="0 0 24 24"><path d="M3 17V8a1 1 0 0 1 1-1h9v10"/><path d="M13 10h4l4 4v3h-2"/><circle cx="7.5" cy="17.5" r="2"/><circle cx="17.5" cy="17.5" r="2"/></svg></span>Flota</button>
+      <button class="nav-item" data-mod="averias"><span class="ic"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 1-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 1 5.4-5.4l-2.6 2.6-2-2 2.6-2.6z"/></svg></span>Averías</button>
+      <button class="nav-item" data-mod="mantenimiento"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 4v2.2M12 17.8V20M4 12h2.2M17.8 12H20M6.3 6.3l1.6 1.6M16.1 16.1l1.6 1.6M6.3 17.7l1.6-1.6M16.1 7.9l1.6-1.6"/></svg></span>Manten.</button>
+      <button class="nav-item" data-mod="incidencias"><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 3l9 16H3L12 3z"/><path d="M12 10v4"/><circle cx="12" cy="17" r=".6" fill="currentColor" stroke="none"/></svg></span>Bloqueos</button>
+    </nav>
+    <div class="main-content">
+    <div class="map-wrap">
+      <div class="map-canvas-area">
+      <canvas id="mapCanvas"></canvas>
+
+      <button class="map-overlay map-search-btn" id="searchToggle" title="Buscar unidad o almacén, filtrar por tipo" aria-label="Buscar unidad o almacén, filtrar por tipo">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      </button>
+
+      <div class="map-overlay search-ctl" id="searchCtl">
+        <input type="text" id="vehSearch" placeholder="Buscar unidad, ej. TA03">
+        <div class="found" id="vehSearchFound"></div>
+        <div class="type-filters">
+          <button class="active" data-type="auto"><span class="ic" style="color:var(--veh-car)"><svg viewBox="0 0 24 24"><path d="M5 16l1.5-5.5A2 2 0 0 1 8.4 9h7.2a2 2 0 0 1 1.9 1.5L19 16"/><path d="M3 16h18v3a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H6v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-3z"/><circle cx="7.5" cy="16" r="1.5"/><circle cx="16.5" cy="16" r="1.5"/></svg></span>Auto</button>
+          <button class="active" data-type="moto"><span class="ic" style="color:var(--veh-moto)"><svg viewBox="0 0 24 24"><circle cx="5.5" cy="18" r="2.7"/><circle cx="18" cy="18" r="2.7"/><path d="M2.8 18h2.2"/><path d="M5.5 18l2-6.5c.5-1.5 1.8-2.5 3.4-2.5h3.6c1.3 0 2.4.8 2.8 2l2.7 7"/><path d="M11 15h4.2"/><path d="M13.2 9V7.4h2.3"/></svg></span>Moto</button>
+          <button class="active" data-type="bici"><span class="ic" style="color:var(--veh-bike)"><svg viewBox="0 0 24 24"><circle cx="6" cy="17.5" r="3.2"/><circle cx="18" cy="17.5" r="3.2"/><path d="M6 17.5l6-9.5h3.5"/><path d="M6 17.5h10.5"/><path d="M12 8l4.5 9.5"/><path d="M14.3 9h2.4"/></svg></span>Bici</button>
+        </div>
+        <input type="text" id="whSearch" placeholder="Buscar almacén, ej. Este" style="margin-top:8px;">
+        <div class="found" id="whSearchFound"></div>
+        <button id="toggleRoutes" class="active" style="width:100%;margin-top:4px;font-size:10.5px;font-weight:600;padding:6px;border-radius:7px;border:1px solid var(--border);background:var(--accent-soft);color:var(--accent);cursor:pointer;font-family:'Sora',sans-serif;">┄ Mostrar rutas asignadas</button>
+      </div>
+
+      <div class="map-overlay scale-bar">
+        <i id="scaleBarLine"></i>
+        <span>5 km</span>
+      </div>
+
+      <div class="zoom-ctl">
+        <button id="zoomIn" title="Acercar" aria-label="Acercar">+</button>
+        <div class="zdiv"></div>
+        <button id="zoomOut" title="Alejar" aria-label="Alejar">–</button>
+        <div class="zdiv"></div>
+        <button id="zoomReset" title="Restablecer vista" aria-label="Restablecer vista">⟳</button>
+      </div>
+
+      <div class="selection-panel" id="selectionPanel">
+        <div class="sel-top">
+          <div class="sel-title">
+            <span class="sel-swatch" id="selSwatch"></span>
+            <div>
+              <div class="sel-name" id="selName">—</div>
+              <div class="sel-sub" id="selSub">—</div>
+            </div>
+          </div>
+          <button class="sel-close" id="selClose" aria-label="Cerrar">✕</button>
+        </div>
+        <div id="selBody"></div>
+      </div>
+      </div>
+
+      <div class="legend-bar">
+        <div class="lb-col">
+          <div class="lb-col-title">Retícula urbana</div>
+          <div class="lb-col-body">
+            <span class="lb-item">70 km × 50 km · nodos cada 1 km</span>
+          </div>
+        </div>
+
+        <div class="lb-div"></div>
+
+        <div class="lb-col">
+          <div class="lb-col-title">Resumen de flota</div>
+          <div class="lb-col-body">
+            <span class="lb-item" style="color:var(--veh-car)"><svg viewBox="0 0 24 24"><path d="M5 16l1.5-5.5A2 2 0 0 1 8.4 9h7.2a2 2 0 0 1 1.9 1.5L19 16"/><path d="M3 16h18v3a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H6v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-3z"/><circle cx="7.5" cy="16" r="1.5"/><circle cx="16.5" cy="16" r="1.5"/></svg> <b id="legCarCount">0/6</b><span class="lb-sub">autos</span></span>
+            <span class="lb-item" style="color:var(--veh-moto)"><svg viewBox="0 0 24 24"><circle cx="5.5" cy="18" r="2.7"/><circle cx="18" cy="18" r="2.7"/><path d="M2.8 18h2.2"/><path d="M5.5 18l2-6.5c.5-1.5 1.8-2.5 3.4-2.5h3.6c1.3 0 2.4.8 2.8 2l2.7 7"/><path d="M11 15h4.2"/><path d="M13.2 9V7.4h2.3"/></svg> <b id="legMotoCount">0/10</b><span class="lb-sub">motos</span></span>
+            <span class="lb-item" style="color:var(--veh-bike)"><svg viewBox="0 0 24 24"><circle cx="6" cy="17.5" r="3.2"/><circle cx="18" cy="17.5" r="3.2"/><path d="M6 17.5l6-9.5h3.5"/><path d="M6 17.5h10.5"/><path d="M12 8l4.5 9.5"/><path d="M14.3 9h2.4"/></svg> <b id="legBikeCount">0/8</b><span class="lb-sub">bicis</span></span>
+          </div>
+        </div>
+
+        <div class="lb-div"></div>
+
+        <div class="lb-col">
+          <div class="lb-col-title">Estado del sistema</div>
+          <div class="lb-col-body">
+            <span class="lb-item"><b id="legPackages">0</b><span class="lb-sub">paquetes en tránsito</span></span>
+            <span class="lb-item"><b id="legAlerts" style="color:var(--critical)">0</b><span class="lb-sub">alertas activas</span></span>
+          </div>
+        </div>
+
+        <div class="lb-div"></div>
+
+        <div class="lb-col lb-col-wide">
+          <div class="lb-col-title">Leyenda</div>
+          <div class="lb-col-body">
+            <span class="lb-item"><span class="lb-dots"><i style="background:var(--good)"></i><i style="background:var(--warning)"></i><i style="background:var(--critical)"></i></span> cumplimiento del pedido</span>
+            <span class="lb-item">┄ ruta asignada</span>
+            <span class="lb-item">▬ calle bloqueada</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="sidebar" id="sidebarPanel">
+      <div class="sel-top" style="padding:12px 16px 0;">
+        <span class="sb-heading" style="margin:0;">Panel de Indicadores y Registro de Eventos</span>
+        <button class="sel-close" id="sidebarClose" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="sidebar-tabs" role="tablist">
+        <button class="sidebar-tab active" id="sbTabMetrics" data-tab="metrics" role="tab" aria-selected="true"><svg class="btn-ic" viewBox="0 0 24 24"><rect x="3" y="12" width="4" height="8" rx="1"/><rect x="10" y="7" width="4" height="13" rx="1"/><rect x="17" y="3" width="4" height="17" rx="1"/></svg>Indicadores</button>
+        <button class="sidebar-tab" id="sbTabLog" data-tab="log" role="tab" aria-selected="false"><svg class="btn-ic" viewBox="0 0 24 24"><path d="M4 4h13l3 3v13H4z"/><path d="M8 10h8M8 14h8M8 18h5"/></svg>Registro<span class="badge" id="logBadge" style="display:none;">0</span></button>
+      </div>
+      <div class="sidebar-scroll active" data-tabpanel="metrics">
+      <div class="sb-section">
+        <div class="sb-heading">Desempeño</div>
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-top"><span class="kpi-label">Pedidos activos</span><span class="kpi-ic"><svg viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v9l9 5 9-5V8"/></svg></span></div>
+            <span class="kpi-value" id="kpiActive">0</span>
+            <span class="kpi-sub" id="kpiActiveSub">en tránsito</span>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-top"><span class="kpi-label">Cumplimiento SLA</span><span class="kpi-ic good"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span></div>
+            <span class="kpi-value good" id="kpiOnTime">—</span>
+            <span class="kpi-sub" id="kpiOnTimeSub">entregas a tiempo</span>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-top"><span class="kpi-label">Entregados hoy</span><span class="kpi-ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18"/><path d="M8 14l2.5 2.5L16 11"/></svg></span></div>
+            <span class="kpi-value" id="kpiToday">0</span>
+            <span class="kpi-sub" id="kpiTodaySub">día en curso</span>
+          </div>
+          <div class="kpi-card wide">
+            <div class="kpi-top"><span class="kpi-label">Incidencias activas</span><span class="kpi-ic warning"><svg viewBox="0 0 24 24"><path d="M12 3l9 16H3L12 3z"/><path d="M12 10v4"/></svg></span></div>
+            <span class="kpi-value warning" id="kpiIncidents">0</span>
+            <span class="kpi-sub" id="kpiIncidentsSub">bloqueos y averías en curso</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="sb-section">
+        <div class="sb-heading">Pedidos por tipo</div>
+        <div id="pedTipoRows"></div>
+      </div>
+
+      <div class="sb-section">
+        <div class="sb-heading">Flota</div>
+        <div id="flotaRows"></div>
+      </div>
+
+      <div class="sb-section">
+        <div class="sb-heading">Cumplimiento por prioridad</div>
+        <div id="prioRows"></div>
+      </div>
+
+      <div class="sb-section">
+        <div class="sb-heading">Almacenes</div>
+        <div class="wh-card" data-wh="central" style="cursor:pointer;" title="Ver en el mapa">
+          <div class="wh-top"><span class="wh-name">Almacén Central</span><span class="wh-inf">stock ilimitado · nodo (27,14)</span></div>
+          <div class="wh-gauge"><i style="width:100%;background:var(--accent);"></i></div>
+        </div>
+        <div class="wh-card" data-wh="noroeste" style="cursor:pointer;" title="Ver en el mapa">
+          <div class="wh-top"><span class="wh-name" id="whNoroesteName">Nor-Oeste</span><span class="wh-val" id="whNoroesteVal">0 / 1000</span></div>
+          <div class="wh-gauge"><i id="whNoroesteBar" style="width:0%;"></i></div>
+          <div class="wh-inf" style="margin-top:4px;">nodo (12,38)</div>
+        </div>
+        <div class="wh-card" data-wh="este" style="cursor:pointer;" title="Ver en el mapa">
+          <div class="wh-top"><span class="wh-name" id="whEsteName">Este</span><span class="wh-val" id="whEsteVal">0 / 1000</span></div>
+          <div class="wh-gauge"><i id="whEsteBar" style="width:0%;"></i></div>
+          <div class="wh-inf" style="margin-top:4px;">nodo (57,27)</div>
+        </div>
+      </div>
+
+      </div>
+      <div class="sidebar-log" data-tabpanel="log">
+        <div class="sb-heading">Registro de eventos</div>
+        <div class="log-list" id="logList"></div>
+      </div>
+    </aside>
+
+    <div class="module-panel" id="modPedidos">
+      <div class="module-head"><span class="mh-ic"><svg viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v9l9 5 9-5V8"/><path d="M12 13v9"/></svg></span><h2>Registro de pedidos</h2></div>
+      <div class="msub" id="pedidosMsub">Registro manual y masivo de pedidos, con las mismas validaciones que aplica la simulación.</div>
+
+      <div id="pedManualSection">
+        <div class="inc-form" id="pedidoForm">
+          <div class="ifield"><label>Cliente</label><input type="text" id="pedCliente" placeholder="c1001" style="width:110px;"></div>
+          <div class="ifield"><label>Cantidad (1-24)</label><input type="number" id="pedCantidad" min="1" max="24" style="width:80px;"></div>
+          <div class="ifield">
+            <label>Modalidad</label>
+            <select id="pedModalidad"></select>
+          </div>
+          <div class="ifield"><label>Destino X (0-70)</label><input type="number" id="pedX" min="0" max="70" style="width:80px;"></div>
+          <div class="ifield"><label>Destino Y (0-50)</label><input type="number" id="pedY" min="0" max="50" style="width:80px;"></div>
+          <button id="btnRegistrarPedido">Registrar pedido</button>
+        </div>
+        <div class="modal-alert" id="pedAlert" style="display:none;background:color-mix(in srgb, var(--critical) 12%, transparent);color:var(--critical);border-radius:8px;padding:10px 12px;font-size:12.5px;margin-bottom:14px;"></div>
+
+        <div class="inc-form">
+          <div class="ifield" style="flex:1 1 300px;">
+            <label>Carga masiva (una línea por pedido: cliente,cantidad,modalidad,x,y — modalidad: 36/18/12/8/4)</label>
+            <textarea id="pedMasivoTexto" rows="3" style="width:100%;font-family:'IBM Plex Mono',monospace;font-size:12px;padding:7px 9px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--ink);resize:vertical;" placeholder="c2001,10,36,20,20&#10;c2002,5,8,40,30"></textarea>
+          </div>
+          <button id="btnRegistrarMasivo">Cargar lote</button>
+        </div>
+        <div class="msub" id="masivoResultado"></div>
+      </div>
+
+      <div id="pedArchivoSection" class="inc-form" style="flex-direction:column;align-items:stretch;">
+        <div class="data-field" style="margin-bottom:0;">
+          <div class="dt">Este escenario recibe los pedidos por archivo de ventas</div>
+          <div class="dd">Histórico y proyectado, formato mensual. Un registro por línea:</div>
+          <div class="dfmt">##d##h##m:posX,posY,cIdCliente,qq,hl<br>11d13h31m:45,43,c9167,12,36</div>
+          <label class="upload-btn" for="fileVentas"><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></span>Subir archivo de ventas</label>
+          <input type="file" id="fileVentas" accept=".txt" hidden>
+          <div class="data-status" id="statusVentas"></div>
+        </div>
+      </div>
+
+      <div class="inc-form" style="padding:10px 16px;">
+        <div class="ifield">
+          <label>Buscar por cliente</label>
+          <input type="text" id="pedBuscarCliente" placeholder="c1001">
+        </div>
+        <div class="ifield">
+          <label>Filtrar por estado</label>
+          <select id="pedFiltroEstado">
+            <option value="">Todos</option>
+            <option value="registrado">Registrado</option>
+            <option value="en ruta">En ruta</option>
+            <option value="entregado">Entregado</option>
+            <option value="no cumplido">No cumplido</option>
+          </select>
+        </div>
+        <div class="ifield">
+          <label>Filtrar por modalidad</label>
+          <select id="pedFiltroModalidad">
+            <option value="">Todas</option>
+            <option value="36">Regular (36h)</option>
+            <option value="18">Priorizada 18h</option>
+            <option value="12">Priorizada 12h</option>
+            <option value="8">Priorizada 8h</option>
+            <option value="4">Priorizada 4h</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="inc-table-wrap">
+        <table class="inc-table">
+          <thead><tr><th>ID</th><th>Cliente</th><th>Cant.</th><th>Modalidad</th><th>Destino</th><th>Hora límite</th><th>Estado</th><th>Unidad</th></tr></thead>
+          <tbody id="pedTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="module-panel" id="modFlota">
+      <div class="module-head"><span class="mh-ic"><svg viewBox="0 0 24 24"><path d="M3 17V8a1 1 0 0 1 1-1h9v10"/><path d="M13 10h4l4 4v3h-2"/><circle cx="7.5" cy="17.5" r="2"/><circle cx="17.5" cy="17.5" r="2"/></svg></span><h2>Flota</h2></div>
+      <div class="msub">Lista completa de la flota configurada y el estado actual de cada unidad.</div>
+      <div class="inc-table-wrap">
+        <table class="inc-table">
+          <thead><tr><th>Unidad</th><th>Tipo</th><th>Estado</th><th>Pedido actual</th><th>Carga</th><th>Últimos pedidos</th><th>Posición</th></tr></thead>
+          <tbody id="flotaTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="module-panel" id="modAverias">
+      <div class="module-head"><span class="mh-ic"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 1-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 1 5.4-5.4l-2.6 2.6-2-2 2.6-2.6z"/></svg></span><h2>Averías</h2></div>
+      <div class="msub" id="averiasMsub">Registrar una avería manualmente sobre una unidad en ruta, y ver el historial de averías de la ejecución.</div>
+
+      <div id="averiasManualSection">
+        <div class="inc-form">
+          <div class="ifield">
+            <label>Unidad</label>
+            <select id="incVehSelect"></select>
+          </div>
+          <div class="ifield">
+            <label>Tipo de avería</label>
+            <select id="incTipoSelect"></select>
+          </div>
+          <button id="btnRegistrarAveria">Registrar avería</button>
+        </div>
+      </div>
+
+      <div id="averiasArchivoSection" class="inc-form" style="flex-direction:column;align-items:stretch;">
+        <div class="data-field" style="margin-bottom:0;">
+          <div class="dt">Este escenario también admite averías por archivo</div>
+          <div class="dd">Una avería por línea, programada a su hora de simulación (unidad TTNN, tipo 1/2/3):</div>
+          <div class="dfmt">##d##h##m:TTNN,tipo<br>01d09h30m:TA01,2</div>
+          <label class="upload-btn" for="fileAverias"><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></span>Subir archivo de averías</label>
+          <input type="file" id="fileAverias" accept=".txt" hidden>
+          <div class="data-status" id="statusAverias"></div>
+        </div>
+      </div>
+
+      <div class="inc-form" style="padding:10px 16px;">
+        <div class="ifield">
+          <label>Filtrar por tipo</label>
+          <select id="averiasFiltroTipo">
+            <option value="">Todos los tipos</option>
+            <option value="1">Tipo 1 (leve)</option>
+            <option value="2">Tipo 2 (moderada)</option>
+            <option value="3">Tipo 3 (grave)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="inc-table-wrap">
+        <table class="inc-table">
+          <thead><tr><th>Unidad</th><th>Tipo</th><th>Desde</th><th>Hasta</th></tr></thead>
+          <tbody id="averiasTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="module-panel" id="modMantenimiento">
+      <div class="module-head"><span class="mh-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 4v2.2M12 17.8V20M4 12h2.2M17.8 12H20M6.3 6.3l1.6 1.6M16.1 16.1l1.6 1.6M6.3 17.7l1.6-1.6M16.1 7.9l1.6-1.6"/></svg></span><h2>Mantenimiento</h2></div>
+      <div class="msub" id="manMsub">Programar mantenimiento preventivo para una unidad disponible, y ver las ventanas de mantenimiento de la ejecución.</div>
+
+      <div id="manManualSection">
+        <div class="inc-form">
+          <div class="ifield">
+            <label>Unidad</label>
+            <select id="manVehSelect"></select>
+          </div>
+          <div class="ifield">
+            <label>Duración (horas)</label>
+            <input type="number" id="manHoras" value="2" min="1" max="24" style="width:80px;">
+          </div>
+          <button id="btnRegistrarMantenimiento">Programar mantenimiento</button>
+        </div>
+      </div>
+
+      <div id="manArchivoSection" class="inc-form" style="flex-direction:column;align-items:stretch;">
+        <div class="data-field" style="margin-bottom:0;">
+          <div class="dt">Este escenario recibe el plan de mantenimiento preventivo por archivo</div>
+          <div class="dd">Archivo <code>mant.preventivo.m1.m2</code> (bimensual). Un registro por línea — <code>aaaammdd:TTNN</code>. La unidad queda fuera de ruta de las 00:00 a las 23:59 de esa fecha:</div>
+          <div class="dfmt">aaaammdd:TTNN<br>20260908:TB03</div>
+          <label class="upload-btn" for="fileMantenimiento"><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></span>Subir plan de mantenimiento</label>
+          <input type="file" id="fileMantenimiento" accept=".txt" hidden>
+          <div class="data-status" id="statusMantenimiento"></div>
+        </div>
+      </div>
+
+      <div class="inc-table-wrap">
+        <table class="inc-table">
+          <thead><tr><th>Unidad</th><th>Duración</th><th>Desde</th><th>Hasta</th></tr></thead>
+          <tbody id="manTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="module-panel" id="modIncidencias">
+      <div class="module-head"><span class="mh-ic"><svg viewBox="0 0 24 24"><path d="M12 3l9 16H3L12 3z"/><path d="M12 10v4"/><circle cx="12" cy="17" r=".6" fill="currentColor" stroke="none"/></svg></span><h2>Bloqueos</h2></div>
+      <div class="msub">Registrar un bloqueo de calle manualmente, y ver el historial de bloqueos de la ejecución.</div>
+
+      <div class="inc-form">
+        <div class="ifield" style="flex:1 1 260px;">
+          <label>Nodos del bloqueo (x1,y1,x2,y2,...)</label>
+          <input type="text" id="incBloqueoNodos" placeholder="31,21,34,21">
+        </div>
+        <div class="ifield">
+          <label>Duración (horas)</label>
+          <input type="number" id="incBloqueoHoras" value="4" min="1" max="72" style="width:80px;">
+        </div>
+        <button id="btnRegistrarBloqueo">Registrar bloqueo</button>
+      </div>
+
+      <div class="inc-form" style="flex-direction:column;align-items:stretch;">
+        <div class="data-field" style="margin-bottom:0;">
+          <div class="dt">O cargar un archivo de bloqueos</div>
+          <div class="dd">Un registro por línea, polígono abierto de nodos:</div>
+          <div class="dfmt">##d##h##m-##d##h##m:x1,y1,x2,y2,...<br>01d06h00m-01d15h00m:31,21,34,21</div>
+          <label class="upload-btn" for="fileBloqueos"><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></span>Subir archivo de bloqueos</label>
+          <input type="file" id="fileBloqueos" accept=".txt" hidden>
+          <div class="data-status" id="statusBloqueos"></div>
+        </div>
+      </div>
+
+      <div class="inc-table-wrap">
+        <table class="inc-table">
+          <thead><tr><th>Tramo</th><th>Desde</th><th>Hasta</th></tr></thead>
+          <tbody id="incTbody"></tbody>
+        </table>
+      </div>
+    </div>
+    </div>
+  </main>
+</div>
+
+<div class="modal-backdrop" id="startGateModal">
+  <div class="modal">
+    <h3>Configurar inicio de la ejecución</h3>
+    <div class="modal-sub">Antes de iniciar, elige el escenario a correr.</div>
+    <div class="mfield">
+      <label>Escenario</label>
+      <select id="gateEscenario">
+        <option value="diaria">Operación diaria</option>
+        <option value="5d">Simulación 5 días</option>
+        <option value="colapso">Simulación hasta el colapso</option>
+      </select>
+    </div>
+    <div id="gateFechaRow" class="mrow">
+      <div class="mfield"><label>Fecha inicial</label><input type="date" id="gateFecha" value="2026-09-01"></div>
+      <div class="mfield"><label>Hora inicial</label><input type="time" id="gateHora" value="07:00"></div>
+    </div>
+    <div class="mfield">
+      <label>Composición de la flota</label>
+      <div class="mrow">
+        <div class="mfield"><label style="font-weight:400;">Autos</label><input type="number" id="gateAutos" min="0" max="30" value="6"></div>
+        <div class="mfield"><label style="font-weight:400;">Motos</label><input type="number" id="gateMotos" min="0" max="40" value="10"></div>
+        <div class="mfield"><label style="font-weight:400;">Bicis</label><input type="number" id="gateBicis" min="0" max="40" value="8"></div>
+      </div>
+    </div>
+    <div class="mfield">
+      <label>Capacidad de almacenes (paquetes)</label>
+      <div class="mrow">
+        <div class="mfield"><label style="font-weight:400;">Nor-Oeste</label><input type="number" id="gateCapNoroeste" min="100" max="5000" step="50" value="1000"></div>
+        <div class="mfield"><label style="font-weight:400;">Este</label><input type="number" id="gateCapEste" min="100" max="5000" step="50" value="1000"></div>
+      </div>
+      <div class="modal-sub" style="margin:4px 0 0;">El Almacén Central siempre tiene stock infinito.</div>
+    </div>
+    <div class="mfield">
+      <label>Horarios de cambio de turno (turnos de 8 h)</label>
+      <div class="mrow">
+        <div class="mfield"><label style="font-weight:400;">Turno 1</label><input type="time" id="gateTurno1" value="07:00"></div>
+        <div class="mfield"><label style="font-weight:400;">Turno 2</label><input type="time" id="gateTurno2" value="15:00"></div>
+        <div class="mfield"><label style="font-weight:400;">Turno 3</label><input type="time" id="gateTurno3" value="23:00"></div>
+      </div>
+    </div>
+    <div class="modal-sub" id="gateDesc"></div>
+    <div class="modal-actions">
+      <button id="btnGateConfirm">Continuar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="pedConfirmModal">
+  <div class="modal">
+    <h3>Confirmar pedido</h3>
+    <div class="modal-sub">Revisa los datos antes de registrarlo.</div>
+    <div class="confirm-rows">
+      <div class="confirm-row"><span>Cliente</span><b id="pcCliente"></b></div>
+      <div class="confirm-row"><span>Cantidad</span><b id="pcCantidad"></b></div>
+      <div class="confirm-row"><span>Modalidad</span><b id="pcModalidad"></b></div>
+      <div class="confirm-row"><span>Destino</span><b id="pcDestino"></b></div>
+    </div>
+    <div class="modal-actions" style="justify-content:space-between;">
+      <button id="btnPedConfirmCancel" class="btn-secondary">Cancelar</button>
+      <button id="btnPedConfirmOk">Confirmar registro</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="masivoConfirmModal">
+  <div class="modal">
+    <h3>Confirmar carga masiva</h3>
+    <div class="modal-sub">Vas a registrar <b id="mcCantidad">0</b> pedido(s). Se validará cada línea igual que en el alta manual.</div>
+    <div class="confirm-preview" id="mcPreview"></div>
+    <div class="modal-actions" style="justify-content:space-between;">
+      <button id="btnMasivoConfirmCancel" class="btn-secondary">Cancelar</button>
+      <button id="btnMasivoConfirmOk">Confirmar carga</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="fileConfirmModal">
+  <div class="modal">
+    <h3 id="fcTitle">Confirmar carga de archivo</h3>
+    <div class="modal-sub">Vas a cargar <b id="fcCantidad">0</b> registro(s) desde el archivo. Revisa el adelanto antes de aplicarlos a la simulación.</div>
+    <div class="confirm-preview" id="fcPreview"></div>
+    <div class="modal-actions" style="justify-content:space-between;">
+      <button id="btnFileConfirmCancel" class="btn-secondary">Cancelar</button>
+      <button id="btnFileConfirmOk">Confirmar carga</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="resetConfirmModal">
+  <div class="modal">
+    <h3>¿Reiniciar la simulación?</h3>
+    <div class="modal-sub">Se detiene la ejecución actual y se pierden los pedidos, vehículos e incidencias en curso. Después podrás elegir de nuevo el escenario, la flota y la fecha de inicio.</div>
+    <div class="modal-actions" style="justify-content:space-between;">
+      <button id="btnResetCancel" class="btn-secondary">Cancelar</button>
+      <button id="btnResetOk">Reiniciar</button>
+    </div>
+  </div>
+</div>
+
+
+
+  <!--
+    Los scripts se cargan como <script> clásicos (no type="module") EN ESTE ORDEN
+    a propósito: cada archivo declara const/let/function de nivel superior que el
+    siguiente script ya puede usar (comparten el mismo entorno léxico global del
+    documento), igual que antes cuando todo vivía en un único IIFE. Si cambias el
+    orden de estas etiquetas, revisa que ningún archivo use algo que el siguiente
+    todavía no haya declarado.
+  -->
+  <script src="js/core/config.js"></script>
+  <script src="js/core/state.js"></script>
+  <script src="js/core/time.js"></script>
+  <script src="js/core/grid.js"></script>
+  <script src="js/data/file-io.js"></script>
+  <script src="js/core/log.js"></script>
+  <script src="js/sim/orders.js"></script>
+  <script src="js/sim/blockages.js"></script>
+  <script src="js/sim/incidents.js"></script>
+  <script src="js/sim/vehicles.js"></script>
+  <script src="js/sim/shift-restock.js"></script>
+  <script src="js/sim/sim-step.js"></script>
+  <script src="js/ui/render.js"></script>
+  <script src="js/ui/dom-update.js"></script>
+  <script src="js/ui/selection-panel.js"></script>
+  <script src="js/ui/map-input.js"></script>
+  <script src="js/ui/config-panel.js"></script>
+  <script src="js/ui/file-upload.js"></script>
+  <script src="js/ui/run-controls.js"></script>
+  <script src="js/ui/nav-rail.js"></script>
+  <script src="js/ui/averias-module.js"></script>
+  <script src="js/ui/bloqueos-module.js"></script>
+  <script src="js/ui/flota-module.js"></script>
+  <script src="js/ui/mantenimiento-module.js"></script>
+  <script src="js/ui/search-filter.js"></script>
+  <script src="js/ui/indicators-panel.js"></script>
+  <script src="js/ui/pedidos-module.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
