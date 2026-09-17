@@ -14,7 +14,9 @@ import pe.pucp.paqrap.solucion.Ruta;
 import pe.pucp.paqrap.solucion.Solucion;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 /**
@@ -141,11 +143,22 @@ public class ALNS {
      *         (con {@link Solucion#esFactible()} falso y sus errores)
      */
     public Solucion resolver(ContextoPlanificacion ctx) {
+        return resolver(ctx, null);
+    }
+
+    /**
+     * Ejecuta ALNS sobre los pedidos considerados del contexto, reutilizando el plan vigente
+     * cuando existe. Las rutas que siguen siendo compatibles se heredan; los pedidos de rutas
+     * afectadas por unidades no disponibles o arcos bloqueados se liberan y se reinsertan.
+     */
+    public Solucion resolver(ContextoPlanificacion ctx, Solucion planPrevio) {
         long inicioReal = System.nanoTime();
         estadisticas = new Estadisticas();
         Random aleatorio = new Random(par.semilla);
 
-        Solucion solucionInicial = ConstructorInicial.construir(ctx);
+        Solucion solucionInicial = (planPrevio == null)
+                ? ConstructorInicial.construir(ctx)
+                : construirDesdePlanPrevio(ctx, planPrevio, aleatorio);
         double costoInicial = solucionInicial.evaluar(ctx);
         estadisticas.costoInicial = costoInicial;
 
@@ -261,6 +274,89 @@ public class ALNS {
             proporcion *= (1.0 - 0.7 * ocupacionFlota(s, ctx));
         }
         return (int) Math.max(1, Math.round(totalPedidos * proporcion));
+    }
+
+    /**
+     * Reoptimización incremental: conserva asignaciones previas que todavía pertenecen al
+     * contexto actual y libera las que deben replanificarse por incidencia o indisponibilidad.
+     */
+    private Solucion construirDesdePlanPrevio(ContextoPlanificacion ctx, Solucion planPrevio,
+                                              Random aleatorio) {
+        Solucion heredada = heredarAsignacionesVigentes(ctx, planPrevio);
+
+        List<Pedido> removidos = new ArrayList<>();
+        removidos.addAll(new RemocionPorAveria().destruir(heredada, Integer.MAX_VALUE, ctx, aleatorio));
+        removidos.addAll(new RemocionPorArcoBloqueado().destruir(heredada, Integer.MAX_VALUE, ctx, aleatorio));
+        removidos.addAll(liberarRutasInfactibles(heredada, ctx));
+
+        List<Pedido> porReinsertar = new ArrayList<>(heredada.getNoAsignados());
+        for (Pedido p : removidos) {
+            if (!porReinsertar.contains(p)) {
+                porReinsertar.add(p);
+            }
+        }
+        new InsercionGolosa().reparar(heredada, porReinsertar, ctx, aleatorio);
+        heredada.evaluar(ctx);
+        return heredada;
+    }
+
+    private Solucion heredarAsignacionesVigentes(ContextoPlanificacion ctx, Solucion planPrevio) {
+        Solucion heredada = new Solucion();
+        Map<String, Vehiculo> asignables = new HashMap<>();
+        for (Vehiculo v : ctx.getUnidadesAsignables()) {
+            asignables.put(v.getCodigo(), v);
+        }
+
+        List<Pedido> vigentes = ctx.getPedidosPorAtender();
+        for (Ruta rutaAnterior : planPrevio.getRutas()) {
+            Vehiculo vehiculo = asignables.get(rutaAnterior.getVehiculo().getCodigo());
+            if (vehiculo == null) {
+                marcarVigentesComoNoAsignados(heredada, rutaAnterior, vigentes);
+                continue;
+            }
+            Ruta nueva = heredada.rutaDe(vehiculo, rutaAnterior.getAlmacenOrigen());
+            for (Pedido p : rutaAnterior.getSecuencia()) {
+                if (!vigentes.contains(p)) {
+                    continue;
+                }
+                if (heredada.hayStock(ctx, rutaAnterior.getAlmacenOrigen(), p.getCantidad())) {
+                    heredada.asignar(nueva, nueva.tamanio(), p);
+                } else {
+                    heredada.marcarNoAsignado(p);
+                }
+            }
+            nueva.recalcular(ctx);
+        }
+
+        for (Pedido p : vigentes) {
+            if (heredada.unidadDe(p) == null && !heredada.getNoAsignados().contains(p)) {
+                heredada.marcarNoAsignado(p);
+            }
+        }
+        return heredada;
+    }
+
+    private void marcarVigentesComoNoAsignados(Solucion destino, Ruta ruta, List<Pedido> vigentes) {
+        for (Pedido p : ruta.getSecuencia()) {
+            if (vigentes.contains(p)) {
+                destino.marcarNoAsignado(p);
+            }
+        }
+    }
+
+    private List<Pedido> liberarRutasInfactibles(Solucion solucion, ContextoPlanificacion ctx) {
+        List<Pedido> removidos = new ArrayList<>();
+        for (Ruta ruta : new ArrayList<>(solucion.getRutas())) {
+            ruta.recalcular(ctx);
+            if (ruta.esFactible()) {
+                continue;
+            }
+            for (Pedido p : new ArrayList<>(ruta.getSecuencia())) {
+                solucion.desasignar(p);
+                removidos.add(p);
+            }
+        }
+        return removidos;
     }
 
     /** Fracción de la capacidad total de la flota disponible que está comprometida. */

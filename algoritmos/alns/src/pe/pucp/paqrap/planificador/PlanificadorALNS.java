@@ -48,8 +48,8 @@ public class PlanificadorALNS implements Planificador {
     }
 
     @Override
-    public Solucion planificar(ContextoPlanificacion ctx) {
-        Solucion s = motor.resolver(ctx);
+    public Solucion planificar(ContextoPlanificacion ctx, Solucion planPrevio) {
+        Solucion s = motor.resolver(ctx, planPrevio);
         ultimasEstadisticas = motor.getEstadisticas();
         return s;
     }

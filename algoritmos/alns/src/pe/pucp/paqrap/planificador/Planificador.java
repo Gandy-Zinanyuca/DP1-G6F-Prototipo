@@ -20,10 +20,13 @@ public interface Planificador {
      * Produce la asignación de rutas para el instante T del contexto.
      *
      * @param ctx fotografía de la operación en el instante T
+     * @param planPrevio plan vigente del ciclo anterior, o {@code null} si se planifica
+     *                   desde cero. Permite reoptimizar ante bloqueos o averías sin descartar
+     *                   las asignaciones que siguen siendo válidas.
      * @return la solución; si no es factible ({@link Solucion#esFactible()}), sus errores
      *         describen las restricciones violadas (colapso logístico)
      */
-    Solucion planificar(ContextoPlanificacion ctx);
+    Solucion planificar(ContextoPlanificacion ctx, Solucion planPrevio);
 
     /** Nombre del algoritmo, usado en los reportes de experimentación numérica. */
     String nombre();

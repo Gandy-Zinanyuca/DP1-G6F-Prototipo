@@ -178,6 +178,7 @@ public final class DemoPlanificador {
         double kmAcumulados = 0;
         double solesAcumulados = 0;
         boolean colapso = false;
+        Solucion planVigente = null;
 
         for (int c = 0; c < ciclos; c++) {
             liberarUnidadesQueRegresaron(instancia, minuto);
@@ -203,7 +204,7 @@ public final class DemoPlanificador {
                 continue;
             }
 
-            Solucion plan = planificador.planificar(ctx);
+            Solucion plan = planificador.planificar(ctx, planVigente);
             System.out.print(planificador.resumenUltimaEjecucion());
 
             if (!plan.esFactible()) {
@@ -213,6 +214,7 @@ public final class DemoPlanificador {
                 break;
             }
 
+            planVigente = plan.copia();
             Resumen r = ejecutarPlan(plan, ctx);
             entregadosAcumulados += r.entregados;
             kmAcumulados += plan.getDistanciaTotalKm();
