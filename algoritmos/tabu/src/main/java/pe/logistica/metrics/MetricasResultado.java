@@ -33,14 +33,14 @@ public record MetricasResultado(RendimientoAlgoritmo rendimiento, boolean factib
         int usados = 0; double sumaUtilizacion = 0;
         for (ResultadoRuta resultado : evaluacion.rutas()) {
             Ruta ruta = resultado.ruta(); Vehiculo v = ruta.vehiculo();
-            long carga = ruta.pedidos().stream().mapToLong(Pedido::cantidad).sum();
+            long carga = ruta.carga();
             double porcentaje = 100.0 * carga / v.tipo().capacidad();
             cargas.put(v.codigo(), carga); porcentajes.put(v.codigo(), porcentaje);
-            for (Pedido pedido : ruta.pedidos()) if (ids.contains(pedido.id())) asignados.add(pedido.id());
+            for (Entrega entrega : ruta.entregas()) if (ids.contains(entrega.pedido().id())) asignados.add(entrega.pedido().id());
             // Una ruta con incumplimiento duro no cuenta como servicio entregable.
             if (resultado.factible()) for (Visita visita : resultado.visitas())
                 if (visita.dentroDelPlazo() && ids.contains(visita.pedido().id())) aTiempo.add(visita.pedido().id());
-            if (ruta.pedidos().isEmpty()) continue;
+            if (ruta.entregas().isEmpty()) continue;
             usados++; sumaUtilizacion += porcentaje;
             ResumenTipoVehiculo anterior = tipos.get(v.tipo());
             tipos.put(v.tipo(), new ResumenTipoVehiculo(anterior.utilizados() + 1,

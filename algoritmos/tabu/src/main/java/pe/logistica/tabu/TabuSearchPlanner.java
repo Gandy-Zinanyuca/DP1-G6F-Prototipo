@@ -19,6 +19,7 @@ public class TabuSearchPlanner {
         double costoInicial = mejorEvaluacion.costoTotal();
         var tabu = new TabuList();
         var asignacion = new AssignmentNeighborhood(); var ruteo = new RoutingNeighborhood();
+        var fraccionamiento = new SplitNeighborhood();
         int iteraciones = 0, iteracionMejor = 0;
         long candidatos = 1, factibles = mejorEvaluacion.factible() ? 1 : 0, rechazados = 0, aspiraciones = 0;
         String parada = "MAXIMO_ITERACIONES";
@@ -32,6 +33,7 @@ public class TabuSearchPlanner {
                 Consumer<Candidato> evaluar = vecino -> selector.considerar(vecino, evaluador.evaluar(vecino.solucion()));
                 asignacion.generar(actual, evaluar);
                 ruteo.generar(actual, evaluar);
+                fraccionamiento.generar(actual, evaluar);
                 candidatos += selector.evaluados(); factibles += selector.factibles();
                 rechazados += selector.rechazadosTabu(); aspiraciones += selector.aspiraciones();
                 Candidato elegido = selector.elegido();

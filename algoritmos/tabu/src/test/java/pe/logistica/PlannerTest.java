@@ -21,7 +21,7 @@ class PlannerTest {
                 p("Fin", t.plusMinutes(120), 1), p("Despues", t.plusMinutes(120).plusNanos(1), 1));
         var resultado = new TabuSearchPlanner().ejecutar(estado(pedidos, List.of(auto)), config);
         assertTrue(resultado.metricas().factibilidadGlobal()); assertEquals(2, resultado.metricas().pedidosConsiderados());
-        assertEquals(Set.of("Inicio", "Fin"), new HashSet<>(resultado.mejorSolucion().rutas().get(0).pedidos().stream().map(Pedido::id).toList()));
+        assertEquals(Set.of("Inicio", "Fin"), new HashSet<>(resultado.mejorSolucion().rutas().get(0).entregas().stream().map(e -> e.pedido().id()).toList()));
         assertEquals(120, resultado.metricas().scMinutos());
     }
     @Test void inicialInviableEsExplicitaYNoBuscaConPenalizaciones() {
@@ -34,6 +34,15 @@ class PlannerTest {
         var resultado = new TabuSearchPlanner().ejecutar(estado(List.of(p("A", t, 1), p("B", t, 25)), List.of(auto)), config);
         assertFalse(resultado.metricas().factibilidadGlobal()); assertEquals(1, resultado.metricas().pedidosAsignados());
         assertEquals(1, resultado.metricas().pedidosNoAsignados()); assertEquals(50, resultado.metricas().porcentajeCumplimiento());
+    }
+    @Test void pedidoQueExcedeUnVehiculoSeFraccionaEnLaInsercionInicial() {
+        var otro = new Vehiculo("TA02", new Nodo(0, 0));
+        var soloInicial = new ConfiguracionTabu(30, 4, 0, 7);
+        var resultado = new TabuSearchPlanner().ejecutar(estado(List.of(p("A", t, 30)), List.of(auto, otro)), soloInicial);
+        var m = resultado.metricas();
+        assertTrue(m.factibilidadGlobal()); assertEquals(1, m.pedidosAsignados());
+        assertEquals(24, resultado.mejorSolucion().rutas().get(0).entregas().get(0).cantidad());
+        assertEquals(6, resultado.mejorSolucion().rutas().get(1).entregas().get(0).cantidad());
     }
     @Test void sinPedidosEsFactibleSinDivisionesPorCero() {
         var m = new TabuSearchPlanner().ejecutar(estado(List.of(), List.of()), config).metricas();

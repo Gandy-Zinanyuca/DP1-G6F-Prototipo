@@ -10,12 +10,12 @@ public final class RoutingNeighborhood {
     public void generar(Solucion actual, Consumer<Candidato> consumidor) {
         for (int r = 0; r < actual.rutas().size(); r++) {
             Ruta ruta = actual.rutas().get(r);
-            for (int i = 0; i < ruta.pedidos().size(); i++) {
-                for (int j = i + 1; j < ruta.pedidos().size(); j++) {
-                    var pedidos = new ArrayList<>(ruta.pedidos()); Collections.swap(pedidos, i, j);
-                    var rutas = new ArrayList<>(actual.rutas()); rutas.set(r, new Ruta(ruta.vehiculo(), pedidos));
-                    consumidor.accept(new Candidato(new Solucion(rutas),
-                            TabuMove.swap(ruta.vehiculo().codigo(), ruta.pedidos().get(i).id(), ruta.pedidos().get(j).id())));
+            for (int i = 0; i < ruta.entregas().size(); i++) {
+                for (int j = i + 1; j < ruta.entregas().size(); j++) {
+                    var entregas = new ArrayList<>(ruta.entregas()); Collections.swap(entregas, i, j);
+                    var rutas = new ArrayList<>(actual.rutas()); rutas.set(r, new Ruta(ruta.vehiculo(), entregas));
+                    consumidor.accept(new Candidato(new Solucion(rutas), TabuMove.swap(ruta.vehiculo().codigo(),
+                            ruta.entregas().get(i).pedido().id(), ruta.entregas().get(j).pedido().id())));
                 }
             }
         }

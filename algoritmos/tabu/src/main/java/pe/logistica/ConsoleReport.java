@@ -28,14 +28,14 @@ public final class ConsoleReport {
         for (ResultadoRuta rr : resultado.evaluacion().rutas()) {
             Ruta ruta = rr.ruta(); Vehiculo v = ruta.vehiculo();
             out.printf("%n%s | %s (%s)%n", v.codigo(), v.tipo(), v.tipo().descripcion());
-            if (ruta.pedidos().isEmpty()) {
+            if (ruta.entregas().isEmpty()) {
                 out.println("Sin pedidos | Distancia: 0 km | Tiempo: 0 h | Costo: S/ 0.00");
                 out.printf("Capacidad: 0/%d (0.00 %%)%n", v.tipo().capacidad());
                 continue;
             }
-            out.println("Orden: " + ruta.pedidos().stream().map(Pedido::id).collect(Collectors.joining(" -> ")));
+            out.println("Orden: " + ruta.entregas().stream().map(e -> e.pedido().id()).collect(Collectors.joining(" -> ")));
             var coordenadas = new ArrayList<String>(); coordenadas.add(v.ubicacionInicial().toString());
-            ruta.pedidos().forEach(p -> coordenadas.add(p.ubicacion().toString())); coordenadas.add(v.ubicacionInicial().toString());
+            ruta.entregas().forEach(e -> coordenadas.add(e.pedido().ubicacion().toString())); coordenadas.add(v.ubicacionInicial().toString());
             out.println("Coordenadas de visita (con regreso): " + String.join(" -> ", coordenadas));
             out.println("Salida: " + rr.salida().format(FECHA) + " | Regreso: " + rr.fin().format(FECHA));
             out.printf(Locale.ROOT, "Distancia: %.2f km%nTiempo estimado: %.4f h%nCosto: S/ %.2f%n",
@@ -43,7 +43,7 @@ public final class ConsoleReport {
             out.printf(Locale.ROOT, "Capacidad: %d/%d (%.2f %%)%n", m.capacidadUtilizadaPorVehiculo().get(v.codigo()),
                     v.tipo().capacidad(), m.porcentajeCapacidadPorVehiculo().get(v.codigo()));
             for (Visita visita : rr.visitas()) out.printf("  %s cliente=%s %s | cantidad=%d | llegada=%s | atencion=%s a %s | deadline=%s | %s%n",
-                    visita.pedido().id(), visita.pedido().clienteId(), visita.pedido().ubicacion(), visita.pedido().cantidad(), visita.llegada().format(FECHA),
+                    visita.pedido().id(), visita.pedido().clienteId(), visita.pedido().ubicacion(), visita.entrega().cantidad(), visita.llegada().format(FECHA),
                     visita.inicioAtencion().format(FECHA), visita.finAtencion().format(FECHA),
                     visita.pedido().deadline().format(FECHA), visita.dentroDelPlazo() ? "A TIEMPO" : "FUERA DE PLAZO");
             if (detalleCaminos) for (var camino : rr.caminos()) {

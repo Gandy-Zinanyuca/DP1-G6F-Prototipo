@@ -17,12 +17,14 @@ import pe.pucp.paqrap.solucion.Solucion;
 public interface Planificador {
 
     /**
-     * Produce la asignación de rutas del ciclo.
+     * Produce la asignación de rutas para el instante T del contexto.
      *
-     * @param ctx        fotografía de la operación al inicio del ciclo
-     * @param planPrevio plan del ciclo anterior, o {@code null} para planificar desde cero.
-     *                   Pasarlo convierte la llamada en una reoptimización incremental.
-     * @return la solución con una ruta por unidad utilizada y los pedidos diferidos
+     * @param ctx fotografía de la operación en el instante T
+     * @param planPrevio plan vigente del ciclo anterior, o {@code null} si se planifica
+     *                   desde cero. Permite reoptimizar ante bloqueos o averías sin descartar
+     *                   las asignaciones que siguen siendo válidas.
+     * @return la solución; si no es factible ({@link Solucion#esFactible()}), sus errores
+     *         describen las restricciones violadas (colapso logístico)
      */
     Solucion planificar(ContextoPlanificacion ctx, Solucion planPrevio);
 

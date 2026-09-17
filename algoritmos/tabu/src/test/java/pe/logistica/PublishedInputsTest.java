@@ -36,13 +36,13 @@ class PublishedInputsTest {
         var v = new Vehiculo("TA01", new Nodo(0, 0));
         var pedido = new Pedido("P", t, new Nodo(20, 0), 1, 1);
         var estado = new EstadoOperacion(t, List.of(pedido), List.of(v), List.of(), List.of(), ParametrosOperacion.publicados());
-        var ev = new SolutionEvaluator(estado, estado.pedidos()).evaluar(new Solucion(List.of(new Ruta(v, List.of(pedido)))));
+        var ev = new SolutionEvaluator(estado, estado.pedidos()).evaluar(new Solucion(List.of(new Ruta(v, List.of(new Entrega(pedido, 1))))));
         assertTrue(ev.factible()); var visita = ev.rutas().get(0).visitas().get(0);
         assertEquals(t.plusHours(1), visita.llegada()); assertEquals(t.plusHours(2), visita.finAtencion());
         assertEquals(3, ev.tiempoTotalHoras());
         var tarde = new Pedido("P2", t, new Nodo(21, 0), 1, 1);
         var otro = new EstadoOperacion(t, List.of(tarde), List.of(v), List.of(), List.of(), ParametrosOperacion.publicados());
-        assertFalse(new SolutionEvaluator(otro, otro.pedidos()).evaluar(new Solucion(List.of(new Ruta(v, List.of(tarde))))).factible());
+        assertFalse(new SolutionEvaluator(otro, otro.pedidos()).evaluar(new Solucion(List.of(new Ruta(v, List.of(new Entrega(tarde, 1)))))).factible());
     }
     @Test void velocidadFraccionariaNoTruncaSegundosNiPrometeLlegadaAnticipada() {
         var pf = new PathFinder(new GridMap(List.of()));

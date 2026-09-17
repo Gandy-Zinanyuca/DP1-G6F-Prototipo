@@ -41,6 +41,6 @@ public class RemocionAleatoria implements OperadorDestruccion {
 
     @Override
     public String nombre() {
-        return "remocion-aleatoria";
+        return "eliminacion-aleatoria";
     }
 }
