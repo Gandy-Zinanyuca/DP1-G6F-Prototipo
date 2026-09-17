@@ -5,75 +5,99 @@ import pe.pucp.paqrap.modelo.Coordenada;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.Set;
 
 /**
  * Retícula urbana de PaqRap con bloqueos dependientes del tiempo.
  *
  * <h2>Estructura</h2>
  * <p>El mapa es una retícula de (70+1) x (50+1) nodos separados 1 km (LE037). Cada nodo tiene
- * a lo sumo cuatro arcos incidentes, todos de doble sentido (RNF03) y de longitud unitaria.
- * En lugar de materializar una lista de adyacencia, el estado de la red se guarda en un
- * arreglo {@code byte[]} de una posición por nodo: los cuatro bits bajos indican qué arcos
- * incidentes están cerrados (bit 0 = Este, 1 = Oeste, 2 = Norte, 3 = Sur). La representación
- * ocupa 3 621 bytes y permite comprobar la transitabilidad de un arco en tiempo constante.</p>
+ * a lo sumo cuatro calles incidentes, todas de doble sentido (RNF03) y de longitud unitaria.
+ * No se permiten movimientos diagonales.</p>
  *
- * <h2>Cálculo de distancias</h2>
- * <p>Como todos los arcos tienen peso 1, la distancia mínima entre dos nodos se obtiene con
- * una <b>BFS</b> desde el origen, que en una sola pasada de O(V+E) ≈ 14 000 operaciones
- * produce la distancia a <i>todos</i> los nodos del mapa. Por eso el mapa no cachea pares
- * origen-destino sino vectores de distancia completos por origen: los orígenes que el
- * planificador consulta repetidamente (almacenes, posiciones de unidades, nodos de clientes)
- * pagan una sola BFS por ciclo. Cuando no hay ningún bloqueo vigente se evita la BFS por
- * completo y se devuelve la distancia Manhattan.</p>
+ * <h2>CAMINO_MÁS_RÁPIDO (ISA, sección 5.1)</h2>
+ * <p>Cada calle unitaria guarda los intervalos [inicio, fin) de los bloqueos que la cierran,
+ * tal como vienen en el archivo de bloqueos. {@link #caminoMasRapido} es un Dijkstra temporal
+ * ordenado por hora de llegada: un tramo solo puede recorrerse si el cruce completo no se
+ * solapa con un intervalo de bloqueo; si se solapa, la unidad espera hasta la primera hora en
+ * que puede cruzarlo. Como todo bloqueo tiene fin, siempre existe camino.</p>
  *
- * <h2>Dependencia temporal</h2>
- * <p>Los bloqueos tienen intervalo de vigencia, de modo que la red cambia a lo largo del
- * horizonte. El planificador evalúa cada ciclo con la fotografía de la red vigente al inicio
- * del ciclo ({@link #fijarInstante(int)}) y vuelve a planificar cada 15 minutos simulados
- * (LE026); la dinámica del problema se absorbe en esa cadencia de replanificación y no dentro
- * de la evaluación de una ruta individual.</p>
+ * <p>Si el camino Manhattan canónico (primero en X, luego en Y) no requiere ninguna espera, es
+ * óptimo —su llegada es la cota inferior— y se devuelve sin ejecutar Dijkstra.</p>
  */
 public class MapaUrbano {
 
-    public static final int NUM_NODOS = (Coordenada.ANCHO_MAX + 1) * (Coordenada.ALTO_MAX + 1);
-    private static final int LIMITE_CACHE_ORIGENES = 4096;
+    public static final int ANCHO = Coordenada.ANCHO_MAX + 1;
+    public static final int NUM_NODOS = ANCHO * (Coordenada.ALTO_MAX + 1);
+    private static final int LIMITE_CACHE = 50_000;
 
     /** Desplazamientos por dirección: 0 Este, 1 Oeste, 2 Norte, 3 Sur. */
     private static final int[] DX = {1, -1, 0, 0};
     private static final int[] DY = {0, 0, 1, -1};
-    private static final int[] OPUESTA = {1, 0, 3, 2};
+
+    /** Resultado de CAMINO_MÁS_RÁPIDO para un tramo. */
+    public static final class Tramo {
+        /** Hora de llegada al destino, en minutos (con fracción). */
+        public final double llegada;
+        /** Kilómetros recorridos. */
+        public final int km;
+        /** Calles recorridas, como claves {@link #clave(int, int)}; vacío si no se pidieron. */
+        public final List<Long> arcos;
+
+        Tramo(double llegada, int km, List<Long> arcos) {
+            this.llegada = llegada;
+            this.km = km;
+            this.arcos = arcos;
+        }
+    }
 
     private final List<Bloqueo> bloqueos;
 
-    /** Bits de arcos cerrados por nodo para el instante fijado. */
-    private final byte[] arcosCerrados = new byte[NUM_NODOS];
+    /** Intervalos de cierre por calle, ordenados por inicio: {inicio, fin} en minutos. */
+    private final Map<Long, List<int[]>> cierresPorArco = new HashMap<>();
+
+    /** Intervalos de todos los bloqueos, para descartar Dijkstra cuando no hay ninguno activo. */
+    private final int[][] intervalosGlobales;
 
     private int instanteActual = -1;
-    private boolean hayBloqueosVigentes;
     private List<Bloqueo> vigentes = new ArrayList<>();
 
-    /** Caché LRU de vectores de distancia por nodo origen, válida para el instante fijado. */
-    private final Map<Integer, int[]> cacheDistancias =
-            new LinkedHashMap<Integer, int[]>(1024, 0.75f, true) {
-                @Override
-                protected boolean removeEldestEntry(Map.Entry<Integer, int[]> eldest) {
-                    return size() > LIMITE_CACHE_ORIGENES;
-                }
-            };
-
-    private final int[] colaBfs = new int[NUM_NODOS];
+    private final Map<String, Tramo> cache = new LinkedHashMap<String, Tramo>(4096, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<String, Tramo> eldest) {
+            return size() > LIMITE_CACHE;
+        }
+    };
 
     public MapaUrbano(List<Bloqueo> bloqueos) {
         this.bloqueos = bloqueos;
+        intervalosGlobales = new int[bloqueos.size()][];
+        for (int i = 0; i < bloqueos.size(); i++) {
+            Bloqueo b = bloqueos.get(i);
+            int[] intervalo = {b.getMinutoInicio(), b.getMinutoFin()};
+            intervalosGlobales[i] = intervalo;
+            for (int[] arco : b.arcosUnitarios()) {
+                cierresPorArco.computeIfAbsent(clave(arco[0], arco[1]), k -> new ArrayList<>())
+                        .add(intervalo);
+            }
+        }
+        for (List<int[]> lista : cierresPorArco.values()) {
+            lista.sort((a, b) -> Integer.compare(a[0], b[0]));
+        }
     }
 
     public List<Bloqueo> getBloqueos() {
         return bloqueos;
     }
 
+    /** Bloqueos vigentes en el instante de planificación T. */
     public List<Bloqueo> getBloqueosVigentes() {
         return vigentes;
     }
@@ -82,187 +106,217 @@ public class MapaUrbano {
         return instanteActual;
     }
 
-    /**
-     * Fija la fotografía de la red vial correspondiente al minuto indicado: recalcula el
-     * conjunto de arcos cerrados e invalida la caché de distancias. Es la primera llamada de
-     * cada ciclo de planificación.
-     */
+    /** Fija el instante de planificación T (solo determina qué bloqueos son "vigentes en T"). */
     public void fijarInstante(int minuto) {
         if (minuto == instanteActual) {
             return;
         }
         instanteActual = minuto;
-        Arrays.fill(arcosCerrados, (byte) 0);
-        cacheDistancias.clear();
         vigentes = new ArrayList<>();
-
         for (Bloqueo b : bloqueos) {
-            if (!b.vigenteEn(minuto)) {
+            if (b.vigenteEn(minuto)) {
+                vigentes.add(b);
+            }
+        }
+    }
+
+    /** Calles bloqueadas vigentes en el instante indicado, como claves de arco. */
+    public Set<Long> arcosBloqueadosEn(int minuto) {
+        Set<Long> arcos = new HashSet<>();
+        for (Bloqueo b : bloqueos) {
+            if (b.vigenteEn(minuto)) {
+                for (int[] arco : b.arcosUnitarios()) {
+                    arcos.add(clave(arco[0], arco[1]));
+                }
+            }
+        }
+        return arcos;
+    }
+
+    /** Clave de una calle unitaria, independiente del sentido. */
+    public static long clave(int nodoA, int nodoB) {
+        return (long) Math.min(nodoA, nodoB) * NUM_NODOS + Math.max(nodoA, nodoB);
+    }
+
+    /**
+     * Primera hora ≥ {@code llegada} en que puede iniciarse el cruce de la calle a–b de modo que
+     * el cruce completo, de duración {@code cruce}, no se solape con ningún bloqueo.
+     */
+    private double proximaSalida(int a, int b, double llegada, double cruce) {
+        List<int[]> cierres = cierresPorArco.get(clave(a, b));
+        double salida = llegada;
+        if (cierres == null) {
+            return salida;
+        }
+        for (int[] c : cierres) {
+            if (salida >= c[1]) {
                 continue;
             }
-            vigentes.add(b);
-            for (int[] arco : b.arcosUnitarios()) {
-                cerrarArco(arco[0], arco[1]);
+            if (salida + cruce <= c[0]) {
+                break;
             }
+            salida = c[1];
         }
-        hayBloqueosVigentes = !vigentes.isEmpty();
+        return salida;
     }
 
-    private void cerrarArco(int nodoA, int nodoB) {
-        if (nodoA < 0 || nodoB < 0 || nodoA >= NUM_NODOS || nodoB >= NUM_NODOS) {
-            return;
-        }
-        Coordenada a = Coordenada.desdeIndice(nodoA);
-        for (int d = 0; d < 4; d++) {
-            Coordenada vecino = new Coordenada(a.getX() + DX[d], a.getY() + DY[d]);
-            if (vecino.dentroDelMapa() && vecino.indice() == nodoB) {
-                arcosCerrados[nodoA] |= (byte) (1 << d);
-                arcosCerrados[nodoB] |= (byte) (1 << OPUESTA[d]);
-                return;
+    private boolean hayBloqueoEntre(double desde, double hasta) {
+        for (int[] c : intervalosGlobales) {
+            if (c[0] < hasta && c[1] > desde) {
+                return true;
             }
         }
-    }
-
-    /** Indica si el arco unitario que sale de {@code nodo} en la dirección {@code d} es transitable. */
-    private boolean transitable(int nodo, int d) {
-        return (arcosCerrados[nodo] & (1 << d)) == 0;
+        return false;
     }
 
     /**
-     * Indica si el nodo está totalmente aislado por bloqueos vigentes. Un pedido cuyo destino
-     * quede aislado no puede insertarse en ninguna ruta y debe quedar diferido al siguiente
-     * ciclo de planificación.
+     * CAMINO_MÁS_RÁPIDO(origen, destino, salida, velocidad, bloqueos).
+     *
+     * @param salida       minuto (con fracción) en que la unidad parte del origen
+     * @param velocidadKmH velocidad del tipo de unidad
+     * @param conArcos     si es verdadero, reconstruye la secuencia de calles recorridas
      */
-    public boolean nodoAislado(Coordenada c) {
-        if (!hayBloqueosVigentes) {
-            return false;
-        }
-        int nodo = c.indice();
-        for (int d = 0; d < 4; d++) {
-            Coordenada vecino = new Coordenada(c.getX() + DX[d], c.getY() + DY[d]);
-            if (vecino.dentroDelMapa() && transitable(nodo, d)) {
-                return false;
-            }
-        }
-        return true;
-    }
+    public Tramo caminoMasRapido(Coordenada origen, Coordenada destino, double salida,
+                                 double velocidadKmH, boolean conArcos) {
+        double cruce = 60.0 / velocidadKmH;
+        int fuente = origen.indice();
+        int meta = destino.indice();
+        int manhattan = origen.distanciaManhattan(destino);
 
-    /**
-     * Distancia mínima en kilómetros entre dos nodos evitando los tramos cerrados en el
-     * instante fijado. Devuelve {@link Integer#MAX_VALUE} si el destino es inalcanzable.
-     */
-    public int distancia(Coordenada origen, Coordenada destino) {
-        if (!hayBloqueosVigentes) {
-            return origen.distanciaManhattan(destino);
+        if (fuente == meta) {
+            return new Tramo(salida, 0, Collections.emptyList());
         }
-        int[] dist = distanciasDesde(origen);
-        return dist[destino.indice()];
-    }
 
-    /**
-     * Vector de distancias mínimas desde un origen a todos los nodos del mapa, calculado con
-     * una BFS y memorizado mientras no cambie el instante fijado.
-     */
-    public int[] distanciasDesde(Coordenada origen) {
-        int idxOrigen = origen.indice();
-        int[] cacheado = cacheDistancias.get(idxOrigen);
+        // Sin bloqueos activos en la ventana de viaje, el camino Manhattan es óptimo.
+        if (!hayBloqueoEntre(salida, salida + manhattan * cruce)) {
+            return new Tramo(salida + manhattan * cruce, manhattan,
+                    conArcos ? arcosManhattan(origen, destino) : Collections.emptyList());
+        }
+
+        String k = fuente + ":" + meta + ":" + Double.doubleToLongBits(salida) + ":"
+                + Double.doubleToLongBits(velocidadKmH) + ":" + conArcos;
+        Tramo cacheado = cache.get(k);
         if (cacheado != null) {
             return cacheado;
         }
-        int[] dist = bfs(idxOrigen);
-        cacheDistancias.put(idxOrigen, dist);
-        return dist;
+        Tramo t = recorridoCanonico(origen, destino, salida, cruce, conArcos);
+        if (t == null) {
+            t = dijkstraTemporal(fuente, meta, salida, cruce, conArcos);
+        }
+        cache.put(k, t);
+        return t;
     }
 
-    private int[] bfs(int idxOrigen) {
-        int[] dist = new int[NUM_NODOS];
-        Arrays.fill(dist, Integer.MAX_VALUE);
-        dist[idxOrigen] = 0;
+    /** Camino en L sin esperas, o {@code null} si alguna calle obliga a esperar. */
+    private Tramo recorridoCanonico(Coordenada origen, Coordenada destino, double salida,
+                                    double cruce, boolean conArcos) {
+        List<Long> arcos = conArcos ? new ArrayList<>() : Collections.emptyList();
+        int x = origen.getX();
+        int y = origen.getY();
+        double hora = salida;
+        int km = 0;
+        while (x != destino.getX() || y != destino.getY()) {
+            int nx = x;
+            int ny = y;
+            if (x != destino.getX()) {
+                nx += Integer.signum(destino.getX() - x);
+            } else {
+                ny += Integer.signum(destino.getY() - y);
+            }
+            int a = y * ANCHO + x;
+            int b = ny * ANCHO + nx;
+            if (proximaSalida(a, b, hora, cruce) != hora) {
+                return null;
+            }
+            if (conArcos) {
+                arcos.add(clave(a, b));
+            }
+            hora += cruce;
+            km++;
+            x = nx;
+            y = ny;
+        }
+        return new Tramo(hora, km, arcos);
+    }
 
-        int cabeza = 0;
-        int cola = 0;
-        colaBfs[cola++] = idxOrigen;
+    private Tramo dijkstraTemporal(int fuente, int meta, double salida, double cruce,
+                                   boolean conArcos) {
+        double[] llegada = new double[NUM_NODOS];
+        int[] distancia = new int[NUM_NODOS];
+        int[] previo = new int[NUM_NODOS];
+        Arrays.fill(llegada, Double.POSITIVE_INFINITY);
+        Arrays.fill(previo, -1);
+        llegada[fuente] = salida;
 
-        while (cabeza < cola) {
-            int nodo = colaBfs[cabeza++];
-            int x = nodo % (Coordenada.ANCHO_MAX + 1);
-            int y = nodo / (Coordenada.ANCHO_MAX + 1);
-            int d0 = dist[nodo] + 1;
+        // Etiqueta: {llegada, km, nodo}; orden por llegada, luego km, luego nodo (determinista).
+        PriorityQueue<double[]> cola = new PriorityQueue<>((p, q) -> {
+            int c = Double.compare(p[0], q[0]);
+            if (c != 0) {
+                return c;
+            }
+            c = Double.compare(p[1], q[1]);
+            return c != 0 ? c : Double.compare(p[2], q[2]);
+        });
+        cola.add(new double[]{salida, 0, fuente});
+
+        while (!cola.isEmpty()) {
+            double[] actual = cola.poll();
+            int u = (int) actual[2];
+            if (actual[0] != llegada[u] || (int) actual[1] != distancia[u]) {
+                continue;
+            }
+            if (u == meta) {
+                break;
+            }
+            int ux = u % ANCHO;
+            int uy = u / ANCHO;
             for (int d = 0; d < 4; d++) {
-                int nx = x + DX[d];
-                int ny = y + DY[d];
+                int nx = ux + DX[d];
+                int ny = uy + DY[d];
                 if (nx < 0 || nx > Coordenada.ANCHO_MAX || ny < 0 || ny > Coordenada.ALTO_MAX) {
                     continue;
                 }
-                if (!transitable(nodo, d)) {
-                    continue;
-                }
-                int vecino = ny * (Coordenada.ANCHO_MAX + 1) + nx;
-                if (dist[vecino] > d0) {
-                    dist[vecino] = d0;
-                    colaBfs[cola++] = vecino;
+                int v = ny * ANCHO + nx;
+                double fin = proximaSalida(u, v, actual[0], cruce) + cruce;
+                int km = distancia[u] + 1;
+                if (fin < llegada[v] || (fin == llegada[v] && km < distancia[v])) {
+                    llegada[v] = fin;
+                    distancia[v] = km;
+                    previo[v] = u;
+                    cola.add(new double[]{fin, km, v});
                 }
             }
         }
-        return dist;
+        if (Double.isInfinite(llegada[meta])) {
+            return null;   // camino inexistente
+        }
+        List<Long> arcos = Collections.emptyList();
+        if (conArcos) {
+            arcos = new ArrayList<>();
+            for (int v = meta; v != fuente; v = previo[v]) {
+                arcos.add(clave(previo[v], v));
+            }
+            Collections.reverse(arcos);
+        }
+        return new Tramo(llegada[meta], distancia[meta], arcos);
     }
 
-    /**
-     * Reconstruye el camino mínimo nodo a nodo entre dos puntos, para trazarlo en el
-     * visualizador (LE040). Devuelve una lista vacía si el destino es inalcanzable.
-     */
-    public List<Coordenada> caminoMinimo(Coordenada origen, Coordenada destino) {
-        List<Coordenada> camino = new ArrayList<>();
-        if (!hayBloqueosVigentes) {
-            // Sin bloqueos basta un camino monótono en L.
-            int x = origen.getX();
-            int y = origen.getY();
-            camino.add(origen);
-            while (x != destino.getX()) {
-                x += Integer.signum(destino.getX() - x);
-                camino.add(new Coordenada(x, y));
+    private static List<Long> arcosManhattan(Coordenada origen, Coordenada destino) {
+        List<Long> arcos = new ArrayList<>();
+        int x = origen.getX();
+        int y = origen.getY();
+        while (x != destino.getX() || y != destino.getY()) {
+            int nx = x;
+            int ny = y;
+            if (x != destino.getX()) {
+                nx += Integer.signum(destino.getX() - x);
+            } else {
+                ny += Integer.signum(destino.getY() - y);
             }
-            while (y != destino.getY()) {
-                y += Integer.signum(destino.getY() - y);
-                camino.add(new Coordenada(x, y));
-            }
-            return camino;
+            arcos.add(clave(y * ANCHO + x, ny * ANCHO + nx));
+            x = nx;
+            y = ny;
         }
-        int[] dist = distanciasDesde(origen);
-        if (dist[destino.indice()] == Integer.MAX_VALUE) {
-            return camino;
-        }
-        // Descenso por gradiente sobre el vector de distancias desde el origen.
-        Coordenada actual = destino;
-        camino.add(actual);
-        while (!actual.equals(origen)) {
-            int nodo = actual.indice();
-            for (int d = 0; d < 4; d++) {
-                Coordenada vecino = new Coordenada(actual.getX() + DX[d], actual.getY() + DY[d]);
-                if (!vecino.dentroDelMapa() || !transitable(nodo, d)) {
-                    continue;
-                }
-                if (dist[vecino.indice()] == dist[nodo] - 1) {
-                    actual = vecino;
-                    camino.add(actual);
-                    break;
-                }
-            }
-        }
-        java.util.Collections.reverse(camino);
-        return camino;
-    }
-
-    /**
-     * Indica si el camino mínimo entre dos nodos atraviesa algún tramo de los bloqueos
-     * vigentes. Lo usa el operador de destrucción {@code blocked-arc removal} para identificar
-     * los pedidos cuyas rutas quedaron comprometidas por un cierre sobrevenido.
-     */
-    public boolean rutaAfectadaPorBloqueo(Coordenada origen, Coordenada destino) {
-        if (!hayBloqueosVigentes) {
-            return false;
-        }
-        int real = distancia(origen, destino);
-        return real == Integer.MAX_VALUE || real > origen.distanciaManhattan(destino);
+        return arcos;
     }
 }

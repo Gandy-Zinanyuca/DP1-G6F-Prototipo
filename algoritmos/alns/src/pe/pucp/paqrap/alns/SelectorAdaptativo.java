@@ -4,76 +4,52 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Mecanismo adaptativo del ALNS: selección de operadores por ruleta con pesos que se
- * actualizan según el desempeño reciente.
+ * Mecanismo adaptativo del ALNS (ISA 5.2): SELECCIONAR_OPERADOR y ACTUALIZAR_PESOS.
  *
- * <p>Es el rasgo que distingue al ALNS del Large Neighborhood Search clásico y la razón por la
- * que una misma implementación puede ajustarse a los tres escenarios de evaluación sin
- * reprogramarse: los operadores útiles en la operación día a día no son los mismos que dominan
- * cerca del colapso, y el algoritmo lo descubre solo.</p>
- *
- * <h2>Mecánica</h2>
  * <ol>
- *   <li>En cada iteración se elige el operador <i>i</i> con probabilidad
- *       p<sub>i</sub> = w<sub>i</sub> / Σ w<sub>j</sub> (ruleta).</li>
- *   <li>Se acumula un puntaje π<sub>i</sub> según el resultado obtenido y se cuenta el uso
- *       θ<sub>i</sub>.</li>
- *   <li>Al terminar un segmento de iteraciones, los pesos se suavizan:
- *       w<sub>i</sub> ← λ·w<sub>i</sub> + (1−λ)·(π<sub>i</sub>/θ<sub>i</sub>),
- *       y los contadores se reinician.</li>
+ *   <li>Selección por ruleta: se sortea un valor uniforme en [0, Σ pesos) y se elige el primer
+ *       operador cuyo peso acumulado lo alcance.</li>
+ *   <li>Cada operador acumula puntuaciónSegmento y usosSegmento en cada iteración.</li>
+ *   <li>Al cerrar el segmento: peso ← peso · (1 − r) + r · (puntuaciónSegmento / usosSegmento)
+ *       para los operadores usados, y los contadores se reinician.</li>
  * </ol>
- *
- * <p>El factor de reacción λ ∈ [0,1] controla la memoria: valores altos conservan el
- * aprendizaje acumulado, valores bajos reaccionan rápido al desempeño del último segmento.
- * Los pesos se acotan por abajo para que ningún operador quede permanentemente excluido, lo que
- * preserva la capacidad de diversificación en fases tardías de la búsqueda.</p>
  *
  * @param <T> tipo de operador administrado (destrucción o reparación)
  */
 public class SelectorAdaptativo<T> {
 
-    private static final double PESO_MINIMO = 0.05;
-
     private final List<T> operadores;
     private final double[] pesos;
-    private final double[] puntajes;
-    private final int[] usos;
+    private final double[] puntuacionSegmento;
+    private final int[] usosSegmento;
     private final int[] usosAcumulados;
     private final double factorReaccion;
 
-    public SelectorAdaptativo(List<T> operadores, double factorReaccion) {
+    public SelectorAdaptativo(List<T> operadores, double pesoInicial, double factorReaccion) {
         this.operadores = operadores;
         this.factorReaccion = factorReaccion;
         this.pesos = new double[operadores.size()];
-        this.puntajes = new double[operadores.size()];
-        this.usos = new int[operadores.size()];
+        this.puntuacionSegmento = new double[operadores.size()];
+        this.usosSegmento = new int[operadores.size()];
         this.usosAcumulados = new int[operadores.size()];
-        java.util.Arrays.fill(pesos, 1.0);
+        java.util.Arrays.fill(pesos, pesoInicial);
     }
 
-    /** Selecciona un operador por ruleta proporcional a su peso. */
+    /** SELECCIONAR_OPERADOR: ruleta proporcional al peso. */
     public int seleccionar(Random aleatorio) {
-        double total = 0;
+        double sumaPesos = 0;
         for (double w : pesos) {
-            total += w;
+            sumaPesos += w;
         }
-        double corte = aleatorio.nextDouble() * total;
+        double valorAleatorio = aleatorio.nextDouble() * sumaPesos;
         double acumulado = 0;
         for (int i = 0; i < pesos.length; i++) {
             acumulado += pesos[i];
-            if (acumulado >= corte) {
-                registrarUso(i);
+            if (valorAleatorio <= acumulado) {
                 return i;
             }
         }
-        int ultimo = pesos.length - 1;
-        registrarUso(ultimo);
-        return ultimo;
-    }
-
-    private void registrarUso(int indice) {
-        usos[indice]++;
-        usosAcumulados[indice]++;
+        return pesos.length - 1;
     }
 
     public T operador(int indice) {
@@ -84,21 +60,22 @@ public class SelectorAdaptativo<T> {
         return operadores;
     }
 
-    /** Acumula el puntaje obtenido por el operador en la iteración actual. */
-    public void premiar(int indice, double puntaje) {
-        puntajes[indice] += puntaje;
+    /** Suma la puntuación de la iteración y cuenta un uso del operador. */
+    public void puntuar(int indice, double puntuacion) {
+        puntuacionSegmento[indice] += puntuacion;
+        usosSegmento[indice]++;
+        usosAcumulados[indice]++;
     }
 
-    /** Cierra el segmento: suaviza los pesos con el desempeño observado y reinicia contadores. */
+    /** ACTUALIZAR_PESOS: cierra el segmento y reinicia los contadores. */
     public void actualizarPesos() {
         for (int i = 0; i < pesos.length; i++) {
-            if (usos[i] > 0) {
-                double desempenio = puntajes[i] / usos[i];
-                pesos[i] = factorReaccion * pesos[i] + (1 - factorReaccion) * desempenio;
-                pesos[i] = Math.max(PESO_MINIMO, pesos[i]);
+            if (usosSegmento[i] > 0) {
+                double desempenioSegmento = puntuacionSegmento[i] / usosSegmento[i];
+                pesos[i] = pesos[i] * (1 - factorReaccion) + factorReaccion * desempenioSegmento;
             }
-            puntajes[i] = 0;
-            usos[i] = 0;
+            puntuacionSegmento[i] = 0;
+            usosSegmento[i] = 0;
         }
     }
 

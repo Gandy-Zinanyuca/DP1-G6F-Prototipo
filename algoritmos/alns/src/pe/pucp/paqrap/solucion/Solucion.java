@@ -4,7 +4,6 @@ import pe.pucp.paqrap.modelo.Almacen;
 import pe.pucp.paqrap.modelo.Pedido;
 import pe.pucp.paqrap.modelo.Vehiculo;
 import pe.pucp.paqrap.planificador.ContextoPlanificacion;
-import pe.pucp.paqrap.planificador.ParametrosPlanificador;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -44,8 +43,7 @@ public class Solucion {
     private final Map<String, Integer> consumoAlmacen = new LinkedHashMap<>();
 
     private double costo = Double.NaN;
-    private int tardanzaTotalMinutos;
-    private int pedidosTardios;
+    private List<String> errores;
     private double distanciaTotalKm;
     private double costoOperacionSoles;
 
@@ -62,8 +60,7 @@ public class Solucion {
         s.ubicacion.putAll(ubicacion);
         s.consumoAlmacen.putAll(consumoAlmacen);
         s.costo = costo;
-        s.tardanzaTotalMinutos = tardanzaTotalMinutos;
-        s.pedidosTardios = pedidosTardios;
+        s.errores = errores == null ? null : new ArrayList<>(errores);
         s.distanciaTotalKm = distanciaTotalKm;
         s.costoOperacionSoles = costoOperacionSoles;
         return s;
@@ -185,80 +182,78 @@ public class Solucion {
     // ------------------------------------------------------------------ evaluación
 
     /**
-     * Recalcula todas las rutas y evalúa la función objetivo.
+     * EVALUAR(solución) del ISA (sección 5.1): comprueba todas las restricciones duras y
+     * calcula el costo.
      *
-     * <p>f(S) = w<sub>d</sub>·Σ costo(r) + w<sub>u</sub>·|unidades usadas|
-     *          + w<sub>t</sub>·Σ tardanza(p) + Σ penalización(p ∉ S)</p>
+     * <p>La solución es factible si y solo si no se registra ningún error: toda ruta es factible
+     * (capacidad, plazos, caminos, mantenimiento, alimentación y turno), todos los pedidos
+     * considerados aparecen exactamente una vez, no hay pedidos adicionales ni sin asignar, y
+     * ningún almacén intermedio queda con stock negativo. El costo es
+     * Σ distanciaRuta × costoKmVehículo y solo se usa para comparar soluciones factibles.</p>
      *
-     * <p>Los pesos están escalados para inducir un orden lexicográfico de facto: eliminar
-     * tardanzas domina sobre colocar todos los pedidos, y colocar pedidos domina sobre el costo
-     * de operación. La razón es la definición de colapso del problema: una sola entrega fuera
-     * de plazo termina el escenario, por lo que ninguna reducción de kilómetros compensa un
-     * minuto de tardanza.</p>
-     *
-     * @return el valor de la función objetivo (a minimizar)
+     * @return el costo total de la solución
      */
     public double evaluar(ContextoPlanificacion ctx) {
-        ParametrosPlanificador par = ctx.getParametros();
-
+        errores = new ArrayList<>();
         distanciaTotalKm = 0;
         costoOperacionSoles = 0;
-        tardanzaTotalMinutos = 0;
-        pedidosTardios = 0;
-        double f = 0;
 
+        Set<Integer> encontrados = new java.util.HashSet<>();
         for (Ruta r : rutas.values()) {
-            r.recalcular(ctx);
+            r.asegurarCalculada(ctx);
             if (r.estaVacia()) {
                 continue;
             }
+            if (!r.esFactible()) {
+                errores.add(r.getVehiculo().getCodigo() + ": " + r.getMotivoInfactibilidad());
+            }
+            for (Pedido p : r.getSecuencia()) {
+                if (!encontrados.add(p.getId())) {
+                    errores.add("pedido duplicado P" + p.getId());
+                }
+            }
             distanciaTotalKm += r.getDistanciaKm();
             costoOperacionSoles += r.costoOperacion();
-            tardanzaTotalMinutos += r.getTardanzaTotalMinutos();
-            pedidosTardios += r.getPedidosTardios();
-
-            f += par.costoFijoPorUnidad;
-            if (!r.esFactible()) {
-                // Una ruta estructuralmente infactible (capacidad, turno, nodo aislado) se
-                // penaliza como si todos sus pedidos llegaran fuera de plazo.
-                f += par.penalizacionPedidoTardio * r.tamanio();
-            }
         }
-
-        f += par.pesoCostoDistancia * costoOperacionSoles;
-        f += par.penalizacionPedidoTardio * pedidosTardios;
-        f += par.penalizacionPorMinutoTardanza * tardanzaTotalMinutos;
 
         for (Pedido p : noAsignados) {
-            double criticidad = Math.min(1.5, Math.max(0.0, p.criticidad(ctx.getMinutoActual())));
-            f += par.penalizacionPedidoNoAsignado + par.factorCriticidadNoAsignado * criticidad;
+            errores.add("pedido no asignado P" + p.getId());
+        }
+        Set<Integer> considerados = new java.util.HashSet<>();
+        for (Pedido p : ctx.getPedidosPorAtender()) {
+            considerados.add(p.getId());
+            if (!encontrados.contains(p.getId()) && !noAsignados.contains(p)) {
+                errores.add("pedido faltante P" + p.getId());
+            }
+        }
+        for (Integer id : encontrados) {
+            if (!considerados.contains(id)) {
+                errores.add("pedido adicional P" + id);
+            }
         }
 
-        // Sobregiro de inventario: nunca debería ocurrir si los operadores respetan hayStock().
         for (Almacen a : ctx.getAlmacenes()) {
-            if (a.esCentral()) {
-                continue;
-            }
-            int exceso = consumo(a) - ctx.stockInicial(a);
-            if (exceso > 0) {
-                f += par.penalizacionPedidoTardio * exceso;
+            if (!a.esCentral() && consumo(a) > ctx.stockInicial(a)) {
+                errores.add("stock insuficiente en " + a.getId());
             }
         }
 
-        costo = f;
-        return f;
+        costo = costoOperacionSoles;
+        return costo;
+    }
+
+    /** Resultado de la última evaluación: verdadero si no se registró ningún error. */
+    public boolean esFactible() {
+        return errores != null && errores.isEmpty();
+    }
+
+    /** Errores de la última evaluación (restricciones duras violadas). */
+    public List<String> getErrores() {
+        return errores == null ? new ArrayList<>() : errores;
     }
 
     public double getCosto() {
         return costo;
-    }
-
-    public int getTardanzaTotalMinutos() {
-        return tardanzaTotalMinutos;
-    }
-
-    public int getPedidosTardios() {
-        return pedidosTardios;
     }
 
     public double getDistanciaTotalKm() {
@@ -269,26 +264,12 @@ public class Solucion {
         return costoOperacionSoles;
     }
 
-    /** Una solución es admisible si coloca todos los pedidos sin ninguna tardanza. */
-    public boolean esAdmisible() {
-        if (!noAsignados.isEmpty() || pedidosTardios > 0) {
-            return false;
-        }
-        for (Ruta r : rutas.values()) {
-            if (!r.estaVacia() && !r.esFactible()) {
-                return false;
-            }
-        }
-        return true;
-    }
-
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append(String.format("Solución  f=%.2f  unidades=%d  km=%.0f  costo=S/ %.2f  "
-                        + "tardíos=%d  noAsignados=%d%n",
-                costo, numeroUnidadesUsadas(), distanciaTotalKm, costoOperacionSoles,
-                pedidosTardios, noAsignados.size()));
+        sb.append(String.format("Solución  %s  costo=S/ %.2f  unidades=%d  km=%.0f  noAsignados=%d%n",
+                esFactible() ? "FACTIBLE" : "NO FACTIBLE", costo, numeroUnidadesUsadas(),
+                distanciaTotalKm, noAsignados.size()));
         for (Ruta r : rutas.values()) {
             if (!r.estaVacia()) {
                 sb.append(r).append('\n');

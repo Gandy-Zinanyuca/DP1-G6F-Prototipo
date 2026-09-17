@@ -8,20 +8,14 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Operador de reparación: reinserta en la solución los pedidos que quedaron sin asignar.
+ * Operador de reparación: reinserta en la solución los pedidos removidos por la destrucción.
  *
- * <p>Un reparador puede dejar pedidos fuera si ninguna inserción respeta las restricciones;
- * esos pedidos permanecen en {@link Solucion#getNoAsignados()} y la función objetivo los
- * penaliza en proporción a su criticidad, de modo que la búsqueda vuelve sobre ellos en las
- * iteraciones siguientes.</p>
+ * <p>Solo se aplican inserciones factibles. Un pedido sin inserción factible queda marcado como
+ * no asignado, lo que vuelve no factible al candidato (restricción dura del ISA).</p>
  */
 public interface OperadorReparacion {
 
-    /**
-     * Reinserta los pedidos indicados. La implementación decide el orden de inserción, que es
-     * precisamente lo que distingue a un reparador goloso de uno por arrepentimiento.
-     */
-    void reparar(Solucion solucion, List<Pedido> porInsertar,
+    void reparar(Solucion solucion, List<Pedido> removidos,
                  ContextoPlanificacion ctx, Random aleatorio);
 
     String nombre();

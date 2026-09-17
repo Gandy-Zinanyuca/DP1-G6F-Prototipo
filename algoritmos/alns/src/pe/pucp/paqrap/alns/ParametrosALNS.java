@@ -1,112 +1,79 @@
 package pe.pucp.paqrap.alns;
 
 /**
- * Parámetros de configuración del ALNS.
+ * ConfiguracionALNS del ISA (sección 5.2).
  *
- * <p>Los valores por defecto siguen los rangos reportados por Ropke y Pisinger (2006) y
- * Pisinger y Ropke (2007) y son el punto de partida para la calibración por experimentación
- * numérica. Todos son configurables sin recompilar, lo que permite ejecutar los tres escenarios
- * del curso con la misma implementación cambiando únicamente esta configuración.</p>
+ * <p>El ISA no fija valores numéricos para estos parámetros: deben determinarse mediante
+ * experimentación numérica. Los valores por defecto son solo un punto de partida para la
+ * calibración.</p>
  */
 public class ParametrosALNS {
 
-    // ---------------------------------------------------------------- presupuesto
+    // ---------------------------------------------------------------- ventana de consumo
+
+    /** Sa: salto de planificación, en minutos (cada cuánto se ejecuta el planificador). */
+    public long saMinutos = 10;
+
+    /** K: factor de consumo, a calibrar. */
+    public int k = 7;
+
+    /** Sc = Sa × K: amplitud, en minutos, de la ventana de pedidos considerados. */
+    public long scMinutos() {
+        return saMinutos * k;
+    }
+
+    // ---------------------------------------------------------------- búsqueda
 
     /** Número máximo de iteraciones del bucle principal. */
-    public int maxIteraciones = 3_000;
+    public int maxIteraciones = 1_000;
 
-    /** Presupuesto de tiempo por ciclo de planificación, en milisegundos. */
-    public long presupuestoMs = 2_000;
+    /** Proporción de pedidos de la solución que remueve un operador de destrucción. */
+    public double proporcionDestruccion = 0.20;
 
-    /** Iteraciones sin mejora tras las cuales se recalienta la temperatura. */
-    public int iteracionesParaRecalentar = 400;
+    /**
+     * Reducción dinámica del grado de destrucción conforme aumenta la ocupación de la flota
+     * (ISA 4.1 y 5.2): grado = total × proporción × (1 − 0,7 · ocupación).
+     */
+    public boolean destruccionAdaptativaPorOcupacion = true;
 
     /** Semilla del generador aleatorio; fijarla garantiza ejecuciones reproducibles (LE008). */
     public long semilla = 20262L;
 
-    // ---------------------------------------------------------------- destrucción
+    // ---------------------------------------------------------------- adaptación
 
-    /** Fracción mínima de pedidos removidos por iteración. */
-    public double gradoDestruccionMin = 0.10;
+    /** Iteraciones por segmento, al cabo de las cuales se actualizan los pesos. */
+    public int tamanioSegmento = 100;
 
-    /** Fracción máxima de pedidos removidos por iteración. */
-    public double gradoDestruccionMax = 0.35;
+    /** Peso inicial de cada operador. */
+    public double pesoInicial = 1.0;
 
-    /** Cota absoluta inferior del grado de destrucción, en número de pedidos. */
-    public int destruccionMinimaAbsoluta = 2;
+    /** Factor de reacción r: w ← w·(1 − r) + r·desempeñoSegmento. */
+    public double factorReaccion = 0.10;
 
-    /** Cota absoluta superior del grado de destrucción, en número de pedidos. */
-    public int destruccionMaximaAbsoluta = 60;
+    /** Puntuación cuando el candidato mejora a mejorGlobal. */
+    public double puntuacionNuevoMejor = 33.0;
 
-    /**
-     * Si es verdadero, el grado de destrucción se reduce conforme sube la ocupación de la flota.
-     *
-     * <p>Es la mitigación explícita del riesgo identificado en el informe de selección de
-     * algoritmos: cerca del punto de colapso el espacio factible es mínimo, y remover un
-     * porcentaje elevado de una solución apenas factible puede producir un estado que los
-     * operadores de reparación no logren reconstruir dentro de plazo. Al ligar el grado de
-     * destrucción a la ocupación, el algoritmo se vuelve conservador justo cuando la holgura
-     * desaparece.</p>
-     */
-    public boolean destruccionAdaptativaPorOcupacion = true;
+    /** Puntuación cuando el candidato mejora a la solución actual sin ser nuevo mejor. */
+    public double puntuacionMejoraActual = 9.0;
 
-    /** Factor de sesgo D de la aleatorización del ranking en la remoción del peor. */
-    public double sesgoRemocionPeor = 3.0;
+    /** Puntuación cuando el candidato no mejora a la actual pero es aceptado. */
+    public double puntuacionAceptacionNoMejora = 13.0;
 
-    /** Factor de sesgo D de la aleatorización del ranking en la remoción por relación. */
-    public double sesgoRemocionShaw = 5.0;
-
-    /** Pesos φ, χ, ψ de la medida de relación de Shaw (distancia, tiempo, carga). */
-    public double shawPesoDistancia = 0.6;
-    public double shawPesoTiempo = 0.3;
-    public double shawPesoCarga = 0.1;
+    /** Puntuación cuando el candidato no es factible o es rechazado. */
+    public double puntuacionRechazo = 0.0;
 
     // ---------------------------------------------------------------- reparación
 
-    /** Intensidad del ruido aplicado a los costos de inserción; 0 desactiva el ruido. */
-    public double factorRuido = 0.025;
-
-    /** Órdenes de arrepentimiento incluidos en la cartera de reparadores. */
-    public int[] ordenesArrepentimiento = {2, 3};
-
-    /**
-     * Número máximo de pedidos que se intentan reinsertar en una misma reparación.
-     *
-     * <p>El costo de una reparación crece linealmente con este valor. Acotarlo preserva el
-     * número de iteraciones —que es de donde viene la calidad del ALNS— cuando la demanda
-     * acumulada supera con mucho la capacidad de la flota. Los pedidos que quedan fuera se
-     * eligen por menor criticidad, de modo que el esfuerzo se concentra donde todavía puede
-     * evitarse un incumplimiento.</p>
-     */
-    public int maxPedidosPorReparacion = 120;
-
-    // ---------------------------------------------------------------- adaptación
-
-    /** Longitud del segmento tras el cual se actualizan los pesos de los operadores. */
-    public int longitudSegmento = 100;
-
-    /** Factor de reacción λ del suavizado exponencial de pesos. */
-    public double factorReaccion = 0.80;
-
-    /** σ₁: puntaje cuando la candidata mejora la mejor solución conocida. */
-    public double puntajeNuevoMejor = 33.0;
-
-    /** σ₂: puntaje cuando la candidata mejora la solución actual pero no la mejor. */
-    public double puntajeMejora = 13.0;
-
-    /** σ₃: puntaje cuando la candidata empeora pero es aceptada por el criterio. */
-    public double puntajeAceptada = 6.0;
-
-    /** Puntaje cuando la candidata es rechazada. */
-    public double puntajeRechazada = 0.0;
+    /** Arrepentimiento asignado a un pedido con una sola inserción factible. */
+    public double arrepentimientoSinAlternativa = 1_000_000.0;
 
     // ---------------------------------------------------------------- aceptación
 
-    /** w: empeoramiento relativo aceptado con probabilidad 1/2 al inicio de la búsqueda. */
-    public double porcentajeAceptacionInicial = 0.05;
+    /** Temperatura inicial del criterio tipo recocido simulado. */
+    public double temperaturaInicial = 100.0;
 
-    /** Fracción de T₀ que debe alcanzar la temperatura al agotar el presupuesto. */
-    public double temperaturaFinalRelativa = 0.001;
+    /** Factor de enfriamiento: T = temperaturaInicial × factorEnfriamiento ^ iteración. */
+    public double factorEnfriamiento = 0.995;
 
     // ---------------------------------------------------------------- diagnóstico
 
@@ -115,31 +82,22 @@ public class ParametrosALNS {
 
     public ParametrosALNS copia() {
         ParametrosALNS p = new ParametrosALNS();
+        p.saMinutos = saMinutos;
+        p.k = k;
         p.maxIteraciones = maxIteraciones;
-        p.presupuestoMs = presupuestoMs;
-        p.iteracionesParaRecalentar = iteracionesParaRecalentar;
-        p.semilla = semilla;
-        p.gradoDestruccionMin = gradoDestruccionMin;
-        p.gradoDestruccionMax = gradoDestruccionMax;
-        p.destruccionMinimaAbsoluta = destruccionMinimaAbsoluta;
-        p.destruccionMaximaAbsoluta = destruccionMaximaAbsoluta;
+        p.proporcionDestruccion = proporcionDestruccion;
         p.destruccionAdaptativaPorOcupacion = destruccionAdaptativaPorOcupacion;
-        p.sesgoRemocionPeor = sesgoRemocionPeor;
-        p.sesgoRemocionShaw = sesgoRemocionShaw;
-        p.shawPesoDistancia = shawPesoDistancia;
-        p.shawPesoTiempo = shawPesoTiempo;
-        p.shawPesoCarga = shawPesoCarga;
-        p.factorRuido = factorRuido;
-        p.ordenesArrepentimiento = ordenesArrepentimiento.clone();
-        p.maxPedidosPorReparacion = maxPedidosPorReparacion;
-        p.longitudSegmento = longitudSegmento;
+        p.semilla = semilla;
+        p.tamanioSegmento = tamanioSegmento;
+        p.pesoInicial = pesoInicial;
         p.factorReaccion = factorReaccion;
-        p.puntajeNuevoMejor = puntajeNuevoMejor;
-        p.puntajeMejora = puntajeMejora;
-        p.puntajeAceptada = puntajeAceptada;
-        p.puntajeRechazada = puntajeRechazada;
-        p.porcentajeAceptacionInicial = porcentajeAceptacionInicial;
-        p.temperaturaFinalRelativa = temperaturaFinalRelativa;
+        p.puntuacionNuevoMejor = puntuacionNuevoMejor;
+        p.puntuacionMejoraActual = puntuacionMejoraActual;
+        p.puntuacionAceptacionNoMejora = puntuacionAceptacionNoMejora;
+        p.puntuacionRechazo = puntuacionRechazo;
+        p.arrepentimientoSinAlternativa = arrepentimientoSinAlternativa;
+        p.temperaturaInicial = temperaturaInicial;
+        p.factorEnfriamiento = factorEnfriamiento;
         p.traza = traza;
         return p;
     }

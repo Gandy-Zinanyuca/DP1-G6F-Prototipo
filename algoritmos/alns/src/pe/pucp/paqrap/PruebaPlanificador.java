@@ -17,30 +17,26 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 /**
- * Banco de pruebas de verificación del componente planificador.
- *
- * <p>Ejecuta cinco comprobaciones sobre un ciclo real construido a partir de los archivos del
- * curso. No sustituye a un conjunto de pruebas unitarias, pero cubre las propiedades que, si se
- * rompen, invalidan cualquier resultado de la experimentación numérica:</p>
+ * Banco de pruebas de verificación del componente planificador ALNS (ISA 5.2).
  *
  * <ol>
- *   <li><b>Aporte del metaheurístico</b>: el ALNS debe mejorar la solución de la heurística
- *       constructiva. Si no la mejora, no hay razón para usarlo.</li>
- *   <li><b>Reproducibilidad</b>: dos ejecuciones con la misma semilla deben dar el mismo costo
- *       (LE008, LE009).</li>
- *   <li><b>Integridad de la asignación</b>: cada pedido aparece exactamente una vez, sea en una
- *       ruta o en la lista de diferidos; ninguno se duplica ni se pierde (LE006).</li>
- *   <li><b>Capacidad</b>: ninguna ruta excede la capacidad de su unidad (LE014, LE027).</li>
- *   <li><b>Inventario</b>: ningún almacén intermedio queda con stock negativo (LE019).</li>
+ *   <li><b>Factibilidad</b>: la solución devuelta cumple todas las restricciones duras, o se
+ *       reporta como no factible (colapso) sin iterar.</li>
+ *   <li><b>Aporte del metaheurístico</b>: el costo de ALNS no supera al de la solución inicial.</li>
+ *   <li><b>Métricas</b>: candidatosEvaluados = maxIteraciones = factibles + noFactibles.</li>
+ *   <li><b>Operadores</b>: 5 de destrucción y 2 de reparación.</li>
+ *   <li><b>Reproducibilidad</b>: dos ejecuciones con la misma semilla dan el mismo costo (LE008).</li>
+ *   <li><b>Integridad</b>: cada pedido considerado aparece exactamente una vez (LE006).</li>
+ *   <li><b>Capacidad, plazos e inventario</b> verificados de forma independiente.</li>
  * </ol>
  *
  * <h2>Uso</h2>
  * <pre>
  *   java -cp out pe.pucp.paqrap.PruebaPlanificador &lt;ventas.txt&gt; [bloqueos.txt] [--dia N] [--hora N]
+ *                                                  [--iteraciones N]
  * </pre>
  */
 public final class PruebaPlanificador {
@@ -50,18 +46,21 @@ public final class PruebaPlanificador {
     public static void main(String[] args) throws Exception {
         if (args.length < 1) {
             System.out.println("Uso: java pe.pucp.paqrap.PruebaPlanificador <ventas.txt> "
-                    + "[bloqueos.txt] [--dia N] [--hora N]");
+                    + "[bloqueos.txt] [--dia N] [--hora N] [--iteraciones N]");
             return;
         }
         Path ventas = Paths.get(args[0]);
         Path bloqueos = null;
         int dia = 1;
         int hora = 8;
+        int iteraciones = 500;
         for (int i = 1; i < args.length; i++) {
             if ("--dia".equals(args[i])) {
                 dia = Integer.parseInt(args[++i]);
             } else if ("--hora".equals(args[i])) {
                 hora = Integer.parseInt(args[++i]);
+            } else if ("--iteraciones".equals(args[i])) {
+                iteraciones = Integer.parseInt(args[++i]);
             } else if (bloqueos == null) {
                 Path p = Paths.get(args[i]);
                 bloqueos = Files.exists(p) ? p : null;
@@ -73,101 +72,98 @@ public final class PruebaPlanificador {
                 Instancia.AUTOS_POR_DEFECTO, Instancia.MOTOS_POR_DEFECTO,
                 Instancia.BICICLETAS_POR_DEFECTO);
 
+        ParametrosALNS parAlns = new ParametrosALNS();
+        parAlns.maxIteraciones = iteraciones;
+
         ParametrosPlanificador parPlan = new ParametrosPlanificador();
         int minuto = Turnos.aMinutos(dia, hora, 0);
-        ContextoPlanificacion ctx = ContextoPlanificacion.construir(
-                instancia, minuto, instancia.getPedidos(), Collections.emptyList(), parPlan);
+        // Sin pedidos entregados previamente: se consideran los registrados hasta T + Sc.
+        ContextoPlanificacion ctx = ContextoPlanificacion.construir(instancia, minuto,
+                (int) parAlns.scMinutos(), instancia.getPedidos(), Collections.emptyList(), parPlan);
 
         System.out.println("=====================================================================");
-        System.out.println(" Verificación del componente planificador");
+        System.out.println(" Verificación del componente planificador (ALNS)");
         System.out.println("=====================================================================");
-        System.out.printf(" Instante: %s · pedidos: %d · unidades: %d · bloqueos vigentes: %d%n%n",
-                Turnos.formatear(minuto), ctx.getPedidosPorAtender().size(),
+        System.out.printf(" Instante: %s · Sc=%d min · pedidos: %d · unidades: %d · bloqueos vigentes: %d%n%n",
+                Turnos.formatear(minuto), parAlns.scMinutos(), ctx.getPedidosPorAtender().size(),
                 ctx.getUnidadesAsignables().size(), ctx.getMapa().getBloqueosVigentes().size());
 
         if (ctx.getPedidosPorAtender().isEmpty()) {
-            System.out.println(" No hay pedidos en el horizonte; elija otro día u hora.");
+            System.out.println(" No hay pedidos en la ventana; elija otro día u hora.");
             return;
         }
 
-        // --- 1. Aporte del metaheurístico frente a la heurística constructiva -------------
-        Solucion golosa = ConstructorInicial.construir(ctx);
-        double fGolosa = golosa.evaluar(ctx);
+        Solucion inicial = ConstructorInicial.construir(ctx);
+        double costoInicial = inicial.evaluar(ctx);
 
-        ParametrosALNS parAlns = new ParametrosALNS();
-        parAlns.presupuestoMs = 5_000;
-        parAlns.maxIteraciones = 6_000;
         ALNS alns = new ALNS(parAlns);
-        Solucion mejorada = alns.resolver(ctx);
-        double fAlns = mejorada.evaluar(ctx);
+        Solucion resultado = alns.resolver(ctx);
+        ALNS.Estadisticas est = alns.getEstadisticas();
+        System.out.print(est);
 
-        System.out.printf(" [1] Heurística constructiva : f = %,.2f  (km %.0f · S/ %.2f · "
-                        + "tardíos %d · diferidos %d)%n",
-                fGolosa, golosa.getDistanciaTotalKm(), golosa.getCostoOperacionSoles(),
-                golosa.getPedidosTardios(), golosa.getNoAsignados().size());
-        System.out.printf("     ALNS                    : f = %,.2f  (km %.0f · S/ %.2f · "
-                        + "tardíos %d · diferidos %d)%n",
-                fAlns, mejorada.getDistanciaTotalKm(), mejorada.getCostoOperacionSoles(),
-                mejorada.getPedidosTardios(), mejorada.getNoAsignados().size());
-        System.out.printf("     %d iteraciones en %d ms%n",
-                alns.getEstadisticas().iteraciones, alns.getEstadisticas().milisegundos);
-        verificar("ALNS no empeora la solución constructiva", fAlns <= fGolosa + 1e-6);
+        // --- 1. Factibilidad --------------------------------------------------------------
+        if (!inicial.esFactible()) {
+            System.out.println("\n [1] Solución inicial NO FACTIBLE (colapso): " + inicial.getErrores().get(0));
+            verificar("ALNS devuelve resultado no factible sin iterar",
+                    !resultado.esFactible() && est.iteraciones == 0);
+            terminar();
+            return;
+        }
+        System.out.printf("%n [1] Solución inicial: S/ %.2f · ALNS: S/ %.2f%n", costoInicial, resultado.getCosto());
+        verificar("La solución de ALNS es factible", resultado.esFactible());
 
-        // --- 2. Reproducibilidad ----------------------------------------------------------
-        ALNS repetido = new ALNS(parAlns);
-        double fRepetido = repetido.resolver(ctx).evaluar(ctx);
-        System.out.printf("%n [2] Repetición con la misma semilla: f = %,.2f%n", fRepetido);
+        // --- 2. Aporte ---------------------------------------------------------------------
+        verificar("ALNS no empeora la solución inicial", resultado.getCosto() <= costoInicial + 1e-6);
+
+        // --- 3. Métricas -------------------------------------------------------------------
+        verificar("candidatosEvaluados = maxIteraciones",
+                est.candidatosEvaluados == parAlns.maxIteraciones);
+        verificar("candidatosEvaluados = factibles + noFactibles",
+                est.candidatosEvaluados == est.candidatosFactibles + est.candidatosNoFactibles);
+
+        // --- 4. Operadores -----------------------------------------------------------------
+        verificar("5 operadores de destrucción y 2 de reparación",
+                est.nombresDestruccion.length == 5 && est.nombresReparacion.length == 2);
+
+        // --- 5. Reproducibilidad -----------------------------------------------------------
+        double repetido = new ALNS(parAlns).resolver(ctx).getCosto();
         verificar("Ejecuciones con igual semilla dan igual costo (LE008)",
-                Math.abs(fRepetido - fAlns) < 1e-6);
+                Math.abs(repetido - resultado.getCosto()) < 1e-6);
 
-        // --- 3. Integridad de la asignación ----------------------------------------------
+        // --- 6. Integridad -----------------------------------------------------------------
         Set<Integer> vistos = new HashSet<>();
         boolean duplicados = false;
-        for (Ruta r : mejorada.getRutas()) {
+        for (Ruta r : resultado.getRutas()) {
             for (Pedido p : r.getSecuencia()) {
-                if (!vistos.add(p.getId())) {
-                    duplicados = true;
-                }
+                duplicados |= !vistos.add(p.getId());
             }
         }
-        for (Pedido p : mejorada.getNoAsignados()) {
-            if (!vistos.add(p.getId())) {
-                duplicados = true;
-            }
-        }
-        System.out.printf("%n [3] Pedidos del ciclo: %d · referenciados en la solución: %d%n",
-                ctx.getPedidosPorAtender().size(), vistos.size());
         verificar("Ningún pedido duplicado", !duplicados);
-        verificar("Ningún pedido perdido (LE006)",
-                vistos.size() == ctx.getPedidosPorAtender().size());
+        verificar("Todos los pedidos considerados están asignados (LE006)",
+                vistos.size() == ctx.getPedidosPorAtender().size() && resultado.getNoAsignados().isEmpty());
 
-        // --- 4. Capacidad de las unidades -------------------------------------------------
+        // --- 7. Capacidad, plazos e inventario ---------------------------------------------
         boolean capacidadOk = true;
-        for (Ruta r : mejorada.getRutas()) {
-            if (r.getCargaTotal() > r.getVehiculo().getCapacidad()) {
-                capacidadOk = false;
-                System.out.println("     ! " + r.getVehiculo().getCodigo() + " lleva "
-                        + r.getCargaTotal() + " > " + r.getVehiculo().getCapacidad());
+        boolean plazosOk = true;
+        for (Ruta r : resultado.getRutas()) {
+            capacidadOk &= r.getCargaTotal() <= r.getVehiculo().getCapacidad();
+            for (int i = 0; i < r.tamanio(); i++) {
+                plazosOk &= r.minutoLlegada(i) <= r.getSecuencia().get(i).getMinutoLimite();
             }
         }
-        System.out.println();
         verificar("Ninguna ruta excede la capacidad de su unidad (LE014, LE027)", capacidadOk);
-
-        // --- 5. Inventario de los almacenes intermedios -----------------------------------
+        verificar("Ninguna entrega fuera de plazo (LE021)", plazosOk);
         boolean inventarioOk = true;
         for (Almacen a : ctx.getAlmacenes()) {
-            if (a.esCentral()) {
-                continue;
-            }
-            int restante = ctx.stockInicial(a) - mejorada.consumo(a);
-            System.out.printf("     %s: consumo %d de %d → restante %d%n",
-                    a.getId(), mejorada.consumo(a), ctx.stockInicial(a), restante);
-            if (restante < 0) {
-                inventarioOk = false;
+            if (!a.esCentral()) {
+                inventarioOk &= resultado.consumo(a) <= ctx.stockInicial(a);
             }
         }
         verificar("Ningún almacén intermedio queda con stock negativo (LE019)", inventarioOk);
+        terminar();
+    }
 
+    private static void terminar() {
         System.out.println("=====================================================================");
         System.out.println(fallos == 0
                 ? " TODAS LAS VERIFICACIONES PASARON"
