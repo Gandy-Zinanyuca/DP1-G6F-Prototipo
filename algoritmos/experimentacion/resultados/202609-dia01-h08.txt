@@ -1,0 +1,9 @@
+Per�odo=2026-09 d�a=1 hora=8
+Ventas=5000 omitidas=0; bloqueos=558 omitidos=0; mantenimientos=37
+Pedidos del ciclo=36; unidades asignables=36; bloqueos vigentes=1; mantenimiento del d�a=[TA01]
+Semilla=20262; iteraciones=200; sin parada por reloj
+Costo inicial=613276.00; costo ALNS=610516.00; distancia=826.00 km; operaci�n=6036.00 soles
+Asignados=36; diferidos=0; tard�os=3; unidades usadas=11; admisible=false
+Tiempo primera b�squeda=146 ms; iteraciones=200
+OK: carga, integridad, capacidad, inventario, disponibilidad, no empeoramiento y reproducibilidad.
+La integridad no garantiza cumplimiento de plazos ni factibilidad operacional completa.

@@ -1,0 +1,4 @@
+**/target/
+**/out/
+sources-build.txt
+datos-locales/
