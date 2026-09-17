@@ -13,26 +13,29 @@ class TabuNeighborhoodTest {
     private Pedido p(String id) { return new Pedido(id, t, new Nodo(5, 0), 1, 10); }
     @Test void asignacionPruebaTodasLasPosicionesSinMutarLaFuente() {
         Pedido p1 = p("P1"), p2 = p("P2"), p3 = p("P3");
-        var s = new Solucion(List.of(new Ruta(a, List.of(p1)), new Ruta(b, List.of(p2, p3))));
+        var s = new Solucion(List.of(new Ruta(a, List.of(new Entrega(p1, 1))),
+                new Ruta(b, List.of(new Entrega(p2, 1), new Entrega(p3, 1)))));
         List<Candidato> vecinos = new ArrayList<>(); new AssignmentNeighborhood().generar(s, vecinos::add);
         var traslado = vecinos.stream().filter(c -> c.movimiento().pedidoA().equals("P1")).toList();
         assertEquals(3, traslado.size());
         for (int i = 0; i < 3; i++) {
-            assertEquals(p1, traslado.get(i).solucion().rutas().get(1).pedidos().get(i));
-            assertTrue(traslado.get(i).solucion().rutas().get(0).pedidos().isEmpty());
+            assertEquals(p1, traslado.get(i).solucion().rutas().get(1).entregas().get(i).pedido());
+            assertTrue(traslado.get(i).solucion().rutas().get(0).entregas().isEmpty());
         }
-        assertEquals(List.of(p1), s.rutas().get(0).pedidos());
+        assertEquals(List.of(new Entrega(p1, 1)), s.rutas().get(0).entregas());
         assertThrows(UnsupportedOperationException.class, () -> s.rutas().clear());
     }
     @Test void swapCambiaOrdenSinCambiarAsignacion() {
         var pedidos = List.of(p("P1"), p("P2"), p("P3"), p("P4"));
-        var s = new Solucion(List.of(new Ruta(a, pedidos), new Ruta(b, List.of())));
+        var entregas = pedidos.stream().map(pedido -> new Entrega(pedido, 1)).toList();
+        var s = new Solucion(List.of(new Ruta(a, entregas), new Ruta(b, List.of())));
         List<Candidato> vecinos = new ArrayList<>(); new RoutingNeighborhood().generar(s, vecinos::add);
         assertEquals(6, vecinos.size());
-        assertTrue(vecinos.stream().anyMatch(c -> c.solucion().rutas().get(0).pedidos().equals(List.of(pedidos.get(0), pedidos.get(3), pedidos.get(2), pedidos.get(1)))));
+        assertTrue(vecinos.stream().anyMatch(c -> c.solucion().rutas().get(0).entregas().equals(
+                List.of(entregas.get(0), entregas.get(3), entregas.get(2), entregas.get(1)))));
         for (Candidato c : vecinos) {
-            assertEquals(new HashSet<>(pedidos), new HashSet<>(c.solucion().rutas().get(0).pedidos()));
-            assertTrue(c.solucion().rutas().get(1).pedidos().isEmpty());
+            assertEquals(new HashSet<>(entregas), new HashSet<>(c.solucion().rutas().get(0).entregas()));
+            assertTrue(c.solucion().rutas().get(1).entregas().isEmpty());
         }
     }
     @Test void tenenciaProhibeRetornoAlVehiculoAnteriorYPuedeExpirar() {
@@ -51,7 +54,7 @@ class TabuNeighborhoodTest {
     @Test void aspiracionSoloAdmiteTabuFactibleQueMejoraEstrictoGlobal() {
         Pedido p = p("P"); var estado = new EstadoOperacion(t, List.of(p), List.of(a, b), List.of(), List.of());
         var evaluador = new SolutionEvaluator(estado, estado.pedidos());
-        var candidato = new Candidato(new Solucion(List.of(new Ruta(a, List.of()), new Ruta(b, List.of(p)))), TabuMove.asignacion("P", "TA01", "TM01"));
+        var candidato = new Candidato(new Solucion(List.of(new Ruta(a, List.of()), new Ruta(b, List.of(new Entrega(p, 1))))), TabuMove.asignacion("P", "TA01", "TM01"));
         var evaluacion = evaluador.evaluar(candidato.solucion()); assertEquals(60, evaluacion.costoTotal());
         var tabu = new TabuList(); tabu.registrar(TabuMove.asignacion("P", "TM01", "TA01"), 1, 7);
         var mejora = new CandidateSelector(tabu, 2, 80); mejora.considerar(candidato, evaluacion);
@@ -65,7 +68,7 @@ class TabuNeighborhoodTest {
     }
     @Test void selectorAceptaEmpeoramientoFactibleParaExplorar() {
         Pedido p = p("P"); var estado = new EstadoOperacion(t, List.of(p), List.of(a, b), List.of(), List.of());
-        var s = new Solucion(List.of(new Ruta(a, List.of(p)), new Ruta(b, List.of())));
+        var s = new Solucion(List.of(new Ruta(a, List.of(new Entrega(p, 1))), new Ruta(b, List.of())));
         var selector = new CandidateSelector(new TabuList(), 1, 60);
         selector.considerar(new Candidato(s, TabuMove.asignacion("P", "TM01", "TA01")), new SolutionEvaluator(estado, estado.pedidos()).evaluar(s));
         assertNotNull(selector.elegido()); assertEquals(80, selector.evaluacionElegida().costoTotal());

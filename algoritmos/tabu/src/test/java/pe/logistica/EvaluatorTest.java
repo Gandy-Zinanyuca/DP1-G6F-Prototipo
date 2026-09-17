@@ -19,26 +19,26 @@ class EvaluatorTest {
     @Test void rechazaOmisionesDuplicadosPedidosAlteradosYVehiculosAlterados() {
         Pedido p = pedido("P", o, 1, 2);
         assertFalse(evaluar(List.of(p), List.of(new Ruta(auto, List.of())), List.of()).factible());
-        assertFalse(evaluar(List.of(p), List.of(new Ruta(auto, List.of(p, p))), List.of()).factible());
-        assertFalse(evaluar(List.of(p), List.of(new Ruta(auto, List.of(pedido("P", o, 2, 2)))), List.of()).factible());
-        assertFalse(evaluar(List.of(p), List.of(new Ruta(new Vehiculo("TM01", o), List.of(p))), List.of()).factible());
+        assertFalse(evaluar(List.of(p), List.of(new Ruta(auto, List.of(new Entrega(p, 1), new Entrega(p, 1)))), List.of()).factible());
+        assertFalse(evaluar(List.of(p), List.of(new Ruta(auto, List.of(new Entrega(pedido("P", o, 2, 2), 2)))), List.of()).factible());
+        assertFalse(evaluar(List.of(p), List.of(new Ruta(new Vehiculo("TM01", o), List.of(new Entrega(p, 1)))), List.of()).factible());
     }
     @Test void unVehiculoNoPuedeTenerDosRutas() {
         Pedido p = pedido("P", o, 1, 2);
-        assertFalse(evaluar(List.of(p), List.of(new Ruta(auto, List.of(p)), new Ruta(auto, List.of())), List.of()).factible());
+        assertFalse(evaluar(List.of(p), List.of(new Ruta(auto, List.of(new Entrega(p, 1))), new Ruta(auto, List.of())), List.of()).factible());
     }
     @Test void capacidadEsSumaDeBultosSinRecargas() {
         Pedido a = pedido("A", o, 12, 4), b = pedido("B", o, 13, 4);
-        assertFalse(evaluar(List.of(a, b), List.of(new Ruta(auto, List.of(a, b))), List.of()).factible());
+        assertFalse(evaluar(List.of(a, b), List.of(new Ruta(auto, List.of(new Entrega(a, 12), new Entrega(b, 13)))), List.of()).factible());
     }
     @Test void deadlineExigeFinalizarServicioYPermiteIgualdad() {
         Pedido exacto = pedido("A", o, 1, 1), tarde = pedido("B", new Nodo(1, 0), 1, 1);
-        assertTrue(evaluar(List.of(exacto), List.of(new Ruta(auto, List.of(exacto))), List.of()).factible());
-        assertFalse(evaluar(List.of(tarde), List.of(new Ruta(auto, List.of(tarde))), List.of()).factible());
+        assertTrue(evaluar(List.of(exacto), List.of(new Ruta(auto, List.of(new Entrega(exacto, 1)))), List.of()).factible());
+        assertFalse(evaluar(List.of(tarde), List.of(new Ruta(auto, List.of(new Entrega(tarde, 1)))), List.of()).factible());
     }
     @Test void mideServicioViajeCostoYRegreso() {
         Pedido p = pedido("P", new Nodo(4, 0), 1, 3);
-        var e = evaluar(List.of(p), List.of(new Ruta(auto, List.of(p))), List.of());
+        var e = evaluar(List.of(p), List.of(new Ruta(auto, List.of(new Entrega(p, 1)))), List.of());
         assertTrue(e.factible()); assertEquals(8, e.distanciaTotalKm()); assertEquals(64, e.costoTotal());
         assertEquals(1.2, e.tiempoTotalHoras(), 1e-9);
         assertEquals(t.plusMinutes(6), e.rutas().get(0).visitas().get(0).inicioAtencion());
@@ -48,25 +48,25 @@ class EvaluatorTest {
         Pedido a = pedido("A", o, 1, 10), b = new Pedido("B", t.plusHours(2), o, 1, 10);
         Vehiculo v = new Vehiculo("TA01", TipoVehiculo.TA, o, true, t.plusHours(1));
         var estado = new EstadoOperacion(t, List.of(a, b), List.of(v), List.of(), List.of());
-        var e = new SolutionEvaluator(estado, estado.pedidos()).evaluar(new Solucion(List.of(new Ruta(v, List.of(a, b)))));
+        var e = new SolutionEvaluator(estado, estado.pedidos()).evaluar(new Solucion(List.of(new Ruta(v, List.of(new Entrega(a, 1), new Entrega(b, 1))))));
         assertTrue(e.factible()); assertEquals(t.plusHours(2), e.rutas().get(0).salida());
     }
     @Test void rechazaVehiculoNoDisponible() {
         Pedido p = pedido("P", o, 1, 2);
         Vehiculo v = new Vehiculo("TA01", TipoVehiculo.TA, o, false, t);
         var estado = new EstadoOperacion(t, List.of(p), List.of(v), List.of(), List.of());
-        assertFalse(new SolutionEvaluator(estado, estado.pedidos()).evaluar(new Solucion(List.of(new Ruta(v, List.of(p))))).factible());
+        assertFalse(new SolutionEvaluator(estado, estado.pedidos()).evaluar(new Solucion(List.of(new Ruta(v, List.of(new Entrega(p, 1)))))).factible());
     }
     @Test void mantenimientoImpideSalidaPeroPermiteRutaVacia() {
         Pedido p = pedido("P", o, 1, 2); var m = List.of(new Mantenimiento(t.toLocalDate(), "TA01"));
-        assertFalse(evaluar(List.of(p), List.of(new Ruta(auto, List.of(p))), m).factible());
+        assertFalse(evaluar(List.of(p), List.of(new Ruta(auto, List.of(new Entrega(p, 1)))), m).factible());
         assertTrue(evaluar(List.of(), List.of(new Ruta(auto, List.of())), m).factible());
     }
     @Test void compruebaMantenimientoTambienEnElRegresoTrasMedianoche() {
         LocalDateTime noche = t.withHour(21).withMinute(0);
         Pedido p = new Pedido("P", noche, new Nodo(70, 0), 1, 6);
         var estado = new EstadoOperacion(noche, List.of(p), List.of(auto), List.of(), List.of(new Mantenimiento(t.toLocalDate().plusDays(1), "TA01")));
-        var e = new SolutionEvaluator(estado, estado.pedidos()).evaluar(new Solucion(List.of(new Ruta(auto, List.of(p)))));
+        var e = new SolutionEvaluator(estado, estado.pedidos()).evaluar(new Solucion(List.of(new Ruta(auto, List.of(new Entrega(p, 1))))));
         assertFalse(e.factible()); assertTrue(e.rutas().get(0).visitas().get(0).dentroDelPlazo());
     }
     @Test void bloqueoPuedeVolverInviableUnPlazo() {
@@ -74,6 +74,6 @@ class EvaluatorTest {
         Pedido p = pedido("P", new Nodo(40, 0), 1, 2);
         var bloqueo = new Bloqueo(t.minusHours(1), t.plusDays(1), List.of(o, new Nodo(1, 0)));
         var estado = new EstadoOperacion(t, List.of(p), List.of(auto), List.of(bloqueo), List.of());
-        assertFalse(new SolutionEvaluator(estado, estado.pedidos()).evaluar(new Solucion(List.of(new Ruta(auto, List.of(p))))).factible());
+        assertFalse(new SolutionEvaluator(estado, estado.pedidos()).evaluar(new Solucion(List.of(new Ruta(auto, List.of(new Entrega(p, 1)))))).factible());
     }
 }
