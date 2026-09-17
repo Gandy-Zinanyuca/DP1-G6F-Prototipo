@@ -7,10 +7,8 @@ import pe.pucp.paqrap.solucion.Solucion;
 /**
  * Implementación del componente planificador basada en Adaptive Large Neighborhood Search.
  *
- * <p>Adapta el presupuesto de cómputo al escenario: la operación día a día exige respuesta
- * dentro del ciclo de 15 minutos simulados, mientras que la simulación de 5 días debe completar
- * cientos de ciclos dentro de una ventana de 30 a 60 minutos reales. Como el ALNS es un
- * algoritmo <i>anytime</i>, ajustar el presupuesto no requiere cambiar nada del algoritmo.</p>
+ * <p>Las configuraciones por escenario solo cambian parámetros de ConfiguracionALNS; los
+ * valores deben calibrarse mediante experimentación numérica (ISA 5.2).</p>
  */
 public class PlanificadorALNS implements Planificador {
 
@@ -27,45 +25,31 @@ public class PlanificadorALNS implements Planificador {
         this.motor = new ALNS(parametros);
     }
 
-    /**
-     * Configuración recomendada para la operación día a día: presupuesto corto, orientado a
-     * responder dentro del ciclo de planificación.
-     */
+    /** Operación día a día. */
     public static PlanificadorALNS paraOperacionDiaria() {
         ParametrosALNS p = new ParametrosALNS();
-        p.maxIteraciones = 2_000;
-        p.presupuestoMs = 1_500;
+        p.maxIteraciones = 1_000;
         return new PlanificadorALNS(p);
     }
 
-    /**
-     * Configuración recomendada para la simulación de 5 días: presupuesto ajustado para que el
-     * conjunto de ciclos quepa en la ventana de 30 a 60 minutos reales exigida por LE058.
-     */
+    /** Simulación de 5 días: menos iteraciones por ejecución. */
     public static PlanificadorALNS paraSimulacion5D() {
         ParametrosALNS p = new ParametrosALNS();
-        p.maxIteraciones = 1_200;
-        p.presupuestoMs = 400;
+        p.maxIteraciones = 300;
         return new PlanificadorALNS(p);
     }
 
-    /**
-     * Configuración recomendada para el escenario de colapso: presupuesto amplio y destrucción
-     * conservadora, porque cerca del límite de factibilidad importa más reconstruir bien que
-     * explorar lejos.
-     */
+    /** Escenario de colapso: más iteraciones y destrucción conservadora. */
     public static PlanificadorALNS paraColapso() {
         ParametrosALNS p = new ParametrosALNS();
-        p.maxIteraciones = 4_000;
-        p.presupuestoMs = 3_000;
-        p.gradoDestruccionMax = 0.25;
-        p.destruccionAdaptativaPorOcupacion = true;
+        p.maxIteraciones = 2_000;
+        p.proporcionDestruccion = 0.10;
         return new PlanificadorALNS(p);
     }
 
     @Override
-    public Solucion planificar(ContextoPlanificacion ctx, Solucion planPrevio) {
-        Solucion s = motor.resolver(ctx, planPrevio);
+    public Solucion planificar(ContextoPlanificacion ctx) {
+        Solucion s = motor.resolver(ctx);
         ultimasEstadisticas = motor.getEstadisticas();
         return s;
     }
