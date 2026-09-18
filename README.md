@@ -72,7 +72,7 @@ un archivo por sección `/* === … === */` del `<script>` de la demo). Ver
 
 ## `algoritmos/` — componente planificador
 
-Se conserva ALNS de `algorithms` y se integra Tabu Search de `dev/yaser`, con sus dependencias. Ambos se construyen con JDK 17 y sin Maven.
+ALNS experimental y Tabu Search comparten entrada, constructor inicial, restricciones, caminos y evaluación. Ambos se construyen con JDK 17 y sin Maven. El ALNS histórico de `algorithms` permanece separado como referencia.
 
 Consultar la [guía vigente de ejecución](algoritmos/README.md) y los [metadatos de pruebas](algoritmos/METADATOS-PRUEBAS.md).
 
@@ -80,7 +80,7 @@ Consultar la [guía vigente de ejecución](algoritmos/README.md) y los [metadato
 algoritmos\compilar.bat -Pruebas
 ```
 
-Los lanzadores `algoritmos/ejecutar-alns.bat` y `algoritmos/ejecutar-tabu.bat` permiten probar cada motor por separado. Sus modelos y evaluadores todavía son diferentes: la integración no equivale a una comparación experimental bajo reglas idénticas.
+Los lanzadores `algoritmos/ejecutar-alns.bat` y `algoritmos/ejecutar-tabu.bat` reciben los mismos argumentos y presentan un reporte final. `CompararAlgoritmos` ejecuta ambos sobre el mismo estado, audita las salidas y guarda metadatos y resultados; admite un presupuesto temporal común.
 
 ---
 
@@ -110,11 +110,11 @@ DP1-G6F-Prototipo/
    ├─ README.md · METADATOS-PRUEBAS.md
    ├─ compilar.bat · compilar.ps1
    ├─ ejecutar-alns.bat · ejecutar-tabu.bat
-   ├─ alns/                 ALNS conservado de algorithms
+   ├─ alns/                 ALNS comparable y versión histórica
    │  ├─ src/ · data/ · README.md
    │  └─ simular.bat        arnés mensual simplificado
    ├─ tabu/                 TS de dev/yaser · sin Maven
    │  └─ src/main/java/pe/pucp/paqrap/tabu/
-   ├─ comun/                núcleo estricto utilizado por TS
+   ├─ comun/                núcleo estricto compartido por TS y ALNS
    └─ experimentacion/      lanzador TS y pruebas sin JUnit
 ```

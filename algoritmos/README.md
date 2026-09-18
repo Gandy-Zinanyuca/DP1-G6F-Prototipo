@@ -1,73 +1,60 @@
-# Algoritmos: integración ALNS y Tabu Search
+# ALNS y Tabu Search comparables
 
-Esta versión conserva el ALNS de `algorithms` (`50f317c`) e incorpora Tabu Search y sus dependencias de `dev/yaser` (`6864d6a`). La integración es selectiva: no reemplaza el ALNS con el ALNS estricto de la otra rama. Los dos motores se compilan y ejecutan por separado, con JDK 17 o superior y sin Maven.
+Los lanzadores principales ejecutan TS y ALNS sobre el mismo `EstadoOperacion`, constructor inicial, `EvaluadorFactibilidad`, caminos y parámetros operativos. Se compilan con JDK 17, sin Maven.
 
-## Construcción y verificación
+## Compilar y probar
 
-Desde la raíz del repositorio, en PowerShell o CMD:
+Desde la raíz del repositorio en Windows:
 
 ```bat
 algoritmos\compilar.bat -Pruebas
 ```
 
-Compila ambos motores, ejecuta 15 grupos de regresión de TS y verifica ALNS con datos de enero. Un fallo devuelve un código distinto de cero. Para compilar solamente uno:
+La salida es `algoritmos/out`. Se compilan ambos motores juntos para verificar el contrato común; se ejecutan por separado. Los valores antiguos `-Algoritmo alns` y `-Algoritmo tabu` se aceptan por compatibilidad, pero la construcción sigue siendo conjunta.
+
+## Ejecutar cada algoritmo
+
+Ambos comandos tienen exactamente los mismos argumentos:
 
 ```bat
-algoritmos\compilar.bat -Algoritmo alns
-algoritmos\compilar.bat -Algoritmo tabu
-```
-
-Los resultados de compilación están en `alns/out` y `tabu/out`, ignorados por Git. No deben mezclarse los classpaths ni utilizar antiguos JAR o carpetas `target`. El script requiere Windows PowerShell; en otros sistemas se puede utilizar `javac --release 17` sobre las mismas carpetas de fuentes.
-
-## Ejecutar ALNS
-
-Prueba corta con tres ciclos y datos de enero:
-
-```bat
-algoritmos\ejecutar-alns.bat algoritmos/alns/data/ventas.v20260909/ventas.202601.txt algoritmos/alns/data/bloqueos.v20260909/bloqueo.2601.txt algoritmos/alns/data/mant.preventivo.09.10.txt --dia 1 --hora 1 --ciclos 3 --iteraciones 20 --semilla 20262
-```
-
-La consola presenta pedidos, rutas, costo, distancia, tiempo de búsqueda y resumen de entregas; puede detenerse por colapso. Para lanzar el arnés mensual existente:
-
-```bat
-algoritmos\alns\simular.bat 202609
-```
-
-Guarda la salida en `algoritmos/alns/resultados/sim_202609.txt`. Ejecuta hasta el colapso o el límite de ciclos. Es un arnés simplificado: marca como ejecutadas las rutas completas de cada ciclo; no sustituye una simulación de eventos que avance cada vehículo físicamente. El valor predeterminado de 4464 ciclos representa 31 días con saltos de 10 minutos; para septiembre, de 30 días, usar `--ciclos 4320`. Cada ejecución del mismo mes sobrescribe su informe.
-
-## Ejecutar Tabu Search
-
-Prueba de septiembre a las 08:00:
-
-```bat
+algoritmos\ejecutar-alns.bat algoritmos/alns/data/ventas.v20260909/ventas.202609.txt algoritmos/alns/data/bloqueos.v20260909/bloqueo.2609.txt algoritmos/alns/data/mant.preventivo.09.10.txt 2026-09-01T08:00 20 20262
 algoritmos\ejecutar-tabu.bat algoritmos/alns/data/ventas.v20260909/ventas.202609.txt algoritmos/alns/data/bloqueos.v20260909/bloqueo.2609.txt algoritmos/alns/data/mant.preventivo.09.10.txt 2026-09-01T08:00 20 20262
 ```
 
-Los últimos dos argumentos son iteraciones y semilla; si se omiten, se usan 100 y 20262. Muestra pedidos leídos y considerados, cobertura, paquetes pendientes, costo, kilómetros, utilización, tiempo y motivo de parada. La salida se vuelve a evaluar con una instancia nueva del evaluador antes de imprimirse.
+Argumentos: ventas, bloqueos, mantenimiento, instante ISO, [iteraciones], [semilla], [presupuesto-ms].
+Predeterminados: 100 iteraciones, semilla 20262, presupuesto 0 (sin reloj). Un presupuesto positivo se aplica a ambos motores, incluyendo su construcción inicial. Es un límite cooperativo: una operación en curso puede terminar después del plazo.
 
-Este ejecutable evalúa una fotografía de la operación, no un mes completo. El cargador excluye pedidos registrados después del instante indicado y aquellos cuyo plazo vence después de las siguientes 24 horas; limita la selección a 400 pedidos. No descuenta entregas de ejecuciones anteriores. Para modificar estos filtros hay que configurar el adaptador; no son parámetros de la búsqueda tabú.
+El reporte final incluye pedidos leídos/considerados/completos, paquetes pendientes, cobertura, vehículos, utilización, costo operativo, distancia, objetivo, tiempo, iteraciones, candidatos, factibilidad y motivo de parada. La salida se audita con una nueva instancia del evaluador común.
+
+## Experimentación conjunta
+
+Para comprobar reproducibilidad con 20 iteraciones y tres semillas:
+
+```bat
+java -cp algoritmos/out pe.pucp.paqrap.CompararAlgoritmos algoritmos/alns/data/ventas.v20260909/ventas.202609.txt algoritmos/alns/data/bloqueos.v20260909/bloqueo.2609.txt algoritmos/alns/data/mant.preventivo.09.10.txt 2026-09-01T08:00 algoritmos/experimentacion/resultados/nueva-prueba 20 20262,20263,20264
+```
+
+Para comparar calidad bajo el mismo presupuesto de tiempo, usar un límite de iteraciones alto y añadir, por ejemplo, 1000 milisegundos:
+
+```bat
+java -cp algoritmos/out pe.pucp.paqrap.CompararAlgoritmos algoritmos/alns/data/ventas.v20260909/ventas.202609.txt algoritmos/alns/data/bloqueos.v20260909/bloqueo.2609.txt algoritmos/alns/data/mant.preventivo.09.10.txt 2026-09-01T08:00 algoritmos/experimentacion/resultados/nueva-prueba-tiempo 100000 20262,20263,20264 1000
+```
+
+Usar una carpeta nueva o vacía. Se guardan `metricas.csv`, un README de metadatos y un informe por motor/semilla con rutas, horarios y pendientes. Se realizan dos iteraciones de calentamiento por motor y se alterna el orden entre semillas. El comparador audita factibilidad, objetivo y no empeoramiento respecto de la inicial común.
 
 ## Arquitectura y alcance
 
-| Carpeta | Contenido |
+| Componente | Responsabilidad |
 | --- | --- |
-| `alns/src` | ALNS y su dominio, evaluador, mapa, lectores y arnés de ciclos de `algorithms` |
-| `tabu/src/main/java` | Motor TS de `dev/yaser`, vecindarios, aspiración y memoria tabú |
-| `comun/src/main/java/pe/pucp/paqrap/estricto` | Dominio, lectores, caminos, constructor y evaluador utilizados actualmente por TS |
-| `experimentacion/src/main/java` | Lanzador de TS, carga y resumen de consola |
-| `experimentacion/src/test/java` | Regresiones de TS sin dependencias externas |
-| `alns/data` | Datos de ventas, bloqueos y mantenimiento utilizados por ambos lanzadores |
+| `comun/src/main/java/.../estricto` | Dominio, carga, constructor, evaluación, métricas y caminos utilizados por ambos |
+| `alns/src/main/java/.../estricto` | ALNS adaptado al núcleo común |
+| `tabu/src/main/java` | Tabu Search |
+| `experimentacion/src/main/java` | Lanzadores individuales, reporte y comparación |
+| `experimentacion/src/test/java` | Pruebas de reglas, reproducibilidad e igualdad de la inicial |
+| `alns/src/pe` | ALNS histórico de algorithms, conservado fuera del experimento común |
 
-Aunque la carpeta se llama `comun`, el ALNS conservado no utiliza aún este núcleo. Los motores tienen contratos y reglas diferentes; estos comandos permiten probar cada versión, pero no constituyen una comparación experimental homogénea.
+El ALNS comparable reutiliza la selección adaptativa y el criterio de aceptación originales, con operadores adaptados a `PartePedido`. No es una medición de la cartera completa del ALNS histórico. El ALNS histórico se compila mediante `algoritmos/alns/compilar.bat` y su arnés `simular.bat` permanece disponible; no mezclar sus resultados con los del experimento común.
 
-Consultar [metadatos y reglas de comparación](METADATOS-PRUEBAS.md), [ALNS](alns/README.md) y [Tabu Search](tabu/README.md).
+Las pruebas actuales son fotografías de la operación: seleccionan pedidos registrados hasta T, cuyo plazo vence como máximo en T+24 horas, con límite 400. No reconstruyen entregas anteriores ni simulan todo el mes. Ambos reciben exactamente la misma selección. La gestión del lote está fuera de los motores.
 
-## Documentación y procedencia
-
-Se reemplazaron los tres documentos `DISENO-ALGORITMOS.md` por estas guías del código efectivo, evitando conservar pseudocódigos y rutas de ejecución de versiones anteriores como instrucciones vigentes. La documentación anterior sigue disponible en el historial Git. El anterior TS `pe.logistica`, su POM, pruebas JUnit y reportes publicados fueron sustituidos por la versión de `dev/yaser`; sus resultados no representan esta integración.
-
-Se conservaron `CARACTERISTICAS-GUI.md` y `Estandares_GUI_PaqRap_en_Ruta.docx`. Las fuentes Java de ALNS y el prototipo gráfico permanecen iguales a `algorithms`. No se incorporaron las mejoras propuestas en el chat ni se afirma que el código implemente ya todos los pseudocódigos revisados.
-
-También se conservan `tabu/datos/inventario.json`, el mantenimiento y el Excel de referencias como insumos de procedencia. Los lanzadores actuales utilizan los TXT de `alns/data`; el inventario histórico no certifica automáticamente esos archivos ni configura las reglas del motor.
-
-Si se reintegra Maven, crear módulos para el núcleo estricto y TS, y un módulo independiente para ALNS, con nivel Java 17. Mantener los classpaths separados hasta unificar modelos; adaptar las pruebas ejecutables sin borrar sus comprobaciones. Actualmente no se necesita descargar dependencias.
+Consultar [metadatos y resultados](METADATOS-PRUEBAS.md), [ALNS](alns/README.md) y [TS](tabu/README.md). La documentación anterior y los archivos de GUI permanecen recuperables en Git. No se necesitan dependencias externas; una futura integración de Maven puede organizar módulos común, ALNS, TS y experimentación sin cambiar estos contratos.

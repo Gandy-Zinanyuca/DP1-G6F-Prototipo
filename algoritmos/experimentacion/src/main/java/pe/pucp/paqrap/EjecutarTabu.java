@@ -9,7 +9,7 @@ public final class EjecutarTabu {
         var entrada = EjecutorIndividual.cargar(args, "EjecutarTabu");
         var configuracion = new ConfiguracionTabu(
                 entrada.iteraciones(), 7, Math.max(1, entrada.iteraciones()),
-                400, 0, entrada.semilla());
+                400, entrada.presupuestoMs(), entrada.semilla());
         EjecutorIndividual.ejecutar(entrada, new TabuSearchPlanner(configuracion));
     }
 

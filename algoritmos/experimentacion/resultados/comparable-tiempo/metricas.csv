@@ -1,0 +1,7 @@
+algoritmo,semilla,iteraciones,candidatos,inserciones_iniciales,Ta_ms,objetivo,costo_soles,km,tiempo_rutas_min,pedidos_totales,pedidos_completos,paquetes_pendientes,cumplimiento_pedidos,cumplimiento_paquetes,vehiculos,utilizacion,factible,completa,parada
+TS-estricto,20262,66,19733,4772,1000.810,27008874.00,8874.00,1408.00,7570.000,36,29,27,0.805556,0.835366,22,0.815476,true,false,TIEMPO
+ALNS-estricto,20262,20,17209,4772,1017.762,27009180.00,9180.00,1526.00,8531.600,36,29,27,0.805556,0.835366,24,0.796512,true,false,TIEMPO
+ALNS-estricto,20263,11,8988,4772,1039.172,27008778.00,8778.00,1510.00,8738.400,36,29,27,0.805556,0.835366,25,0.815476,true,false,TIEMPO
+TS-estricto,20263,36,10592,4772,1000.161,27008790.00,8790.00,1390.00,7516.000,36,29,27,0.805556,0.835366,22,0.815476,true,false,TIEMPO
+TS-estricto,20264,74,22664,4772,1000.430,27008426.00,8426.00,1374.00,7923.200,36,29,27,0.805556,0.835366,23,0.815476,true,false,TIEMPO
+ALNS-estricto,20264,21,18049,4772,1005.306,27008358.00,8358.00,1404.00,8311.800,36,29,27,0.805556,0.835366,24,0.835366,true,false,TIEMPO

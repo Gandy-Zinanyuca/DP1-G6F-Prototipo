@@ -11,23 +11,24 @@ import pe.pucp.paqrap.estricto.servicios.PlanificadorEstricto;
 
 /** Carga, audita y presenta una ejecución individual con una salida breve y homogénea. */
 final class EjecutorIndividual {
-    record Entrada(DatasetLoader.Carga carga, int iteraciones, long semilla) {}
+    record Entrada(DatasetLoader.Carga carga, int iteraciones, long semilla, long presupuestoMs) {}
 
     static Entrada cargar(String[] args, String clase) throws Exception {
-        if (args.length < 4 || args.length > 6) {
+        if (args.length < 4 || args.length > 7) {
             throw new IllegalArgumentException(
                     "Uso: " + clase + " ventas.AAAAMM.txt bloqueo.AAMM.txt "
-                            + "mantenimiento.txt instante-ISO [iteraciones] [semilla]");
+                            + "mantenimiento.txt instante-ISO [iteraciones] [semilla] [presupuesto-ms]");
         }
         int iteraciones = args.length > 4 ? Integer.parseInt(args[4]) : 100;
         long semilla = args.length > 5 ? Long.parseLong(args[5]) : 20262L;
-        if (iteraciones < 0) {
+        long presupuestoMs = args.length > 6 ? Long.parseLong(args[6]) : 0;
+        if (iteraciones < 0 || presupuestoMs < 0) {
             throw new IllegalArgumentException("Las iteraciones no pueden ser negativas");
         }
         var carga = new DatasetLoader().cargar(
                 Path.of(args[0]), Path.of(args[1]), Path.of(args[2]),
                 LocalDateTime.parse(args[3]), 24, 400);
-        return new Entrada(carga, iteraciones, semilla);
+        return new Entrada(carga, iteraciones, semilla, presupuestoMs);
     }
 
     static void ejecutar(Entrada entrada, PlanificadorEstricto planificador) {
@@ -44,6 +45,8 @@ final class EjecutorIndividual {
 
         var carga = entrada.carga();
         var m = resultado.metricas();
+        System.out.printf(Locale.ROOT, "Instante=%s; presupuesto=%d ms; objetivo=%.2f%n",
+                carga.estado().instante(), entrada.presupuestoMs(), m.objetivo());
         System.out.printf(Locale.ROOT,
                 "%n%s%n"
                         + "Entrada: %d pedidos leidos; %d considerados; %d bloqueos; %d mantenimientos%n"
