@@ -17,6 +17,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Programa de prueba del componente planificador.
@@ -173,12 +174,15 @@ public final class DemoPlanificador {
 
         List<Pedido> pedidosVivos = new ArrayList<>(instancia.getPedidos());
 
-        int minuto = Turnos.aMinutos(diaInicial, horaInicial, 0);
+        int minutoInicial = Turnos.aMinutos(diaInicial, horaInicial, 0);
+        int minuto = minutoInicial;
         int entregadosAcumulados = 0;
         double kmAcumulados = 0;
         double solesAcumulados = 0;
         boolean colapso = false;
+        String motivoColapso = null;
         Solucion planVigente = null;
+        int ciclosSostenidos = 0;
 
         for (int c = 0; c < ciclos; c++) {
             liberarUnidadesQueRegresaron(instancia, minuto);
@@ -199,6 +203,7 @@ public final class DemoPlanificador {
                     ctx.getMapa().getBloqueosVigentes().size());
 
             if (ctx.getPedidosPorAtender().isEmpty()) {
+                ciclosSostenidos++;   // sin pedidos tambien es un ciclo sostenido (igual que TS/SIN_PEDIDOS)
                 minuto += sa;
                 System.out.println("    (sin pedidos en la ventana de consumo)");
                 continue;
@@ -208,12 +213,15 @@ public final class DemoPlanificador {
             System.out.print(planificador.resumenUltimaEjecucion());
 
             if (!plan.esFactible()) {
+                motivoColapso = Turnos.formatear(minuto) + ": " + ctx.getPedidosPorAtender().size()
+                        + " pedidos en ventana sin plan factible";
                 System.out.println("    COLAPSO LOGÍSTICO: no existe plan factible en "
                         + Turnos.formatear(minuto));
                 colapso = true;
                 break;
             }
 
+            ciclosSostenidos++;
             planVigente = plan.copia();
             Resumen r = ejecutarPlan(plan, ctx);
             entregadosAcumulados += r.entregados;
@@ -241,9 +249,17 @@ public final class DemoPlanificador {
             }
         }
 
+        int minutosSostenidos = minuto - minutoInicial;
         System.out.println("=====================================================================");
-        System.out.printf(" Resumen: %d pedidos entregados · %.0f km · S/ %.2f%s%n",
-                entregadosAcumulados, kmAcumulados, solesAcumulados, colapso ? " · COLAPSO" : "");
+        System.out.printf(Locale.ROOT,
+                "FITNESS (tiempo sostenido antes de colapso): %d ciclos = %d min = %.2f h%n",
+                ciclosSostenidos, minutosSostenidos, minutosSostenidos / 60.0);
+        System.out.printf(Locale.ROOT, "Entregados: %d | Distancia: %.0f km | Costo: S/ %.2f | %s%n",
+                entregadosAcumulados, kmAcumulados, solesAcumulados,
+                colapso ? "COLAPSO" : "SIN COLAPSO (fin de ciclos pedidos)");
+        if (colapso) {
+            System.out.println("Motivo: " + motivoColapso);
+        }
         System.out.println("=====================================================================");
     }
 

@@ -48,7 +48,7 @@ public class TabuSearchPlanner {
         double taMs = (System.nanoTime() - inicio) / 1_000_000.0;
         var rendimiento = new RendimientoAlgoritmo(taMs, iteraciones, candidatos, factibles, rechazados,
                 aspiraciones, iteracionMejor, inicial.insercionesEvaluadas(), costoInicial, parada);
-        var metricas = MetricasResultado.calcular(estado, configuracion, considerados, mejorEvaluacion, rendimiento);
-        return new ResultadoPlanificacion(mejor, metricas, mejorEvaluacion, estado.parametros());
+            var metricas = MetricasResultado.calcular(estado, configuracion, considerados, mejorEvaluacion, rendimiento);
+            return new ResultadoPlanificacion(mejor, metricas, mejorEvaluacion, estado.parametros());
+        }
     }
-}

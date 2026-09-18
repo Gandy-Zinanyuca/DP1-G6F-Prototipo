@@ -13,9 +13,11 @@ package pe.pucp.paqrap.modelo;
  */
 public enum TipoVehiculo {
 
-    AUTO("TA", 24, 40.0, 8.00),
-    MOTO("TM", 8, 25.0, 6.00),
-    BICICLETA("TB", 4, 12.0, 3.00);
+    // Velocidades del perfil publicado (Flota!B3:D5, ver REFERENCIAS.md de algoritmos/tabu):
+    // 40/25/12 fueron los valores de la demo legada, reemplazados por 20/40/14 el 08/09/2026.
+    AUTO("TA", 24, 20.0, 8.00),
+    MOTO("TM", 8, 40.0, 6.00),
+    BICICLETA("TB", 4, 14.0, 3.00);
 
     private final String prefijo;
     private final int capacidad;

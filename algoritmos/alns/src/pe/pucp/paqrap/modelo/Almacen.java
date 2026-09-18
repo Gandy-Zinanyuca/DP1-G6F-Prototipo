@@ -31,12 +31,17 @@ public class Almacen {
         this.stock = central ? Integer.MAX_VALUE : capacidad;
     }
 
-    /** Construye la configuración estándar de los tres almacenes de PaqRap (LE049). */
+    /**
+     * Construye la configuración estándar de los tres almacenes de PaqRap (LE049).
+     *
+     * <p>Coordenadas del perfil publicado (PR_Proyecto!D19; Mapa!L58:M60, ver REFERENCIAS.md de
+     * algoritmos/tabu): D19 reemplazó las coordenadas antiguas el 08/09/2026 23:55.</p>
+     */
     public static Almacen[] configuracionEstandar(int capacidadIntermedios) {
         return new Almacen[]{
-                new Almacen("ALM-CENTRAL", new Coordenada(25, 15), true, Integer.MAX_VALUE),
+                new Almacen("ALM-CENTRAL", new Coordenada(27, 14), true, Integer.MAX_VALUE),
                 new Almacen("ALM-NOROESTE", new Coordenada(12, 38), false, capacidadIntermedios),
-                new Almacen("ALM-ESTE", new Coordenada(55, 27), false, capacidadIntermedios)
+                new Almacen("ALM-ESTE", new Coordenada(57, 27), false, capacidadIntermedios)
         };
     }
 

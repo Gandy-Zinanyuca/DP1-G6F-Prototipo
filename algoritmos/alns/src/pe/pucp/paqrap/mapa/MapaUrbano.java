@@ -83,14 +83,42 @@ public class MapaUrbano {
             Bloqueo b = bloqueos.get(i);
             int[] intervalo = {b.getMinutoInicio(), b.getMinutoFin()};
             intervalosGlobales[i] = intervalo;
-            for (int[] arco : b.arcosUnitarios()) {
-                cierresPorArco.computeIfAbsent(clave(arco[0], arco[1]), k -> new ArrayList<>())
-                        .add(intervalo);
+            for (long clave : arcosCerradosPor(b)) {
+                cierresPorArco.computeIfAbsent(clave, k -> new ArrayList<>()).add(intervalo);
             }
         }
         for (List<int[]> lista : cierresPorArco.values()) {
             lista.sort((a, b) -> Integer.compare(a[0], b[0]));
         }
+    }
+
+    /**
+     * Calles que cierra un bloqueo: las de su polilínea más, por cierre conservador
+     * (PR_Proyecto!D24:E24, ver REFERENCIAS.md de algoritmos/tabu), todas las incidentes a cada
+     * nodo que la polilínea toca — no se atraviesa ni se gira por un nodo bloqueado, aunque la
+     * calle de giro no forme parte del bloqueo original.
+     */
+    private static Set<Long> arcosCerradosPor(Bloqueo b) {
+        Set<Long> arcos = new HashSet<>();
+        Set<Integer> nodosTocados = new HashSet<>();
+        for (int[] arco : b.arcosUnitarios()) {
+            arcos.add(clave(arco[0], arco[1]));
+            nodosTocados.add(arco[0]);
+            nodosTocados.add(arco[1]);
+        }
+        for (int nodo : nodosTocados) {
+            int nx0 = nodo % ANCHO;
+            int ny0 = nodo / ANCHO;
+            for (int d = 0; d < 4; d++) {
+                int nx = nx0 + DX[d];
+                int ny = ny0 + DY[d];
+                if (nx < 0 || nx > Coordenada.ANCHO_MAX || ny < 0 || ny > Coordenada.ALTO_MAX) {
+                    continue;
+                }
+                arcos.add(clave(nodo, ny * ANCHO + nx));
+            }
+        }
+        return arcos;
     }
 
     public List<Bloqueo> getBloqueos() {
@@ -120,14 +148,12 @@ public class MapaUrbano {
         }
     }
 
-    /** Calles bloqueadas vigentes en el instante indicado, como claves de arco. */
+    /** Calles bloqueadas vigentes en el instante indicado, como claves de arco (cierre conservador). */
     public Set<Long> arcosBloqueadosEn(int minuto) {
         Set<Long> arcos = new HashSet<>();
         for (Bloqueo b : bloqueos) {
             if (b.vigenteEn(minuto)) {
-                for (int[] arco : b.arcosUnitarios()) {
-                    arcos.add(clave(arco[0], arco[1]));
-                }
+                arcos.addAll(arcosCerradosPor(b));
             }
         }
         return arcos;
