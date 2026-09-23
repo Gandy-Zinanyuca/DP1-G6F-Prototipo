@@ -70,6 +70,11 @@ de la corrida y el tiempo acumulado del planificador (Σ Ta, promedio y máximo 
 pedidos registrados, entregados y fraccionados, y los km y el costo de las rutas despachadas.
 Durante la corrida se imprime una línea por día simulado (`--detalle` imprime una por ciclo).
 
+**Campaña de N corridas para la experimentación numérica**: `./experimentos_colapso.sh N`
+(Linux, en paralelo) o `experimentos_colapso.bat N` (Windows) ejecuta N semillas hasta el colapso
+y deja un CSV por corrida; el análisis estadístico (prueba de hipótesis en R) está en
+[`../experimentacion`](../experimentacion/README.md).
+
 **Simular un mes completo** (o hasta el colapso, si ocurre antes). La salida queda en
 `resultados/sim_AAAAMM.txt` y al final se muestra el resumen:
 
