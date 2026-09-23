@@ -1,0 +1,31 @@
+=============================================================================
+ PaqRap · Duración hasta el colapso: Tabú vs ALNS
+=============================================================================
+ Fecha        : 2026-09-23 10:15 
+ Métrica      : dias_simulados (mayor es mejor)
+ Nivel alfa   : 0.05 
+ ALNS         : algoritmos/alns/resultados/experimentos/alns 
+ Tabú         : (sin datos todavía) 
+
+ H0: μ_Tabú = μ_ALNS  (no hay diferencia)
+ H1: μ_Tabú > μ_ALNS  (Tabú dura más hasta el colapso)
+
+-- 1. Estadística descriptiva -----------------------------------------------
+     n  media    de    cv     min     q1 mediana      q3     max
+ALNS 6 369.07 1.246 0.003 366.542 369.41 369.535 369.644 369.757
+
+-- 2. Supuestos ---------------------------------------------------------------
+ Shapiro-Wilk ALNS : p = 0.0004 -> NO normal
+
+-- 3. Tamaño de muestra sugerido (solo hay datos de ALNS) --------------------
+ Desviación estándar de ALNS: 1.246 días (n = 6)
+ N por grupo para detectar que Tabú dura 'delta' días más, t unilateral, alfa = 0.05 , potencia 0.80
+ (asumiendo la misma dispersión en Tabú):
+ delta_dias n_por_grupo
+       0.25         308
+       0.50          78
+       1.00          20
+       2.00           6
+       5.00           2
+
+ Con al menos 30 corridas por grupo la prueba es robusta a desvíos moderados de normalidad.

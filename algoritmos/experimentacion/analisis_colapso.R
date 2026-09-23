@@ -136,6 +136,13 @@ datos$algoritmo <- factor(datos$algoritmo, levels = c("ALNS", "Tabu")[c(TRUE, !i
 # ----------------------------------------------------------------- utilidades
 fmt <- function(x, d = 3) formatC(x, format = "f", digits = d)
 
+# Ruta relativa a la raíz del repositorio, para que el informe no dependa del equipo local.
+raiz_repo <- normalizePath(file.path(dir_script, "..", ".."), mustWork = FALSE)
+ruta_legible <- function(p) {
+  np <- normalizePath(p, mustWork = FALSE)
+  if (startsWith(np, paste0(raiz_repo, .Platform$file.sep))) substring(np, nchar(raiz_repo) + 2) else p
+}
+
 descriptivos <- function(x) {
   c(n = length(x), media = mean(x), de = sd(x), cv = sd(x) / mean(x),
     min = min(x), q1 = unname(quantile(x, 0.25)), mediana = median(x),
@@ -176,8 +183,8 @@ cat("===========================================================================
 cat(" Fecha        :", format(Sys.time(), "%Y-%m-%d %H:%M"), "\n")
 cat(" Métrica      :", opciones$metrica, "(mayor es mejor)\n")
 cat(" Nivel alfa   :", opciones$alfa, "\n")
-cat(" ALNS         :", normalizePath(opciones$alns, mustWork = FALSE), "\n")
-cat(" Tabú         :", if (is.null(opciones$tabu)) "(sin datos todavía)" else normalizePath(opciones$tabu), "\n\n")
+cat(" ALNS         :", ruta_legible(opciones$alns), "\n")
+cat(" Tabú         :", if (is.null(opciones$tabu)) "(sin datos todavía)" else ruta_legible(opciones$tabu), "\n\n")
 cat(" H0: μ_Tabú = μ_ALNS  (no hay diferencia)\n")
 cat(" H1: μ_Tabú > μ_ALNS  (Tabú dura más hasta el colapso)\n\n")
 
@@ -330,8 +337,12 @@ colores <- c(ALNS = "#1f77b4", Tabu = "#d62728")[levels(datos$algoritmo)]
 etiqueta_y <- paste0(opciones$metrica, " (hasta el colapso)")
 
 png(file.path(opciones$salida, "boxplot_colapso.png"), width = 900, height = 650, res = 120)
+# outline = FALSE evita dibujar los atípicos dos veces (ya van como puntos), pero el eje Y debe
+# abarcar todas las corridas para que ningún punto ni la media queden fuera del gráfico.
 boxplot(duracion ~ algoritmo, data = datos, col = adjustcolor(colores, 0.35), border = colores,
-        ylab = etiqueta_y, xlab = "", main = "Duración hasta el colapso por algoritmo", outline = FALSE)
+        ylab = etiqueta_y, xlab = "", main = "Duración hasta el colapso por algoritmo", outline = FALSE,
+        ylim = range(datos$duracion), names = levels(datos$algoritmo))
+axis(1, at = seq_along(levels(datos$algoritmo)), labels = levels(datos$algoritmo))
 stripchart(duracion ~ algoritmo, data = datos, vertical = TRUE, method = "jitter", pch = 19,
            col = adjustcolor(colores, 0.7), add = TRUE)
 points(seq_along(levels(datos$algoritmo)), tapply(datos$duracion, datos$algoritmo, mean),
@@ -360,5 +371,5 @@ for (g in levels(datos$algoritmo)) {
 }
 invisible(dev.off())
 
-cat("\nArchivos generados en", normalizePath(opciones$salida), ":\n")
+cat("\nArchivos generados en", ruta_legible(opciones$salida), ":\n")
 cat(paste0("  ", list.files(opciones$salida), collapse = "\n"), "\n")
