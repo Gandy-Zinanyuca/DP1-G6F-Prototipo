@@ -105,7 +105,7 @@ public final class CalculadorRuta {
     if (pausa == -1) {
       di = hora.isBefore(bandaIni) ? bandaIni : hora;
       df = di.plusMinutes(par.descansoMinutos());
-      if (df.isAfter(bandaFin))
+      if (di.isAfter(bandaFin) || df.isAfter(turno.plusMinutes(par.turnoMinutos())))
         return error(r, salida, "descanso fuera de banda");
       hora = df;
     }
@@ -120,7 +120,7 @@ public final class CalculadorRuta {
       if (pausa == i) {
         di = hora.isBefore(bandaIni) ? bandaIni : hora;
         df = di.plusMinutes(par.descansoMinutos());
-        if (df.isAfter(bandaFin))
+        if (di.isAfter(bandaFin) || df.isAfter(turno.plusMinutes(par.turnoMinutos())))
           return error(r, salida, "descanso fuera de banda");
         hora = df;
       }

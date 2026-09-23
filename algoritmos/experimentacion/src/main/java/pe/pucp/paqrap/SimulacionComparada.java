@@ -25,6 +25,32 @@ public final class SimulacionComparada {
                           double minutosRutas, int vehiculos, double utilizacion) {}
     private record Entrega(PartePedido parte, LocalDateTime fin) {}
 
+    /** Acredita solo una hora continua ya transcurrida sin ruta, dentro de la banda.
+     * No supone descanso anterior al arranque ni suma intervalos interrumpidos.
+     * El mapa contiene el FIN efectivo del descanso (tambien para rutas comprometidas).
+     */
+    static Set<String> descansosCompletados(EstadoOperacion base, List<Vehiculo> flota,
+            LocalDateTime ahora, ParametrosOperacion p, Map<String, LocalDateTime> finales) {
+        var inicioTurno = turno(ahora, p);
+        var hechos = new HashSet<String>();
+        for (var v : flota) {
+            var fin = finales.get(v.codigo());
+            if (fin != null && !fin.isAfter(ahora) && fin.isAfter(inicioTurno)) {
+                hechos.add(v.codigo()); continue;
+            }
+            if (!v.disponible()) continue;
+            var inicio = inicioTurno.plusMinutes(p.descansoDesde());
+            if (base.instante().isAfter(inicio)) inicio = base.instante();
+            if (v.disponibleDesde().isAfter(inicio)) inicio = v.disponibleDesde();
+            var termino = inicio.plusMinutes(p.descansoMinutos());
+            if (!inicio.isAfter(inicioTurno.plusMinutes(p.descansoHasta())) && !termino.isAfter(ahora)) {
+                finales.put(v.codigo(), termino);
+                hechos.add(v.codigo());
+            }
+        }
+        return hechos;
+    }
+
     private static LocalDateTime turno(LocalDateTime t, ParametrosOperacion p) {
         int m = t.getHour() * 60 + t.getMinute();
         return t.toLocalDate().atStartOfDay().plusMinutes(p.inicioTurnoMinuto()
@@ -44,6 +70,7 @@ public final class SimulacionComparada {
         var originales = new HashMap<String, Pedido>();
         var entregados = new HashMap<String, Integer>();
         var descansos = new HashMap<String, LocalDateTime>();
+        for (String codigo : base.descansoRealizado()) descansos.put(codigo, base.instante());
         var eventos = new ArrayList<Entrega>();
         var demanda = datos.pedidos().stream().sorted(Comparator.comparing(Pedido::fechaRegistro).thenComparing(Pedido::id)).toList();
         for (var p : demanda) {
@@ -87,8 +114,7 @@ public final class SimulacionComparada {
                     fin = "FIN_DE_DATOS"; break;
                 }
                 if (maxCiclos > 0 && ciclos >= maxCiclos) break;
-                Set<String> descanso = new HashSet<>();
-                for (var v : flota) if (turno(t, par).equals(descansos.get(v.codigo()))) descanso.add(v.codigo());
+                Set<String> descanso = descansosCompletados(base, flota, t, par, descansos);
                 var estado = new EstadoOperacion(t, new ArrayList<>(pendientes.values()), flota, almacenes,
                         base.bloqueos(), base.averias(), base.mantenimientos(), List.of(), descanso);
                 ResultadoPlanificacion resultado = pendientes.isEmpty() ? null : motor.planificar(estado, par);
@@ -127,7 +153,7 @@ public final class SimulacionComparada {
                         if (v.codigo().equals(ruta.ruta().vehiculo()))
                             flota.set(i, new Vehiculo(v.codigo(), v.tipo(), destino.nodo(), true, ruta.fin()));
                     }
-                    if (ruta.descansoInicio() != null) descansos.put(ruta.ruta().vehiculo(), turno(ruta.descansoInicio(), par));
+                    if (ruta.descansoFin() != null) descansos.put(ruta.ruta().vehiculo(), ruta.descansoFin());
                 }
                 // Orden cronologico obligatorio para completar un pedido con su ultima parte.
                 eventos.sort(Comparator.comparing(Entrega::fin));
@@ -200,7 +226,7 @@ public final class SimulacionComparada {
         Path salida = Path.of(args[5]);
         if (Files.exists(salida)) throw new IllegalArgumentException("Use una carpeta nueva para preservar corridas anteriores");
         Files.createDirectories(salida);
-        Files.writeString(salida.resolve("metadatos.txt"), "Simulacion comparable esquema 1\nArgumentos: " + Arrays.toString(args)
+        Files.writeString(salida.resolve("metadatos.txt"), "Simulacion comparable: reglas alimentacion v2 (banda de inicio y hora continua inactiva)\nArgumentos: " + Arrays.toString(args)
                 + "\nJava: " + System.getProperty("java.version") + "\nParametros: " + ParametrosOperacion.porDefecto()
                 + "\nPedidos: " + datos.pedidos().size() + "\nSolo pedidos registrados; sin anticipacion de demanda. Inicio sin operaciones previas.\n");
         var digest = java.security.MessageDigest.getInstance("SHA-256");

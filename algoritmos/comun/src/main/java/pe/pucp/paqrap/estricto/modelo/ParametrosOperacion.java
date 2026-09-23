@@ -1,6 +1,6 @@
 package pe.pucp.paqrap.estricto.modelo;
 import java.util.*;
-/** Parametros compartidos, sin reloj de simulacion, Sa, Sc ni K. Banda relativa al inicio de turno. */
+/** Parametros compartidos. descansoDesde/Hasta delimitan el INICIO de la alimentacion, relativos al turno. */
 public record ParametrosOperacion(int servicioMinutos, boolean plazoIncluyeServicio,
  int turnoMinutos, int inicioTurnoMinuto, int descansoDesde, int descansoHasta, int descansoMinutos,
  int tamanioParte, double costoFijoVehiculo, double penalizacionPaquetePendiente,
@@ -8,7 +8,7 @@ public record ParametrosOperacion(int servicioMinutos, boolean plazoIncluyeServi
  public ParametrosOperacion {
   velocidades=Map.copyOf(velocidades);
   if(servicioMinutos<0 || turnoMinutos<=0 || 1440%turnoMinutos!=0 || inicioTurnoMinuto<0 || inicioTurnoMinuto>=1440 || descansoDesde<0 ||
-     descansoHasta>turnoMinutos || descansoMinutos<=0 || descansoDesde+descansoMinutos>descansoHasta ||
+     descansoMinutos<=0 || descansoDesde>descansoHasta || descansoHasta>turnoMinutos-descansoMinutos ||
      tamanioParte<=0 || !Double.isFinite(costoFijoVehiculo) || costoFijoVehiculo<0 ||
      !Double.isFinite(penalizacionPaquetePendiente) || penalizacionPaquetePendiente<=0) throw new IllegalArgumentException("Parametros invalidos");
   for(var tipo:TipoVehiculo.values()) if(!velocidades.containsKey(tipo) || !Double.isFinite(velocidades.get(tipo)) ||

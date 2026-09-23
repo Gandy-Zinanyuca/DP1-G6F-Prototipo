@@ -39,7 +39,9 @@ Holguras vacias cuando hay colapso o no hay demanda. No promediar solo pedidos f
 
 ## Restricciones comunes
 
-Servicio 60 min, plazo incluye fin de servicio, turno 480 min con origen 07:00, descanso 60 min en banda relativa [60,420], retorno antes de fin de turno. Si la ruta no cabe en el turno vigente, puede esperar al inicio de un turno posterior siempre que servicio, descanso, retorno y deadline sigan siendo factibles. Se aplican capacidad, stock, disponibilidad, bloqueos temporales, averias y mantenimiento. Partes de hasta 4 unidades. La flota y almacenes son los del cargador comun.
+Servicio 60 min, plazo incluye fin de servicio, turno 480 min con origen 07:00, alimentacion 60 min con INICIO en banda relativa [60,420], retorno antes de fin de turno. Para 07:00-15:00 puede comenzar entre 08:00 y 14:00 y terminar a las 15:00. Si la ruta no cabe en el turno vigente, puede esperar al inicio de un turno posterior siempre que servicio, descanso, retorno y deadline sigan siendo factibles. Se aplican capacidad, stock, disponibilidad, bloqueos temporales, averias y mantenimiento. Partes de hasta 4 unidades. La flota y almacenes son los del cargador comun.
+
+En simulacion continua, una hora ininterrumpida de inactividad dentro de la banda acredita la alimentacion del turno. Solo se considera tiempo posterior al inicio de simulacion y al ultimo retorno; una pausa parcial interrumpida por ruta no se acumula. El estado instantaneo que se entregue desde otro backend debe informar los descansos reales. No mezclar campañas anteriores a esta regla con las nuevas para comparar calidad.
 
 La ruta prueba horarios de descanso y prefiere menores tiempos finales por pedido; la evaluacion global utiliza la ultima parte entre todos los vehiculos. Es una heuristica de horarios, no una optimizacion exacta.
 

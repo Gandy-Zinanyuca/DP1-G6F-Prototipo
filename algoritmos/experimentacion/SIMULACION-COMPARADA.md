@@ -50,6 +50,8 @@ El simulador conserva en una agenda externa las entregas en curso y representa c
 
 Cada ruta debe regresar antes de finalizar el turno en que sale. Cuando ya no cabe en el turno vigente, el evaluador prueba los inicios de los turnos posteriores hasta el deadline mas temprano de la ruta. El descanso realizado solo se conserva para el turno vigente; una ruta programada en un turno futuro debe incluir nuevamente su descanso. Esto evita declarar colapso por un pedido que puede esperar al siguiente relevo sin vencer.
 
+Alimentacion: el INICIO permitido es 08:00-14:00, 16:00-22:00 o 00:00-06:00 segun el turno, con 60 minutos completos y fin no posterior al cambio de turno. El simulador acredita tambien 60 minutos continuos sin rutas desde el ultimo retorno (o arranque), dentro de esa banda. Es una politica comun de alimentacion oportunista durante inactividad; una pausa interrumpida no se suma a otra. Una pausa incluida en una ruta se acredita al llegar su hora final, no en el momento de programarla. No se hereda al siguiente turno.
+
 `COLAPSO_PLANIFICACION` significa que el motor no encontro plan completo para la demanda del ciclo; no prueba imposibilidad matematica. Un resultado invalido lanza un error, no se registra como colapso. `FIN_DE_DATOS` espera entregas y retornos; `LIMITE_DE_CICLOS` indica truncamiento y no debe contarse como colapso.
 
 ## Salidas e interpretacion
