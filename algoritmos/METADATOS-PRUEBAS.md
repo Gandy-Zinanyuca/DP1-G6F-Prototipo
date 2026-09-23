@@ -57,7 +57,7 @@ El cargador lee un mes y selecciona por instante y horizonte; no reconstruye ope
 
 El comparador evalua una combinacion por invocacion. Para estimar ultimo nivel soportado se debe ejecutar la secuencia de niveles con la misma instancia y semillas y analizar sus filas; no se infiere a partir de una corrida aislada. No se calcula duracion mensual hasta colapso con este ejecutor.
 
-Los resultados del objetivo antiguo basado en costo no son comparables con este esquema 2. Se conservaron localmente pero dejaron de versionarse.
+Los resultados del objetivo antiguo basado en costo no son comparables con este esquema 2. Los resultados experimentales se versionan; mantener separados los historicos y las nuevas campanas. Consultar experimentacion/SIMULACION-COMPARADA.md para simulaciones continuas con ambos motores.
 
 ## Verificacion
 

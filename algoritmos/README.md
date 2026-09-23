@@ -77,6 +77,6 @@ Estas ejecuciones son instantaneas de planificacion, con una salida por vehiculo
 
 Con presupuesto 0 se reproduce el recorrido con la misma semilla, configuracion y version de codigo. Ta siempre puede variar. Un limite temporal positivo es cooperativo y puede excederse; igual numero de iteraciones no representa igual trabajo para TS y ALNS.
 
-Las carpetas de resultados estan ignoradas por Git; los antiguos archivos quedan locales y en el historial. Registrar el commit y si hay cambios locales junto con los metadatos para identificar la version ejecutada.
+Las carpetas de resultados se versionan en Git. Registrar el commit y si hay cambios locales junto con los metadatos para identificar la version ejecutada. Para simulaciones cronologicas TS/ALNS y campanas hasta colapso, consultar [SIMULACION-COMPARADA.md](experimentacion/SIMULACION-COMPARADA.md).
 
 El simulador mensual historico de algoritmos/alns/src/pe conserva su contrato propio. Sus CSV y analisis de dias hasta colapso no se mezclan con esta comparacion por EstadoOperacion. Ver [ALNS](alns/README.md) y [TS](tabu/README.md).

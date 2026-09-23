@@ -1,5 +1,7 @@
 # Experimentacion pareada por EstadoOperacion
 
+Para pruebas cronologicas de **ambos algoritmos**, con repeticion por semillas y parada hasta colapso, consultar [SIMULACION-COMPARADA.md](SIMULACION-COMPARADA.md). Sus resultados se versionan en Git.
+
 La ejecucion vigente TS/ALNS, las metricas de Ta y holgura, los CSV individuales y el protocolo de colapso de planificacion se describen en la [guia comun](../README.md) y los [metadatos](../METADATOS-PRUEBAS.md). Ambos motores usan la misma instancia y semillas. No mezclar estos CSV con el script R historico descrito abajo.
 
 ## Referencia historica: duracion hasta el colapso
