@@ -71,17 +71,26 @@ public final class RestriccionesTabuTest {
   var v=new Vehiculo("TA01",TipoVehiculo.TA,N,true,T.plusHours(7).plusMinutes(30));
   var p=new Pedido("p",T,N,1,18);
   var e=estado(List.of(p),List.of(v),List.of(new Almacen("A",N,5,false)),List.of(),List.of(),List.of(),List.of(),Set.of("TA01"));
-  var ev=new EvaluadorFactibilidad(e,parametros(60));ok(!ev.evaluar(una(ev)).factible(),"retorno excede turno");
+  var ev=new EvaluadorFactibilidad(e,parametros(60));var siguiente=ev.evaluar(una(ev)).rutas().get(0);
+  ok(siguiente.factible()&&siguiente.salida().equals(T.plusHours(8)),"no espera siguiente turno");
+  ok(siguiente.descansoInicio()!=null,"turno futuro hereda descanso realizado");
   var tarde=new Vehiculo("TA01",TipoVehiculo.TA,N,true,T.plusHours(6).plusMinutes(30));
   var estandar=estado(List.of(p),List.of(tarde),e.almacenes(),List.of(),List.of(),List.of(),List.of(),Set.of("TA01"));
   var defecto=new EvaluadorFactibilidad(estandar,ParametrosOperacion.porDefecto());
-  ok(!defecto.evaluar(una(defecto)).factible(),"turno predeterminado debe terminar 15:00, no 16:00");
+  var turno15=defecto.evaluar(una(defecto)).rutas().get(0);
+  ok(turno15.factible()&&turno15.salida().equals(T.toLocalDate().atTime(15,0)),"no programa turno de las 15:00");
   var noche=T.toLocalDate().atTime(6,30);
   var pedidoNoche=new Pedido("noche",noche.minusHours(1),N,1,4);
   var nocturno=new EstadoOperacion(noche,List.of(pedidoNoche),List.of(new Vehiculo("TA01",N)),e.almacenes(),
     List.of(),List.of(),List.of(),List.of(),Set.of("TA01"));
   var evNoche=new EvaluadorFactibilidad(nocturno,ParametrosOperacion.porDefecto());
-  ok(!evNoche.evaluar(una(evNoche)).factible(),"turno nocturno debe terminar 07:00");
+  var turno7=evNoche.evaluar(una(evNoche)).rutas().get(0);
+  ok(turno7.factible()&&turno7.salida().equals(noche.toLocalDate().atTime(7,0)),"no programa turno de las 07:00");
+  var urgente=new Pedido("urgente",noche.minusHours(3),N,1,4);
+  var sinMargen=new EstadoOperacion(noche,List.of(urgente),List.of(new Vehiculo("TA01",N)),e.almacenes(),
+    List.of(),List.of(),List.of(),List.of(),Set.of("TA01"));
+  var evUrgente=new EvaluadorFactibilidad(sinMargen,ParametrosOperacion.porDefecto());
+  ok(!evUrgente.evaluar(una(evUrgente)).factible(),"espera siguiente turno aunque vence el plazo");
   pruebas++;
  }
  static void testDescanso(){

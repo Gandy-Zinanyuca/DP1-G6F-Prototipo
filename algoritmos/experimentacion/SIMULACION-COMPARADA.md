@@ -48,6 +48,8 @@ Solo ingresan pedidos cuya fecha de registro ya llego; no se anticipan ventas fu
 
 El simulador conserva en una agenda externa las entregas en curso y representa cada vehiculo comprometido por su posicion de retorno y disponibilidad futura. No modela desvio en tiempo real de una ruta ya despachada ante una incidencia inesperada; las incidencias cargadas son conocidas al planificar. Las reglas operativas son las actuales de los motores compartidos (incluido servicio de 60 minutos), no las del ALNS historico.
 
+Cada ruta debe regresar antes de finalizar el turno en que sale. Cuando ya no cabe en el turno vigente, el evaluador prueba los inicios de los turnos posteriores hasta el deadline mas temprano de la ruta. El descanso realizado solo se conserva para el turno vigente; una ruta programada en un turno futuro debe incluir nuevamente su descanso. Esto evita declarar colapso por un pedido que puede esperar al siguiente relevo sin vencer.
+
 `COLAPSO_PLANIFICACION` significa que el motor no encontro plan completo para la demanda del ciclo; no prueba imposibilidad matematica. Un resultado invalido lanza un error, no se registra como colapso. `FIN_DE_DATOS` espera entregas y retornos; `LIMITE_DE_CICLOS` indica truncamiento y no debe contarse como colapso.
 
 ## Salidas e interpretacion

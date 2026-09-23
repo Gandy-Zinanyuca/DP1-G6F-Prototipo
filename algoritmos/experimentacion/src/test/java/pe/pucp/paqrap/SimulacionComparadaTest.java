@@ -35,6 +35,14 @@ public final class SimulacionComparadaTest {
                 ok(limite.fin().equals("LIMITE_DE_CICLOS") && limite.completos() == 0, "Despacho no equivale a entrega");
                 var colapso = SimulacionComparada.ejecutar(datos, motor, 10, 0, dir.resolve("colapso-" + i + ".csv"), 7, 2);
                 ok(colapso.fin().equals("COLAPSO_PLANIFICACION") && colapso.completos() == 0, "No despachar plan incompleto");
+                var madrugada = t.toLocalDate().atStartOfDay();
+                var baseMadrugada = new EstadoOperacion(madrugada, List.of(),
+                        List.of(new Vehiculo("TA01", n), new Vehiculo("TA02", n)),
+                        List.of(new Almacen("A", n, 12, false)), List.of(), List.of(), List.of(), List.of(), Set.of());
+                var pedidoCinco = new Pedido("05h", madrugada.plusHours(4).plusMinutes(55), new Nodo(21, 29), 6, 18);
+                var esperaTurno = SimulacionComparada.ejecutar(new SimulacionComparada.Datos(baseMadrugada, List.of(pedidoCinco)),
+                        motor, 10, 31, dir.resolve("turno-" + i + ".csv"), 7, 1);
+                ok(esperaTurno.fin().equals("LIMITE_DE_CICLOS"), "colapso falso antes del turno de las 07:00");
             }
             ok(base.almacenes().get(0).stock() == 16, "La simulacion no muta la instancia");
             System.out.println("Pruebas de simulacion TS/ALNS correctas.");

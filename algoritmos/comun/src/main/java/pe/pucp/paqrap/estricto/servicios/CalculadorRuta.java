@@ -6,8 +6,8 @@ import java.time.*;
 import java.util.*;
 
 /**
- * Horarios con caminos temporales, pausa en paradas y retorno de llegada
- * minima.
+ * Horarios con caminos temporales, pausa en paradas, espera al siguiente turno
+ * cuando la ruta ya no cabe en el vigente y retorno de llegada minima.
  */
 public final class CalculadorRuta {
   private final EstadoOperacion estado;
@@ -37,24 +37,40 @@ public final class CalculadorRuta {
   public ResultadoRuta calcular(Ruta r) {
     var v = estado.vehiculos().stream().filter(x -> x.codigo().equals(r.vehiculo())).findFirst().orElseThrow();
     var origen = estado.almacenes().stream().filter(x -> x.id().equals(r.almacenOrigen())).findFirst().orElseThrow();
-    LocalDateTime salida = estado.instante().isAfter(v.disponibleDesde()) ? estado.instante() : v.disponibleDesde();
+    LocalDateTime salidaTemprana = estado.instante().isAfter(v.disponibleDesde()) ? estado.instante() : v.disponibleDesde();
     if (r.partes().isEmpty())
-      return new ResultadoRuta(r, salida, salida, origen.id(), List.of(), List.of(), null, null, 0, 0, List.of());
+      return new ResultadoRuta(r, salidaTemprana, salidaTemprana, origen.id(), List.of(), List.of(), null, null, 0, 0, List.of());
     if (r.carga() > v.tipo().capacidad())
-      return error(r, salida, "capacidad");
+      return error(r, salidaTemprana, "capacidad");
     if (!v.disponible())
-      return error(r, salida, "vehiculo indisponible");
-    int minutoDia = salida.getHour() * 60 + salida.getMinute();
-    LocalDateTime turno = salida.toLocalDate().atStartOfDay().plusMinutes(par.inicioTurnoMinuto() +
-        Math.floorDiv(minutoDia - par.inicioTurnoMinuto(), par.turnoMinutos()) * par.turnoMinutos());
-    LocalDateTime finTurno = turno.plusMinutes(par.turnoMinutos());
+      return error(r, salidaTemprana, "vehiculo indisponible");
     var grupos = new ArrayList<List<PartePedido>>();
     for (var parte : r.partes()) {
       if (grupos.isEmpty() || !grupos.get(grupos.size() - 1).get(0).pedido().id().equals(parte.pedido().id()))
         grupos.add(new ArrayList<>());
       grupos.get(grupos.size() - 1).add(parte);
     }
-    // descansoRealizado solo describe el turno del snapshot.
+    LocalDateTime limite = r.partes().stream().map(p -> p.pedido().deadline()).min(LocalDateTime::compareTo).orElseThrow();
+    ResultadoRuta fallo = null;
+    LocalDateTime salida = salidaTemprana;
+    // La primera alternativa conserva la salida mas temprana. Si no cabe, cada
+    // alternativa posterior empieza exactamente al abrir el siguiente turno.
+    while (!salida.isAfter(limite)) {
+      ResultadoRuta candidata = calcularEnTurno(r, v, origen, salida, grupos);
+      if (candidata.factible()) return candidata;
+      fallo = candidata;
+      if (r.enCurso()) break;
+      salida = inicioTurno(salida).plusMinutes(par.turnoMinutos());
+    }
+    return fallo != null ? fallo : error(r, salidaTemprana, "sin turno antes del plazo");
+  }
+
+  private ResultadoRuta calcularEnTurno(Ruta r, Vehiculo v, Almacen origen, LocalDateTime salida,
+      List<List<PartePedido>> grupos) {
+    LocalDateTime turno = inicioTurno(salida);
+    LocalDateTime finTurno = turno.plusMinutes(par.turnoMinutos());
+    // descansoRealizado describe solo el turno vigente en el snapshot. Un turno
+    // futuro comienza con la pausa aun pendiente.
     boolean descansoHecho = estado.descansoRealizado().contains(v.codigo()) && !turno.isAfter(estado.instante());
     if (salida.plusMinutes((long) grupos.size() * par.servicioMinutos() + (descansoHecho ? 0 : par.descansoMinutos()))
         .isAfter(finTurno))
@@ -68,6 +84,12 @@ public final class CalculadorRuta {
       fallo = candidata;
     }
     return mejor != null ? mejor : fallo;
+  }
+
+  private LocalDateTime inicioTurno(LocalDateTime instante) {
+    int minutoDia = instante.getHour() * 60 + instante.getMinute();
+    return instante.toLocalDate().atStartOfDay().plusMinutes(par.inicioTurnoMinuto() +
+        Math.floorDiv(minutoDia - par.inicioTurnoMinuto(), par.turnoMinutos()) * par.turnoMinutos());
   }
 
   private ResultadoRuta simular(Ruta r, Vehiculo v, Almacen origen, LocalDateTime salida, LocalDateTime turno,

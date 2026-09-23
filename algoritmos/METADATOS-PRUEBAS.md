@@ -39,7 +39,7 @@ Holguras vacias cuando hay colapso o no hay demanda. No promediar solo pedidos f
 
 ## Restricciones comunes
 
-Servicio 60 min, plazo incluye fin de servicio, turno 480 min con origen 07:00, descanso 60 min en banda relativa [60,420], retorno antes de fin de turno. Se aplican capacidad, stock, disponibilidad, bloqueos temporales, averias y mantenimiento. Partes de hasta 4 unidades. La flota y almacenes son los del cargador comun.
+Servicio 60 min, plazo incluye fin de servicio, turno 480 min con origen 07:00, descanso 60 min en banda relativa [60,420], retorno antes de fin de turno. Si la ruta no cabe en el turno vigente, puede esperar al inicio de un turno posterior siempre que servicio, descanso, retorno y deadline sigan siendo factibles. Se aplican capacidad, stock, disponibilidad, bloqueos temporales, averias y mantenimiento. Partes de hasta 4 unidades. La flota y almacenes son los del cargador comun.
 
 La ruta prueba horarios de descanso y prefiere menores tiempos finales por pedido; la evaluacion global utiliza la ultima parte entre todos los vehiculos. Es una heuristica de horarios, no una optimizacion exacta.
 
