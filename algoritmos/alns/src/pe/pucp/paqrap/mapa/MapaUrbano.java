@@ -31,6 +31,11 @@ import java.util.Set;
  *
  * <p>Si el camino Manhattan canónico (primero en X, luego en Y) no requiere ninguna espera, es
  * óptimo —su llegada es la cota inferior— y se devuelve sin ejecutar Dijkstra.</p>
+ *
+ * <p>La búsqueda es A*: la cola se ordena por llegada + distancia Manhattan restante × tiempo de
+ * cruce, una cota inferior consistente (las esperas solo retrasan), así que devuelve la misma
+ * llegada óptima que Dijkstra explorando menos nodos. Los cierres se indexan por calle en un
+ * arreglo y los intervalos de bloqueo se consultan por búsqueda binaria.</p>
  */
 public class MapaUrbano {
 
@@ -60,18 +65,59 @@ public class MapaUrbano {
 
     private final List<Bloqueo> bloqueos;
 
-    /** Intervalos de cierre por calle, ordenados por inicio: {inicio, fin} en minutos. */
-    private final Map<Long, List<int[]>> cierresPorArco = new HashMap<>();
+    /**
+     * Intervalos de cierre por calle, ordenados por inicio ({inicio, fin} en minutos), indexados
+     * por {@link #indiceCalle}; {@code null} si la calle nunca se cierra.
+     */
+    private int[][][] cierresPorCalle = new int[2 * NUM_NODOS][][];
 
-    /** Intervalos de todos los bloqueos, para descartar Dijkstra cuando no hay ninguno activo. */
-    private int[][] intervalosGlobales;
+    /** Inicios de todos los bloqueos, ordenados, y el mayor fin entre los primeros k. */
+    private int[] iniciosOrdenados = new int[0];
+    private int[] maxFinPrefijo = new int[0];
 
     private int instanteActual = -1;
     private List<Bloqueo> vigentes = new ArrayList<>();
 
-    private final Map<String, Tramo> cache = new LinkedHashMap<String, Tramo>(4096, 0.75f, true) {
+    /** Clave del caché de tramos: origen, destino, salida, velocidad y si se piden las calles. */
+    private static final class ClaveTramo {
+        final int fuente;
+        final int meta;
+        final long salida;
+        final long velocidad;
+        final boolean conArcos;
+        final int hash;
+
+        ClaveTramo(int fuente, int meta, double salida, double velocidad, boolean conArcos) {
+            this.fuente = fuente;
+            this.meta = meta;
+            this.salida = Double.doubleToLongBits(salida);
+            this.velocidad = Double.doubleToLongBits(velocidad);
+            this.conArcos = conArcos;
+            int h = fuente * 31 + meta;
+            h = h * 31 + Long.hashCode(this.salida);
+            h = h * 31 + Long.hashCode(this.velocidad);
+            this.hash = h * 2 + (conArcos ? 1 : 0);
+        }
+
         @Override
-        protected boolean removeEldestEntry(Map.Entry<String, Tramo> eldest) {
+        public boolean equals(Object o) {
+            if (!(o instanceof ClaveTramo)) {
+                return false;
+            }
+            ClaveTramo c = (ClaveTramo) o;
+            return fuente == c.fuente && meta == c.meta && salida == c.salida
+                    && velocidad == c.velocidad && conArcos == c.conArcos;
+        }
+
+        @Override
+        public int hashCode() {
+            return hash;
+        }
+    }
+
+    private final Map<ClaveTramo, Tramo> cache = new LinkedHashMap<ClaveTramo, Tramo>(4096, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<ClaveTramo, Tramo> eldest) {
             return size() > LIMITE_CACHE;
         }
     };
@@ -101,22 +147,43 @@ public class MapaUrbano {
     }
 
     private void indexarBloqueos() {
-        cierresPorArco.clear();
         cache.clear();
         instanteActual = -1;
-        intervalosGlobales = new int[bloqueos.size()][];
+        Map<Integer, List<int[]>> porCalle = new HashMap<>();
+        int[][] intervalos = new int[bloqueos.size()][];
         for (int i = 0; i < bloqueos.size(); i++) {
             Bloqueo b = bloqueos.get(i);
             int[] intervalo = {b.getMinutoInicio(), b.getMinutoFin()};
-            intervalosGlobales[i] = intervalo;
+            intervalos[i] = intervalo;
             for (int[] arco : b.arcosUnitarios()) {
-                cierresPorArco.computeIfAbsent(clave(arco[0], arco[1]), k -> new ArrayList<>())
-                        .add(intervalo);
+                porCalle.computeIfAbsent(indiceCalle(arco[0], arco[1]), k -> new ArrayList<>()).add(intervalo);
             }
         }
-        for (List<int[]> lista : cierresPorArco.values()) {
-            lista.sort((a, b) -> Integer.compare(a[0], b[0]));
+        cierresPorCalle = new int[2 * NUM_NODOS][][];
+        for (Map.Entry<Integer, List<int[]>> e : porCalle.entrySet()) {
+            List<int[]> lista = e.getValue();
+            lista.sort((x, y) -> Integer.compare(x[0], y[0]));
+            cierresPorCalle[e.getKey()] = lista.toArray(new int[0][]);
         }
+        Arrays.sort(intervalos, (x, y) -> Integer.compare(x[0], y[0]));
+        iniciosOrdenados = new int[intervalos.length];
+        maxFinPrefijo = new int[intervalos.length];
+        int maxFin = Integer.MIN_VALUE;
+        for (int i = 0; i < intervalos.length; i++) {
+            iniciosOrdenados[i] = intervalos[i][0];
+            maxFin = Math.max(maxFin, intervalos[i][1]);
+            maxFinPrefijo[i] = maxFin;
+        }
+    }
+
+    /**
+     * Índice de la calle unitaria entre dos nodos vecinos: cada nodo es dueño de su calle hacia
+     * el Este (2·nodo) y hacia el Norte (2·nodo + 1).
+     */
+    private static int indiceCalle(int nodoA, int nodoB) {
+        int menor = Math.min(nodoA, nodoB);
+        int mayor = Math.max(nodoA, nodoB);
+        return 2 * menor + (mayor - menor == 1 ? 0 : 1);
     }
 
     public List<Bloqueo> getBloqueos() {
@@ -169,7 +236,7 @@ public class MapaUrbano {
      * el cruce completo, de duración {@code cruce}, no se solape con ningún bloqueo.
      */
     private double proximaSalida(int a, int b, double llegada, double cruce) {
-        List<int[]> cierres = cierresPorArco.get(clave(a, b));
+        int[][] cierres = cierresPorCalle[indiceCalle(a, b)];
         double salida = llegada;
         if (cierres == null) {
             return salida;
@@ -187,12 +254,19 @@ public class MapaUrbano {
     }
 
     private boolean hayBloqueoEntre(double desde, double hasta) {
-        for (int[] c : intervalosGlobales) {
-            if (c[0] < hasta && c[1] > desde) {
-                return true;
+        // Algún bloqueo con inicio < hasta y fin > desde: entre los que empiezan antes de 'hasta'
+        // (prefijo por búsqueda binaria), basta con que el mayor fin supere 'desde'.
+        int lo = 0;
+        int hi = iniciosOrdenados.length;
+        while (lo < hi) {
+            int mid = (lo + hi) >>> 1;
+            if (iniciosOrdenados[mid] < hasta) {
+                lo = mid + 1;
+            } else {
+                hi = mid;
             }
         }
-        return false;
+        return lo > 0 && maxFinPrefijo[lo - 1] > desde;
     }
 
     /**
@@ -219,8 +293,7 @@ public class MapaUrbano {
                     conArcos ? arcosManhattan(origen, destino) : Collections.emptyList());
         }
 
-        String k = fuente + ":" + meta + ":" + Double.doubleToLongBits(salida) + ":"
-                + Double.doubleToLongBits(velocidadKmH) + ":" + conArcos;
+        ClaveTramo k = new ClaveTramo(fuente, meta, salida, velocidadKmH, conArcos);
         Tramo cacheado = cache.get(k);
         if (cacheado != null) {
             return cacheado;
@@ -274,21 +347,25 @@ public class MapaUrbano {
         Arrays.fill(previo, -1);
         llegada[fuente] = salida;
 
-        // Etiqueta: {llegada, km, nodo}; orden por llegada, luego km, luego nodo (determinista).
+        // A*: etiqueta {llegada + cota, llegada, km, nodo}; la cota es la distancia Manhattan
+        // restante × tiempo de cruce (consistente: las esperas por bloqueo solo retrasan).
+        // Orden por estimación, luego km, luego nodo (determinista).
+        final int mx = meta % ANCHO;
+        final int my = meta / ANCHO;
         PriorityQueue<double[]> cola = new PriorityQueue<>((p, q) -> {
             int c = Double.compare(p[0], q[0]);
             if (c != 0) {
                 return c;
             }
-            c = Double.compare(p[1], q[1]);
-            return c != 0 ? c : Double.compare(p[2], q[2]);
+            c = Double.compare(p[2], q[2]);
+            return c != 0 ? c : Double.compare(p[3], q[3]);
         });
-        cola.add(new double[]{salida, 0, fuente});
+        cola.add(new double[]{salida + cota(fuente, mx, my, cruce), salida, 0, fuente});
 
         while (!cola.isEmpty()) {
             double[] actual = cola.poll();
-            int u = (int) actual[2];
-            if (actual[0] != llegada[u] || (int) actual[1] != distancia[u]) {
+            int u = (int) actual[3];
+            if (actual[1] != llegada[u] || (int) actual[2] != distancia[u]) {
                 continue;
             }
             if (u == meta) {
@@ -303,13 +380,13 @@ public class MapaUrbano {
                     continue;
                 }
                 int v = ny * ANCHO + nx;
-                double fin = proximaSalida(u, v, actual[0], cruce) + cruce;
+                double fin = proximaSalida(u, v, actual[1], cruce) + cruce;
                 int km = distancia[u] + 1;
                 if (fin < llegada[v] || (fin == llegada[v] && km < distancia[v])) {
                     llegada[v] = fin;
                     distancia[v] = km;
                     previo[v] = u;
-                    cola.add(new double[]{fin, km, v});
+                    cola.add(new double[]{fin + cota(v, mx, my, cruce), fin, km, v});
                 }
             }
         }
@@ -325,6 +402,11 @@ public class MapaUrbano {
             Collections.reverse(arcos);
         }
         return new Tramo(llegada[meta], distancia[meta], arcos);
+    }
+
+    /** Cota inferior del tiempo restante: distancia Manhattan al destino × tiempo de cruce. */
+    private static double cota(int nodo, int mx, int my, double cruce) {
+        return (Math.abs(nodo % ANCHO - mx) + Math.abs(nodo / ANCHO - my)) * cruce;
     }
 
     private static List<Long> arcosManhattan(Coordenada origen, Coordenada destino) {

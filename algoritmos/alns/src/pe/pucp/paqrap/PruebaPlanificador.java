@@ -143,18 +143,27 @@ public final class PruebaPlanificador {
                 cubierto.merge(p.getOriginal(), p.getCantidad(), Integer::sum);
             }
         }
-        boolean cubiertos = resultado.getNoAsignados().isEmpty()
-                && cubierto.size() == ctx.getPedidosPorAtender().size();
+        // Cobertura: lo asignado más lo reprogramado cubre cada pedido, y solo se reprograma lo
+        // que todavía tiene holgura para un ciclo posterior.
+        Map<Pedido, Integer> reprogramado = new IdentityHashMap<>();
+        boolean reprogramacionValida = true;
+        for (Pedido p : resultado.getNoAsignados()) {
+            reprogramado.merge(p.getOriginal(), p.getCantidad(), Integer::sum);
+            reprogramacionValida &= ctx.esPostergable(p);
+        }
+        boolean cubiertos = true;
         for (Pedido p : ctx.getPedidosPorAtender()) {
-            cubiertos &= cubierto.getOrDefault(p.getOriginal(), 0) == p.getCantidad();
+            cubiertos &= cubierto.getOrDefault(p.getOriginal(), 0)
+                    + reprogramado.getOrDefault(p.getOriginal(), 0) == p.getCantidad();
         }
         for (Pedido p : vistos) {
             if (p.esFraccion()) {
                 fraccionados++;
             }
         }
-        System.out.printf(" [6] Partes asignadas: %d (%d fracciones de pedidos repartidos)%n",
-                vistos.size(), fraccionados);
+        System.out.printf(" [6] Partes asignadas: %d (%d fracciones de pedidos repartidos) · reprogramados:"
+                        + " %d pedidos / %d paquetes%n",
+                vistos.size(), fraccionados, resultado.getPedidosPostergados(), resultado.getPaquetesPostergados());
         boolean mismaHora = true;
         for (Pedido p : vistos) {
             Pedido o = p.getOriginal();
@@ -164,23 +173,43 @@ public final class PruebaPlanificador {
         }
         verificar("Ninguna parte de pedido duplicada", !duplicados);
         verificar("Cada fracción conserva el registro, destino y hora límite de su pedido", mismaHora);
-        verificar("La cantidad de cada pedido considerado queda cubierta exactamente (LE006)", cubiertos);
+        verificar("La cantidad de cada pedido considerado queda cubierta exactamente, asignada o"
+                + " reprogramada (LE006)", cubiertos);
+        verificar("Solo se reprograman pedidos con holgura suficiente", reprogramacionValida);
 
         // --- 7. Capacidad, plazos e inventario ---------------------------------------------
         boolean capacidadOk = true;
         boolean plazosOk = true;
+        int viajes = 0;
+        int recargas = 0;
         for (Ruta r : resultado.getRutas()) {
-            capacidadOk &= r.getCargaTotal() <= r.getVehiculo().getCapacidad();
+            if (r.estaVacia()) {
+                continue;
+            }
+            int cargaViajes = 0;
+            for (Ruta.Viaje v : r.getViajes()) {
+                int carga = 0;
+                for (int i = v.getDesde(); i < v.getHasta(); i++) {
+                    carga += r.getSecuencia().get(i).getCantidad();
+                }
+                capacidadOk &= carga == v.getCarga() && carga <= r.getVehiculo().getCapacidad();
+                cargaViajes += carga;
+            }
+            capacidadOk &= cargaViajes == r.getCargaTotal();
+            viajes += r.getViajes().size();
+            recargas += r.getViajes().size() - 1;
             for (int i = 0; i < r.tamanio(); i++) {
                 plazosOk &= r.minutoLlegada(i) <= r.getSecuencia().get(i).getMinutoLimite();
             }
         }
-        verificar("Ninguna ruta excede la capacidad de su unidad (LE014, LE027)", capacidadOk);
+        System.out.printf(" [7] Viajes: %d (%d con recarga en ruta)%n", viajes, recargas);
+        verificar("Ningún viaje excede la capacidad de su unidad y los viajes cubren la ruta (LE014, LE027)",
+                capacidadOk);
         verificar("Ninguna entrega fuera de plazo (LE021)", plazosOk);
         boolean inventarioOk = true;
         for (Almacen a : ctx.getAlmacenes()) {
             if (!a.esCentral()) {
-                inventarioOk &= resultado.consumo(a) <= ctx.stockInicial(a);
+                inventarioOk &= resultado.consumo(ctx, a) <= ctx.stockInicial(a);
             }
         }
         verificar("Ningún almacén intermedio queda con stock negativo (LE019)", inventarioOk);

@@ -21,18 +21,20 @@ inventario), tres tipos de unidad, hora límite por pedido y bloqueos de calles 
 **Restricciones duras** (una sola violación hace no factible la solución; un incumplimiento de
 plazo es colapso logístico):
 
-- capacidad de la unidad;
+- capacidad de la unidad **en cada viaje** y a lo sumo `maxViajesPorRuta` viajes por ruta (§4.4);
 - llegada a cada destino no posterior a su hora límite; 1 hora de entrega por destinatario;
 - disponibilidad de la unidad y ausencia de mantenimiento preventivo durante toda la ruta;
 - caminos calculados con CAMINO_MÁS_RÁPIDO respetando los bloqueos en la hora real de cruce;
 - la cantidad de cada pedido considerado cubierta exactamente, completa en una unidad o
-  repartida entre varias (ver §4.3);
+  repartida entre varias (ver §4.3), salvo los pedidos **reprogramables** (§4.5);
 - regreso a un almacén;
 - *adicionales al EVALUAR del ISA*: inventario no negativo en almacenes intermedios, hora de
   alimentación separada 1 h de los cambios de turno, y confinamiento al turno si
   `limitarRutaAlTurno` está activo.
 
-**Costo** (solo compara soluciones factibles): `Σ_r distanciaKm(r) × costoPorKm(τ(r))`.
+**Costo** (solo compara soluciones factibles): `Σ_r distanciaKm(r) × costoPorKm(τ(r))` más
+`penalizaciónPorPaquete × paquetes reprogramados` (1 000 000 por paquete: domina cualquier
+diferencia de distancia, así que solo se reprograma lo que no cabe).
 
 **Pedidos considerados en el instante T** (ventana de consumo `Sc = Sa × K`): los pendientes —no
 entregados, registrados hasta T— más los registrados en `(T, T + Sc]`. La ruta sale en
@@ -59,11 +61,14 @@ orden estable y una semilla única garantizan reproducibilidad (LE008).
 
 ### 2.1 CAMINO_MÁS_RÁPIDO (`MapaUrbano.caminoMasRapido`)
 
-Cada calle unitaria guarda los intervalos `[inicio, fin)` de los bloqueos que la cierran. Dijkstra
-temporal ordenado por hora de llegada: una calle solo se cruza si el cruce completo no se solapa con
-un cierre; si se solapa, la unidad espera hasta el fin del bloqueo. Atajos exactos: si ningún bloqueo
-está activo durante la ventana de viaje, o si el camino en L no requiere esperas, la llegada
-Manhattan es óptima y no se ejecuta Dijkstra. Los resultados con bloqueos se memorizan.
+Cada calle unitaria guarda los intervalos `[inicio, fin)` de los bloqueos que la cierran (arreglo
+indexado por calle). Búsqueda A* temporal: la cola se ordena por llegada + distancia Manhattan
+restante × tiempo de cruce, cota consistente porque las esperas solo retrasan, así que da la misma
+llegada óptima que Dijkstra explorando menos nodos. Una calle solo se cruza si el cruce completo no
+se solapa con un cierre; si se solapa, la unidad espera hasta el fin del bloqueo. Atajos exactos: si
+ningún bloqueo está activo durante la ventana de viaje (búsqueda binaria sobre los intervalos), o si
+el camino en L no requiere esperas, la llegada Manhattan es óptima y no se ejecuta la búsqueda. Los
+resultados con bloqueos se memorizan.
 
 ---
 
@@ -150,6 +155,53 @@ MIENTRAS restante > 0
 - Se evalúa igual que la solución inicial de Búsqueda Tabú, que también fracciona como último
   recurso, para que ambos algoritmos resuelvan el mismo problema.
 
+### 4.4 Rutas con recarga (viajes múltiples)
+
+El curso permite que una unidad recargue en cualquier almacén con stock y siga repartiendo
+(preguntas y respuestas, pregunta 10; la hoja Flota fija un mínimo de viajes diarios: auto 3,
+moto 6, bicicleta 2,1). La ruta sigue siendo *(unidad, almacén de origen, secuencia)*; los viajes
+se **derivan** de la secuencia:
+
+```
+carga ← 0 ; almacén ← origen
+PARA CADA pedido de la secuencia
+    SI carga + cantidad > capacidad
+        ir al almacén más cercano con stock para el siguiente viaje ; recargar ; carga ← 0
+    entregar ; carga ← carga + cantidad
+regresar al almacén más cercano
+```
+
+- Los operadores no cambian: la posición en que se inserta un pedido decide también si la unidad
+  sigue la ruta o vuelve antes a recargar.
+- Capacidad por viaje; a lo sumo `maxViajesPorRuta` viajes (3), que acota el horizonte de la ruta
+  y el costo de la búsqueda; el plan se rehace cada Sa.
+- El inventario se descuenta en el almacén donde carga cada viaje; la solución suma los consumos
+  de todas las rutas (restricción global).
+- La hora de alimentación se ubica en el turno en que arranca la ruta, como antes.
+- Podas de la inserción que no cambian las soluciones factibles: se descarta la unidad si el
+  pedido no cabe ni usando todos sus viajes, se deja de probar posiciones una vez que la parada
+  previa llega después de la hora límite del pedido, y el inventario solo se revisa en los
+  almacenes intermedios que usa la ruta modificada.
+
+### 4.5 Reprogramación de pedidos con holgura
+
+Un pedido cuya hora límite está a más de `holguraMinimaPostergacionMin` (240 min) del instante T
+puede quedar sin asignar en el plan: se atenderá en un ciclo posterior. No hace infactible la
+solución, pero cada paquete reprogramado suma la penalización al costo. GENERAR_SOLUCIÓN_INICIAL
+sigue igual, salvo que un pedido que no cabe y es reprogramable no detiene la construcción (sí la
+detiene uno que no lo es). Un pedido que ya no es reprogramable y no cabe provoca el colapso.
+
+### 4.6 Solución inicial con plan previo
+
+```
+heredada ← plan vigente sin lo despachado, con los pedidos nuevos insertados (voraz)
+desdeCero ← GENERAR_SOLUCIÓN_INICIAL
+inicial ← la factible; entre dos factibles, la de menor costo
+```
+
+La reoptimización incremental ya no puede dejar un plan infactible cuando replanificar desde cero
+lo resolvería (causa de la mitad de los colapsos en la campaña con el modelo anterior).
+
 ---
 
 ## 5. Simulación y escenario de colapso (`simulacion.Simulador`)
@@ -165,14 +217,17 @@ REPETIR
     ctx ← pedidos de la ventana (solo la cantidad no despachada) y unidades disponibles
     plan ← ALNS(ctx, planVigente)
     SI plan no es factible → COLAPSO
-    despachar las rutas con inicio < t + Sa ; planVigente ← plan
+    despachar los viajes que salen antes de t + Sa ; planVigente ← plan
     t ← t + Sa
 HASTA colapso, fin de los datos o límite de ciclos
 ```
 
-- **Despacho progresivo**: una ruta despachada compromete la unidad hasta su regreso y descuenta
-  el inventario al salir; las demás rutas del plan se replanifican en el ciclo siguiente
-  partiendo del plan vigente.
+- **Despacho progresivo por viaje**: un viaje despachado compromete la unidad hasta que llega al
+  almacén donde termina y descuenta el inventario del almacén donde carga; los viajes siguientes
+  y las demás rutas se replanifican en el ciclo siguiente partiendo del plan vigente.
+- **Diagnóstico del colapso** (`DiagnosticoColapso`): demanda de la ventana frente a la capacidad
+  de un viaje, si el pedido cabe solo o en un segundo viaje, la misma prueba y una replanificación
+  sin bloqueos, replanificación desde cero, arrepentimiento desde vacío y mantenimientos.
 - **Entregas**: un pedido pasa a entregado cuando el reloj alcanza la llegada de su última parte.
   Todas las partes conservan registro, destino y hora límite del pedido, y cada una debe llegar
   antes de esa hora.
@@ -231,3 +286,5 @@ aceptados, rechazados, nuevasMejores, iteraciónMejor, Ta (ms), factible, errore
    remueven nada produce un candidato de igual costo que se acepta con
    `puntuacionAceptacionNoMejora`; esos operadores ganan peso sin aportar. Conviene decidir si una
    destrucción vacía debe puntuar como rechazo.
+9. Rutas con recarga (§4.4), reprogramación con penalización (§4.5) y solución inicial con
+   plan previo (§4.6) extienden EVALUAR y GENERAR_SOLUCIÓN_INICIAL del ISA.

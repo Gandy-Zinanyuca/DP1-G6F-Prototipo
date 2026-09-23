@@ -24,13 +24,13 @@ import java.util.Set;
  *   ├── rutas          : LinkedHashMap&lt;codigoUnidad, Ruta&gt;   (orden estable ⇒ reproducible)
  *   ├── noAsignados    : LinkedHashSet&lt;Pedido&gt;
  *   ├── ubicacion      : IdentityHashMap&lt;parte, codigoUnidad&gt; (índice inverso, O(1))
- *   └── consumoAlmacen : HashMap&lt;idAlmacen, unidades&gt;         (control de LE019)
+ *   └── (consumo por almacén: derivado de los viajes de cada ruta, control de LE019)
  * </pre>
  *
  * <p>El índice inverso {@code ubicacion} es lo que hace baratos los operadores de destrucción:
  * remover un pedido no exige recorrer todas las rutas, sino localizar la suya en O(1). El
- * registro {@code consumoAlmacen} mantiene el acoplamiento de inventario entre rutas, que es
- * una restricción global y por eso no puede vivir dentro de una ruta individual.</p>
+ * inventario acopla varias rutas —es una restricción global—: cada ruta calcula cuánto toma de
+ * cada almacén en sus viajes y la solución suma esos consumos.</p>
  *
  * <p>Las rutas transportan <i>partes</i>: pedidos completos o fracciones de un pedido (ver
  * {@link Pedido#fraccion}). Un mismo pedido puede repartirse entre varias rutas, por eso el
@@ -45,12 +45,13 @@ public class Solucion {
     private final Map<String, Ruta> rutas = new LinkedHashMap<>();
     private final Set<Pedido> noAsignados = new LinkedHashSet<>();
     private final Map<Pedido, String> ubicacion = new IdentityHashMap<>();
-    private final Map<String, Integer> consumoAlmacen = new LinkedHashMap<>();
 
     private double costo = Double.NaN;
     private List<String> errores;
     private double distanciaTotalKm;
     private double costoOperacionSoles;
+    private int pedidosPostergados;
+    private int paquetesPostergados;
 
     public Solucion() {
     }
@@ -63,11 +64,12 @@ public class Solucion {
         }
         s.noAsignados.addAll(noAsignados);
         s.ubicacion.putAll(ubicacion);
-        s.consumoAlmacen.putAll(consumoAlmacen);
         s.costo = costo;
         s.errores = errores == null ? null : new ArrayList<>(errores);
         s.distanciaTotalKm = distanciaTotalKm;
         s.costoOperacionSoles = costoOperacionSoles;
+        s.pedidosPostergados = pedidosPostergados;
+        s.paquetesPostergados = paquetesPostergados;
         return s;
     }
 
@@ -157,14 +159,13 @@ public class Solucion {
 
     /**
      * Inserta el pedido en la posición indicada de la ruta de la unidad, actualizando el índice
-     * inverso y el consumo del almacén de origen. No verifica factibilidad: el llamador ya la
-     * comprobó al evaluar el costo de inserción.
+     * inverso. No verifica factibilidad: el llamador ya la comprobó al evaluar el costo de
+     * inserción.
      */
     public void asignar(Ruta ruta, int posicion, Pedido pedido) {
         ruta.insertar(posicion, pedido);
         noAsignados.remove(pedido);
         ubicacion.put(pedido, ruta.getVehiculo().getCodigo());
-        consumoAlmacen.merge(ruta.getAlmacenOrigen().getId(), pedido.getCantidad(), Integer::sum);
     }
 
     /**
@@ -179,8 +180,8 @@ public class Solucion {
             return null;
         }
         Ruta r = rutas.get(codigo);
-        if (r != null && r.remover(pedido)) {
-            consumoAlmacen.merge(r.getAlmacenOrigen().getId(), -pedido.getCantidad(), Integer::sum);
+        if (r != null) {
+            r.remover(pedido);
         }
         noAsignados.add(pedido);
         return r;
@@ -207,8 +208,16 @@ public class Solucion {
 
     // ------------------------------------------------------------------ inventario (LE019)
 
-    public int consumo(Almacen almacen) {
-        return consumoAlmacen.getOrDefault(almacen.getId(), 0);
+    /** Unidades que las rutas de la solución toman del almacén, sumando todos sus viajes. */
+    public int consumo(ContextoPlanificacion ctx, Almacen almacen) {
+        int total = 0;
+        for (Ruta r : rutas.values()) {
+            if (!r.estaVacia()) {
+                r.asegurarCalculada(ctx);
+                total += r.consumoEn(almacen);
+            }
+        }
+        return total;
     }
 
     /** Verifica que el almacén pueda soportar una carga adicional sin dejar stock negativo. */
@@ -216,18 +225,37 @@ public class Solucion {
         if (almacen.esCentral()) {
             return true;
         }
-        return ctx.stockInicial(almacen) - consumo(almacen) >= cantidad;
+        return ctx.stockInicial(almacen) - consumo(ctx, almacen) >= cantidad;
     }
 
-    /** Cambia el almacén de origen de una ruta reasignando su consumo de inventario. */
-    public void cambiarAlmacenOrigen(Ruta ruta, Almacen nuevo) {
-        int carga = 0;
-        for (Pedido p : ruta.getSecuencia()) {
-            carga += p.getCantidad();
+    /** Verifica que ningún almacén intermedio quede con stock negativo con las rutas actuales. */
+    public boolean stockAlcanza(ContextoPlanificacion ctx) {
+        for (Almacen a : ctx.getAlmacenes()) {
+            if (!a.esCentral() && consumo(ctx, a) > ctx.stockInicial(a)) {
+                return false;
+            }
         }
-        consumoAlmacen.merge(ruta.getAlmacenOrigen().getId(), -carga, Integer::sum);
+        return true;
+    }
+
+    /**
+     * Como {@link #stockAlcanza(ContextoPlanificacion)}, pero tras modificar una sola ruta de una
+     * solución que ya respetaba el inventario: solo pueden haberse excedido los almacenes
+     * intermedios de los que esa ruta toma carga.
+     */
+    public boolean stockAlcanza(ContextoPlanificacion ctx, Ruta modificada) {
+        modificada.asegurarCalculada(ctx);
+        for (Almacen a : ctx.getAlmacenes()) {
+            if (!a.esCentral() && modificada.consumoEn(a) > 0 && consumo(ctx, a) > ctx.stockInicial(a)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** Cambia el almacén de origen (del primer viaje) de una ruta. */
+    public void cambiarAlmacenOrigen(Ruta ruta, Almacen nuevo) {
         ruta.setAlmacenOrigen(nuevo);
-        consumoAlmacen.merge(nuevo.getId(), carga, Integer::sum);
     }
 
     // ------------------------------------------------------------------ evaluación
@@ -242,6 +270,10 @@ public class Solucion {
      * puede repartirse entre varias rutas), no hay pedidos adicionales ni partes sin asignar, y
      * ningún almacén intermedio queda con stock negativo. El costo es
      * Σ distanciaRuta × costoKmVehículo y solo se usa para comparar soluciones factibles.</p>
+     *
+     * <p>Reprogramación: una parte sin asignar cuyo pedido todavía tiene holgura suficiente
+     * ({@link ContextoPlanificacion#esPostergable}) no es un error —se atenderá en un ciclo
+     * posterior—, pero cada paquete reprogramado suma la penalización configurada al costo.</p>
      *
      * @return el costo total de la solución
      */
@@ -270,8 +302,18 @@ public class Solucion {
             costoOperacionSoles += r.costoOperacion();
         }
 
+        pedidosPostergados = 0;
+        paquetesPostergados = 0;
+        java.util.Set<Pedido> originalesPostergados = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
         for (Pedido p : noAsignados) {
-            errores.add("pedido no asignado P" + p.getId());
+            if (ctx.esPostergable(p)) {
+                paquetesPostergados += p.getCantidad();
+                if (originalesPostergados.add(p.getOriginal())) {
+                    pedidosPostergados++;
+                }
+            } else {
+                errores.add("pedido no asignado P" + p.getId());
+            }
         }
         Map<Pedido, Integer> sinAsignar = new IdentityHashMap<>();
         for (Pedido p : noAsignados) {
@@ -293,12 +335,13 @@ public class Solucion {
         }
 
         for (Almacen a : ctx.getAlmacenes()) {
-            if (!a.esCentral() && consumo(a) > ctx.stockInicial(a)) {
+            if (!a.esCentral() && consumo(ctx, a) > ctx.stockInicial(a)) {
                 errores.add("stock insuficiente en " + a.getId());
             }
         }
 
-        costo = costoOperacionSoles;
+        costo = costoOperacionSoles
+                + ctx.getParametros().penalizacionPorPaquetePostergado * paquetesPostergados;
         return costo;
     }
 
@@ -318,6 +361,16 @@ public class Solucion {
 
     public double getDistanciaTotalKm() {
         return distanciaTotalKm;
+    }
+
+    /** Pedidos (originales) que el plan reprograma para un ciclo posterior. */
+    public int getPedidosPostergados() {
+        return pedidosPostergados;
+    }
+
+    /** Paquetes que el plan reprograma para un ciclo posterior. */
+    public int getPaquetesPostergados() {
+        return paquetesPostergados;
     }
 
     public double getCostoOperacionSoles() {

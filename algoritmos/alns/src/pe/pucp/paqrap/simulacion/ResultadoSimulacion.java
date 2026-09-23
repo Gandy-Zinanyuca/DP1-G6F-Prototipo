@@ -35,6 +35,8 @@ public class ResultadoSimulacion {
     public Fin fin;
     /** Descripción del colapso: pedido afectado y restricción violada. */
     public String causaColapso = "";
+    /** Resumen del diagnóstico del colapso (ver DiagnosticoColapso). */
+    public String diagnosticoColapso = "";
 
     public LocalDateTime instanteInicial;
     public LocalDateTime instanteFinal;
@@ -58,11 +60,26 @@ public class ResultadoSimulacion {
     public int pedidosFraccionados;
     public long paquetesEntregados;
     public int rutasDespachadas;
+    /** Viajes despachados (una ruta puede tener varios, recargando entre ellos). */
+    public int viajesDespachados;
+    /** Viajes despachados y unidades en la flota, por tipo de vehículo. */
+    public final Map<String, Integer> viajesPorTipo = new LinkedHashMap<>();
+    public final Map<String, Integer> unidadesPorTipo = new LinkedHashMap<>();
+    /** Ciclos cuyo plan reprogramó algún pedido y máximo de paquetes reprogramados en un ciclo. */
+    public int ciclosConPostergacion;
+    public int maxPaquetesPostergados;
     public double kmRecorridos;
     public double costoSoles;
 
     public double diasSimulados() {
         return (minutoFinal - minutoInicial) / 1440.0;
+    }
+
+    /** Promedio de viajes despachados por unidad y por día simulado del tipo indicado. */
+    public double viajesPorUnidadDia(String tipo) {
+        int unidades = unidadesPorTipo.getOrDefault(tipo, 0);
+        double dias = diasSimulados();
+        return unidades == 0 || dias <= 0 ? 0 : viajesPorTipo.getOrDefault(tipo, 0) / (unidades * dias);
     }
 
     public double taPromedioMs() {
@@ -88,9 +105,16 @@ public class ResultadoSimulacion {
         m.put("pedidos_fraccionados", String.valueOf(pedidosFraccionados));
         m.put("paquetes_entregados", String.valueOf(paquetesEntregados));
         m.put("rutas_despachadas", String.valueOf(rutasDespachadas));
+        m.put("viajes_despachados", String.valueOf(viajesDespachados));
+        for (String tipo : unidadesPorTipo.keySet()) {
+            m.put("viajes_unidad_dia_" + tipo.toLowerCase(), fmt("%.2f", viajesPorUnidadDia(tipo)));
+        }
+        m.put("ciclos_con_reprogramacion", String.valueOf(ciclosConPostergacion));
+        m.put("max_paquetes_reprogramados", String.valueOf(maxPaquetesPostergados));
         m.put("km", fmt("%.0f", kmRecorridos));
         m.put("costo_soles", fmt("%.2f", costoSoles));
         m.put("causa_colapso", causaColapso);
+        m.put("diagnostico_colapso", diagnosticoColapso);
         return m;
     }
 
@@ -139,6 +163,9 @@ public class ResultadoSimulacion {
         sb.append(String.format(" Fin de la simulación : %s%n", fin));
         if (fin == Fin.COLAPSO) {
             sb.append(String.format(" Causa del colapso    : %s%n", causaColapso));
+            if (!diagnosticoColapso.isEmpty()) {
+                sb.append(String.format(" Diagnóstico          : %s%n", diagnosticoColapso));
+            }
         }
         sb.append(String.format(" Periodo simulado     : %s -> %s (%.2f días, %d meses cargados)%n",
                 instanteInicial, instanteFinal, diasSimulados(), mesesCargados));
@@ -151,8 +178,16 @@ public class ResultadoSimulacion {
                         + " · %d fraccionados · %d paquetes%n",
                 pedidosRegistrados, pedidosPendientesAlInicio, pedidosEntregados, pedidosFraccionados,
                 paquetesEntregados));
-        sb.append(String.format(" Rutas despachadas    : %d · %.0f km · S/ %.2f%n",
-                rutasDespachadas, kmRecorridos, costoSoles));
+        sb.append(String.format(" Rutas despachadas    : %d rutas · %d viajes · %.0f km · S/ %.2f%n",
+                rutasDespachadas, viajesDespachados, kmRecorridos, costoSoles));
+        StringBuilder porTipo = new StringBuilder();
+        for (String tipo : unidadesPorTipo.keySet()) {
+            porTipo.append(porTipo.length() == 0 ? "" : " · ")
+                    .append(String.format("%s %.2f", tipo.toLowerCase(), viajesPorUnidadDia(tipo)));
+        }
+        sb.append(String.format(" Viajes/unidad/día    : %s%n", porTipo));
+        sb.append(String.format(" Reprogramación       : %d ciclos reprogramaron pedidos (máx. %d paquetes en un ciclo)%n",
+                ciclosConPostergacion, maxPaquetesPostergados));
         return sb.toString();
     }
 }

@@ -16,8 +16,9 @@ import java.util.List;
  * deadline ascendente y cada uno se inserta en la posición factible de menor costo. Si ninguna
  * unidad admite el pedido completo, se reparte entre varias ({@link
  * EvaluadorInsercion#insertarFraccionado}), igual que en la solución inicial de Búsqueda Tabú.
- * Si tampoco así admite inserción factible, se marca como no asignado y la solución inicial es
- * no factible.</p>
+ * Si tampoco así admite inserción factible, se marca como no asignado: si el pedido todavía
+ * tiene holgura para atenderse en un ciclo posterior ({@link ContextoPlanificacion#esPostergable})
+ * queda reprogramado y la construcción sigue; si no, la solución inicial es no factible.</p>
  */
 public final class ConstructorInicial {
 
@@ -41,6 +42,9 @@ public final class ConstructorInicial {
             // No cabe completo en ninguna unidad: se intenta repartir antes de rendirse.
             if (!EvaluadorInsercion.insertarFraccionado(s, p, ctx)) {
                 s.marcarNoAsignado(p);
+                if (ctx.esPostergable(p)) {
+                    continue;   // reprogramado: se atenderá en un ciclo posterior
+                }
                 break;   // RETORNAR solución inicial no factible
             }
         }

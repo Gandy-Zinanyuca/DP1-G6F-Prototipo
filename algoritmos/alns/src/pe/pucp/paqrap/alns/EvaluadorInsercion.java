@@ -27,6 +27,11 @@ import java.util.List;
  * origen; el costo del candidato difiere del de la solución en Δ = costo(ruta') − costo(ruta).
  * Para una unidad ociosa se prueba además cada almacén de origen con stock suficiente.</p>
  *
+ * <p>Con recargas, la ruta de una unidad puede tener varios viajes: un pedido cabe en la unidad
+ * si cabe en un viaje, y la posición donde se inserta determina si la unidad sigue repartiendo
+ * o vuelve antes a recargar. El inventario se verifica después de insertar, porque una ruta puede
+ * tomar stock de varios almacenes.</p>
+ *
  * <p>Una unidad que ya transporta una parte del mismo pedido no recibe otra: repartir el pedido
  * solo tiene sentido entre unidades distintas. Cuando ninguna unidad admite el pedido completo,
  * {@link #insertarFraccionado} lo reparte entre varias (los pedidos pueden dividirse entre
@@ -60,9 +65,13 @@ public final class EvaluadorInsercion {
         if (r != null && r.contienePedido(p)) {
             return lista;   // la unidad ya lleva una parte de este pedido
         }
-        int cargaActual = (r == null) ? 0 : r.getCargaTotal();
-        if (cargaActual + p.getCantidad() > v.getCapacidad()) {
-            return lista;   // supera la capacidad disponible
+        if (p.getCantidad() > capacidadLibre(r, v, ctx)) {
+            return lista;   // no cabe ni en un viaje nuevo (o en la carga libre, sin recargas)
+        }
+        if (r != null && ctx.getParametros().permitirRecargas
+                && r.getCargaTotal() + p.getCantidad()
+                   > (long) v.getCapacidad() * ctx.getParametros().maxViajesPorRuta) {
+            return lista;   // no cabe ni usando todos los viajes permitidos
         }
 
         if (r == null || r.estaVacia()) {
@@ -82,21 +91,40 @@ public final class EvaluadorInsercion {
             return lista;
         }
 
-        if (!s.hayStock(ctx, r.getAlmacenOrigen(), p.getCantidad())) {
+        if (!ctx.getParametros().permitirRecargas && !s.hayStock(ctx, r.getAlmacenOrigen(), p.getCantidad())) {
             return lista;
         }
         r.asegurarCalculada(ctx);
         double base = r.costoOperacion();
+        int[] llegadasBase = r.getMinutosLlegada().clone();
+        boolean baseFactible = r.esFactible();
         for (int pos = 0; pos <= r.tamanio(); pos++) {
+            // Si la parada previa ya llega después de la hora límite del pedido, insertarlo en
+            // esta posición o en cualquiera posterior lo haría llegar tarde.
+            if (baseFactible && pos > 0 && pos - 1 < llegadasBase.length
+                    && llegadasBase[pos - 1] > p.getMinutoLimite()) {
+                break;
+            }
             r.insertar(pos, p);
             r.recalcular(ctx);
-            if (r.esFactible()) {
+            if (r.esFactible() && s.stockAlcanza(ctx, r)) {
                 lista.add(new Insercion(v, pos, r.getAlmacenOrigen(), r.costoOperacion() - base));
             }
             r.remover(pos);
         }
         r.recalcular(ctx);   // restaura los atributos derivados de la ruta original
         return lista;
+    }
+
+    /**
+     * Cantidad máxima que la unidad puede recibir de una parte: su capacidad completa si puede
+     * recargar (la parte irá en algún viaje), o la capacidad libre de su único viaje si no.
+     */
+    static int capacidadLibre(Ruta r, Vehiculo v, ContextoPlanificacion ctx) {
+        if (ctx.getParametros().permitirRecargas) {
+            return v.getCapacidad();
+        }
+        return v.getCapacidad() - ((r == null) ? 0 : r.getCargaTotal());
     }
 
     /** Todas las inserciones factibles del pedido en la solución, en orden estable. */
@@ -148,8 +176,7 @@ public final class EvaluadorInsercion {
             Pedido mejorFraccion = null;
             for (Vehiculo v : ctx.getUnidadesAsignables()) {
                 Ruta r = s.getRuta(v.getCodigo());
-                int carga = (r == null) ? 0 : r.getCargaTotal();
-                int q = Math.min(restante, v.getCapacidad() - carga);
+                int q = Math.min(restante, capacidadLibre(r, v, ctx));
                 if (q <= 0) {
                     continue;
                 }
