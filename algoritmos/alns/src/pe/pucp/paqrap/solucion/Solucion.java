@@ -7,6 +7,7 @@ import pe.pucp.paqrap.planificador.ContextoPlanificacion;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -22,7 +23,7 @@ import java.util.Set;
  * Solucion
  *   ├── rutas          : LinkedHashMap&lt;codigoUnidad, Ruta&gt;   (orden estable ⇒ reproducible)
  *   ├── noAsignados    : LinkedHashSet&lt;Pedido&gt;
- *   ├── ubicacion      : HashMap&lt;idPedido, codigoUnidad&gt;      (índice inverso, O(1))
+ *   ├── ubicacion      : IdentityHashMap&lt;parte, codigoUnidad&gt; (índice inverso, O(1))
  *   └── consumoAlmacen : HashMap&lt;idAlmacen, unidades&gt;         (control de LE019)
  * </pre>
  *
@@ -30,6 +31,10 @@ import java.util.Set;
  * remover un pedido no exige recorrer todas las rutas, sino localizar la suya en O(1). El
  * registro {@code consumoAlmacen} mantiene el acoplamiento de inventario entre rutas, que es
  * una restricción global y por eso no puede vivir dentro de una ruta individual.</p>
+ *
+ * <p>Las rutas transportan <i>partes</i>: pedidos completos o fracciones de un pedido (ver
+ * {@link Pedido#fraccion}). Un mismo pedido puede repartirse entre varias rutas, por eso el
+ * índice inverso usa la identidad del objeto y EVALUAR verifica la cobertura por cantidad.</p>
  *
  * <p>El uso de colecciones con orden de inserción estable (LinkedHashMap / LinkedHashSet) no
  * es cosmético: junto con una semilla fija del generador aleatorio, es lo que permite que dos
@@ -39,7 +44,7 @@ public class Solucion {
 
     private final Map<String, Ruta> rutas = new LinkedHashMap<>();
     private final Set<Pedido> noAsignados = new LinkedHashSet<>();
-    private final Map<Integer, String> ubicacion = new LinkedHashMap<>();
+    private final Map<Pedido, String> ubicacion = new IdentityHashMap<>();
     private final Map<String, Integer> consumoAlmacen = new LinkedHashMap<>();
 
     private double costo = Double.NaN;
@@ -96,12 +101,58 @@ public class Solucion {
 
     public void marcarNoAsignado(Pedido p) {
         noAsignados.add(p);
-        ubicacion.remove(p.getId());
+        ubicacion.remove(p);
+    }
+
+    /**
+     * Retira la parte de la solución sin dejarla como no asignada: se usa cuando la parte deja
+     * de existir porque se fusionó con otras o se repartió en fracciones.
+     */
+    public void olvidar(Pedido p) {
+        if (ubicacion.containsKey(p)) {
+            desasignar(p);
+        }
+        noAsignados.remove(p);
+    }
+
+    /**
+     * Fusiona las partes removidas que pertenecen a un mismo pedido en una sola, para que la
+     * reparación las reinserte juntas y solo vuelva a fraccionar si hace falta. Las partes
+     * fusionadas se reemplazan en el conjunto de no asignados por la parte resultante.
+     *
+     * @return las partes a reinsertar, en el orden de la primera aparición de cada pedido
+     */
+    public List<Pedido> consolidar(List<Pedido> removidos) {
+        Map<Pedido, List<Pedido>> porOriginal = new LinkedHashMap<>();
+        for (Pedido p : removidos) {
+            List<Pedido> partes = porOriginal.computeIfAbsent(p.getOriginal(), k -> new ArrayList<>());
+            if (!partes.contains(p)) {
+                partes.add(p);
+            }
+        }
+        List<Pedido> resultado = new ArrayList<>(porOriginal.size());
+        for (Map.Entry<Pedido, List<Pedido>> e : porOriginal.entrySet()) {
+            List<Pedido> partes = e.getValue();
+            if (partes.size() == 1) {
+                resultado.add(partes.get(0));
+                continue;
+            }
+            int total = 0;
+            for (Pedido parte : partes) {
+                total += parte.getCantidad();
+                olvidar(parte);
+            }
+            Pedido original = e.getKey();
+            Pedido fusion = (total == original.getCantidad()) ? original : original.fraccion(total);
+            noAsignados.add(fusion);
+            resultado.add(fusion);
+        }
+        return resultado;
     }
 
     /** Unidad que transporta el pedido, o {@code null} si está sin asignar. */
     public String unidadDe(Pedido p) {
-        return ubicacion.get(p.getId());
+        return ubicacion.get(p);
     }
 
     /**
@@ -112,7 +163,7 @@ public class Solucion {
     public void asignar(Ruta ruta, int posicion, Pedido pedido) {
         ruta.insertar(posicion, pedido);
         noAsignados.remove(pedido);
-        ubicacion.put(pedido.getId(), ruta.getVehiculo().getCodigo());
+        ubicacion.put(pedido, ruta.getVehiculo().getCodigo());
         consumoAlmacen.merge(ruta.getAlmacenOrigen().getId(), pedido.getCantidad(), Integer::sum);
     }
 
@@ -123,7 +174,7 @@ public class Solucion {
      * @return la ruta de la que fue removido, o {@code null} si el pedido no estaba asignado
      */
     public Ruta desasignar(Pedido pedido) {
-        String codigo = ubicacion.remove(pedido.getId());
+        String codigo = ubicacion.remove(pedido);
         if (codigo == null) {
             return null;
         }
@@ -186,8 +237,9 @@ public class Solucion {
      * calcula el costo.
      *
      * <p>La solución es factible si y solo si no se registra ningún error: toda ruta es factible
-     * (capacidad, plazos, caminos, mantenimiento, alimentación y turno), todos los pedidos
-     * considerados aparecen exactamente una vez, no hay pedidos adicionales ni sin asignar, y
+     * (capacidad, plazos, caminos, mantenimiento, alimentación y turno), la cantidad pendiente
+     * de cada pedido considerado queda cubierta exactamente por las partes asignadas (un pedido
+     * puede repartirse entre varias rutas), no hay pedidos adicionales ni partes sin asignar, y
      * ningún almacén intermedio queda con stock negativo. El costo es
      * Σ distanciaRuta × costoKmVehículo y solo se usa para comparar soluciones factibles.</p>
      *
@@ -198,7 +250,8 @@ public class Solucion {
         distanciaTotalKm = 0;
         costoOperacionSoles = 0;
 
-        Set<Integer> encontrados = new java.util.HashSet<>();
+        Set<Pedido> partesVistas = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+        Map<Pedido, Integer> cubierto = new IdentityHashMap<>();
         for (Ruta r : rutas.values()) {
             r.asegurarCalculada(ctx);
             if (r.estaVacia()) {
@@ -208,9 +261,10 @@ public class Solucion {
                 errores.add(r.getVehiculo().getCodigo() + ": " + r.getMotivoInfactibilidad());
             }
             for (Pedido p : r.getSecuencia()) {
-                if (!encontrados.add(p.getId())) {
+                if (!partesVistas.add(p)) {
                     errores.add("pedido duplicado P" + p.getId());
                 }
+                cubierto.merge(p.getOriginal(), p.getCantidad(), Integer::sum);
             }
             distanciaTotalKm += r.getDistanciaKm();
             costoOperacionSoles += r.costoOperacion();
@@ -219,16 +273,22 @@ public class Solucion {
         for (Pedido p : noAsignados) {
             errores.add("pedido no asignado P" + p.getId());
         }
-        Set<Integer> considerados = new java.util.HashSet<>();
+        Map<Pedido, Integer> sinAsignar = new IdentityHashMap<>();
+        for (Pedido p : noAsignados) {
+            sinAsignar.merge(p.getOriginal(), p.getCantidad(), Integer::sum);
+        }
         for (Pedido p : ctx.getPedidosPorAtender()) {
-            considerados.add(p.getId());
-            if (!encontrados.contains(p.getId()) && !noAsignados.contains(p)) {
+            int requerido = p.getCantidad();
+            int asignado = cubierto.getOrDefault(p.getOriginal(), 0);
+            if (asignado > requerido) {
+                errores.add("cantidad excedida de P" + p.getId() + " (" + asignado + ">" + requerido + ")");
+            } else if (asignado + sinAsignar.getOrDefault(p.getOriginal(), 0) < requerido) {
                 errores.add("pedido faltante P" + p.getId());
             }
         }
-        for (Integer id : encontrados) {
-            if (!considerados.contains(id)) {
-                errores.add("pedido adicional P" + id);
+        for (Pedido original : cubierto.keySet()) {
+            if (ctx.cantidadRequerida(original) == 0) {
+                errores.add("pedido adicional P" + original.getId());
             }
         }
 

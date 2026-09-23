@@ -16,7 +16,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.IdentityHashMap;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -29,7 +30,8 @@ import java.util.Set;
  *   <li><b>Métricas</b>: candidatosEvaluados = maxIteraciones = factibles + noFactibles.</li>
  *   <li><b>Operadores</b>: 5 de destrucción y 2 de reparación.</li>
  *   <li><b>Reproducibilidad</b>: dos ejecuciones con la misma semilla dan el mismo costo (LE008).</li>
- *   <li><b>Integridad</b>: cada pedido considerado aparece exactamente una vez (LE006).</li>
+ *   <li><b>Integridad</b>: ninguna parte aparece dos veces y la cantidad de cada pedido
+ *       considerado queda cubierta exactamente, completa o repartida entre unidades (LE006).</li>
  *   <li><b>Capacidad, plazos e inventario</b> verificados de forma independiente.</li>
  * </ol>
  *
@@ -131,16 +133,38 @@ public final class PruebaPlanificador {
                 Math.abs(repetido - resultado.getCosto()) < 1e-6);
 
         // --- 6. Integridad -----------------------------------------------------------------
-        Set<Integer> vistos = new HashSet<>();
+        Set<Pedido> vistos = Collections.newSetFromMap(new IdentityHashMap<>());
+        Map<Pedido, Integer> cubierto = new IdentityHashMap<>();
         boolean duplicados = false;
+        int fraccionados = 0;
         for (Ruta r : resultado.getRutas()) {
             for (Pedido p : r.getSecuencia()) {
-                duplicados |= !vistos.add(p.getId());
+                duplicados |= !vistos.add(p);
+                cubierto.merge(p.getOriginal(), p.getCantidad(), Integer::sum);
             }
         }
-        verificar("Ningún pedido duplicado", !duplicados);
-        verificar("Todos los pedidos considerados están asignados (LE006)",
-                vistos.size() == ctx.getPedidosPorAtender().size() && resultado.getNoAsignados().isEmpty());
+        boolean cubiertos = resultado.getNoAsignados().isEmpty()
+                && cubierto.size() == ctx.getPedidosPorAtender().size();
+        for (Pedido p : ctx.getPedidosPorAtender()) {
+            cubiertos &= cubierto.getOrDefault(p.getOriginal(), 0) == p.getCantidad();
+        }
+        for (Pedido p : vistos) {
+            if (p.esFraccion()) {
+                fraccionados++;
+            }
+        }
+        System.out.printf(" [6] Partes asignadas: %d (%d fracciones de pedidos repartidos)%n",
+                vistos.size(), fraccionados);
+        boolean mismaHora = true;
+        for (Pedido p : vistos) {
+            Pedido o = p.getOriginal();
+            mismaHora &= p.getMinutoLimite() == o.getMinutoLimite()
+                    && p.getMinutoRegistro() == o.getMinutoRegistro()
+                    && p.getDestino().equals(o.getDestino());
+        }
+        verificar("Ninguna parte de pedido duplicada", !duplicados);
+        verificar("Cada fracción conserva el registro, destino y hora límite de su pedido", mismaHora);
+        verificar("La cantidad de cada pedido considerado queda cubierta exactamente (LE006)", cubiertos);
 
         // --- 7. Capacidad, plazos e inventario ---------------------------------------------
         boolean capacidadOk = true;

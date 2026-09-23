@@ -11,6 +11,8 @@ import pe.pucp.paqrap.modelo.Vehiculo;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
+import java.util.Map;
 import java.util.List;
 import java.util.Set;
 
@@ -32,8 +34,11 @@ public class ContextoPlanificacion {
     private final List<Vehiculo> unidadesAsignables;
     private final List<Almacen> almacenes;
 
-    /** Claves "códigoUnidad#día" de los mantenimientos del mes cargado. */
+    /** Claves "códigoUnidad#díaSimulado" de los mantenimientos programados. */
     private final Set<String> mantenimientos = new HashSet<>();
+
+    /** Cantidad por planificar de cada pedido considerado, por pedido original. */
+    private final Map<Pedido, Integer> cantidadRequerida = new IdentityHashMap<>();
 
     public ContextoPlanificacion(Instancia instancia, int minutoActual,
                                  List<Pedido> pedidosPorAtender,
@@ -46,9 +51,10 @@ public class ContextoPlanificacion {
         this.parametros = parametros;
         this.almacenes = instancia.getAlmacenes();
         for (Mantenimiento m : instancia.getMantenimientos()) {
-            if (m.getAnio() == instancia.getAnioSimulado() && m.getMes() == instancia.getMesSimulado()) {
-                mantenimientos.add(m.getCodigoUnidad() + "#" + m.getDiaDelMes());
-            }
+            mantenimientos.add(m.getCodigoUnidad() + "#" + instancia.diaSimulado(m));
+        }
+        for (Pedido p : pedidosPorAtender) {
+            cantidadRequerida.put(p.getOriginal(), p.getCantidad());
         }
         instancia.getMapa().fijarInstante(minutoActual);
     }
@@ -57,8 +63,10 @@ public class ContextoPlanificacion {
      * Construye el contexto de la ejecución en el instante T.
      *
      * <p>Pedidos considerados (ISA 5.1, ventana de consumo Sc = Sa × K): los pendientes —no
-     * entregados y registrados hasta T— más los registrados en (T, T + Sc]. Unidades: las que
-     * no están averiadas ni en mantenimiento preventivo en T.</p>
+     * entregados y registrados hasta T— más los registrados en (T, T + Sc]. De cada pedido se
+     * planifica solo la cantidad que aún no se despachó: si una parte ya salió en una unidad, se
+     * considera una fracción con el resto. Unidades: las que no están averiadas ni en
+     * mantenimiento preventivo en T.</p>
      *
      * @param scMinutos salto de consumo Sc = Sa × K, en minutos
      */
@@ -76,7 +84,11 @@ public class ContextoPlanificacion {
                     || p.getEstado() == Pedido.Estado.NO_CUMPLIDO) {
                 continue;
             }
-            considerados.add(p);
+            int pendiente = p.cantidadPendiente();
+            if (pendiente <= 0) {
+                continue;   // ya despachado por completo: viaja en una unidad
+            }
+            considerados.add(pendiente == p.getCantidad() ? p : p.fraccion(pendiente));
         }
 
         List<Vehiculo> asignables = new ArrayList<>();
@@ -120,6 +132,14 @@ public class ContextoPlanificacion {
 
     public List<Almacen> getAlmacenes() {
         return almacenes;
+    }
+
+    /**
+     * Cantidad que la solución debe cubrir del pedido (por su original); 0 si el pedido no
+     * está entre los considerados.
+     */
+    public int cantidadRequerida(Pedido pedido) {
+        return cantidadRequerida.getOrDefault(pedido.getOriginal(), 0);
     }
 
     /** Indica si la unidad tiene mantenimiento preventivo programado el día simulado indicado. */

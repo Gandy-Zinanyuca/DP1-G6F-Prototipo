@@ -44,10 +44,19 @@ public final class CargadorVentas {
     }
 
     public static Resultado cargar(Path archivo) throws IOException {
+        return cargar(archivo, 0, 1);
+    }
+
+    /**
+     * Carga un archivo mensual cuyo día 1, 00:00, corresponde al minuto {@code desplazamiento}
+     * del reloj de la simulación; se usa al encadenar meses. Los pedidos se numeran desde
+     * {@code idInicial} para que los identificadores no se repitan entre meses.
+     */
+    public static Resultado cargar(Path archivo, int desplazamiento, int idInicial) throws IOException {
         List<Pedido> pedidos = new ArrayList<>();
         List<String> motivos = new ArrayList<>();
         int omitidos = 0;
-        int siguienteId = 1;
+        int siguienteId = idInicial;
         int numeroLinea = 0;
 
         try (BufferedReader br = Files.newBufferedReader(archivo, StandardCharsets.UTF_8)) {
@@ -59,7 +68,7 @@ public final class CargadorVentas {
                     continue;
                 }
                 try {
-                    pedidos.add(parsear(linea, siguienteId));
+                    pedidos.add(parsear(linea, siguienteId, desplazamiento));
                     siguienteId++;
                 } catch (RuntimeException e) {
                     omitidos++;
@@ -71,12 +80,12 @@ public final class CargadorVentas {
     }
 
     /** Parsea una línea del archivo de ventas al modelo de pedido. */
-    static Pedido parsear(String linea, int id) {
+    static Pedido parsear(String linea, int id, int desplazamiento) {
         int sep = linea.indexOf(':');
         if (sep < 0) {
             throw new IllegalArgumentException("falta el separador ':'");
         }
-        int minutoRegistro = parsearInstante(linea.substring(0, sep));
+        int minutoRegistro = desplazamiento + parsearInstante(linea.substring(0, sep));
         String[] campos = linea.substring(sep + 1).split(",");
         if (campos.length != 5) {
             throw new IllegalArgumentException("se esperaban 5 campos, hay " + campos.length);

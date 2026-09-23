@@ -108,6 +108,17 @@ public class Ruta {
         return secuencia.isEmpty();
     }
 
+    /** Indica si la ruta ya transporta alguna parte del mismo pedido registrado. */
+    public boolean contienePedido(Pedido pedido) {
+        Pedido original = pedido.getOriginal();
+        for (Pedido p : secuencia) {
+            if (p.getOriginal() == original) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public void insertar(int posicion, Pedido pedido) {
         secuencia.add(posicion, pedido);
         calculada = false;

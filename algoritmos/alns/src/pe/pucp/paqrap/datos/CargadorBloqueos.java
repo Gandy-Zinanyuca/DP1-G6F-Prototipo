@@ -40,6 +40,14 @@ public final class CargadorBloqueos {
     }
 
     public static Resultado cargar(Path archivo) throws IOException {
+        return cargar(archivo, 0);
+    }
+
+    /**
+     * Carga un archivo mensual cuyo día 1, 00:00, corresponde al minuto {@code desplazamiento}
+     * del reloj de la simulación; se usa al encadenar meses.
+     */
+    public static Resultado cargar(Path archivo, int desplazamiento) throws IOException {
         List<Bloqueo> bloqueos = new ArrayList<>();
         List<String> motivos = new ArrayList<>();
         int omitidos = 0;
@@ -54,7 +62,7 @@ public final class CargadorBloqueos {
                     continue;
                 }
                 try {
-                    bloqueos.add(parsear(linea));
+                    bloqueos.add(parsear(linea, desplazamiento));
                 } catch (RuntimeException e) {
                     omitidos++;
                     motivos.add("Línea " + numeroLinea + ": " + e.getMessage());
@@ -64,7 +72,7 @@ public final class CargadorBloqueos {
         return new Resultado(bloqueos, omitidos, motivos);
     }
 
-    static Bloqueo parsear(String linea) {
+    static Bloqueo parsear(String linea, int desplazamiento) {
         int sep = linea.indexOf(':');
         if (sep < 0) {
             throw new IllegalArgumentException("falta el separador ':'");
@@ -74,8 +82,8 @@ public final class CargadorBloqueos {
         if (guion < 0) {
             throw new IllegalArgumentException("intervalo sin guion separador");
         }
-        int inicio = CargadorVentas.parsearInstante(intervalo.substring(0, guion));
-        int fin = CargadorVentas.parsearInstante(intervalo.substring(guion + 1));
+        int inicio = desplazamiento + CargadorVentas.parsearInstante(intervalo.substring(0, guion));
+        int fin = desplazamiento + CargadorVentas.parsearInstante(intervalo.substring(guion + 1));
         if (fin < inicio) {
             throw new IllegalArgumentException("intervalo invertido");
         }

@@ -26,6 +26,11 @@ import java.util.List;
  * esa ruta (restricciones duras de {@link Ruta#recalcular}) y el inventario del almacén de
  * origen; el costo del candidato difiere del de la solución en Δ = costo(ruta') − costo(ruta).
  * Para una unidad ociosa se prueba además cada almacén de origen con stock suficiente.</p>
+ *
+ * <p>Una unidad que ya transporta una parte del mismo pedido no recibe otra: repartir el pedido
+ * solo tiene sentido entre unidades distintas. Cuando ninguna unidad admite el pedido completo,
+ * {@link #insertarFraccionado} lo reparte entre varias (los pedidos pueden dividirse entre
+ * vehículos).</p>
  */
 public final class EvaluadorInsercion {
 
@@ -52,6 +57,9 @@ public final class EvaluadorInsercion {
                                                     ContextoPlanificacion ctx) {
         List<Insercion> lista = new ArrayList<>();
         Ruta r = s.getRuta(v.getCodigo());
+        if (r != null && r.contienePedido(p)) {
+            return lista;   // la unidad ya lleva una parte de este pedido
+        }
         int cargaActual = (r == null) ? 0 : r.getCargaTotal();
         if (cargaActual + p.getCantidad() > v.getCapacidad()) {
             return lista;   // supera la capacidad disponible
@@ -109,6 +117,68 @@ public final class EvaluadorInsercion {
             }
         }
         return mejor;
+    }
+
+    /**
+     * Reparte el pedido entre varias unidades cuando ninguna lo admite completo.
+     *
+     * <pre>
+     * restante ← cantidad del pedido
+     * MIENTRAS restante &gt; 0
+     *     PARA CADA vehículo disponible que no lleve ya parte del pedido
+     *         q ← mín(restante, capacidad libre del vehículo)
+     *         evaluar la mejor inserción factible de una fracción de q unidades
+     *     elegir la fracción de mayor q (desempate: menor costo) y aplicarla
+     *     SI no existe ninguna → deshacer las fracciones aplicadas y fallar
+     *     restante ← restante − q
+     * </pre>
+     *
+     * <p>Preferir la fracción más grande minimiza el número de partes. La capacidad es la única
+     * restricción que depende de la cantidad (además del stock), así que q no necesita
+     * explorarse por debajo de la capacidad libre.</p>
+     *
+     * @return verdadero si el pedido quedó completamente asignado en fracciones; si es falso,
+     *         la solución queda como estaba
+     */
+    public static boolean insertarFraccionado(Solucion s, Pedido p, ContextoPlanificacion ctx) {
+        int restante = p.getCantidad();
+        List<Pedido> aplicadas = new ArrayList<>();
+        while (restante > 0) {
+            Insercion mejor = null;
+            Pedido mejorFraccion = null;
+            for (Vehiculo v : ctx.getUnidadesAsignables()) {
+                Ruta r = s.getRuta(v.getCodigo());
+                int carga = (r == null) ? 0 : r.getCargaTotal();
+                int q = Math.min(restante, v.getCapacidad() - carga);
+                if (q <= 0) {
+                    continue;
+                }
+                if (mejorFraccion != null && q < mejorFraccion.getCantidad()) {
+                    continue;
+                }
+                Pedido fraccion = (q == p.getCantidad()) ? p : p.fraccion(q);
+                for (Insercion ins : factiblesEnUnidad(s, fraccion, v, ctx)) {
+                    boolean mayor = mejorFraccion == null || q > mejorFraccion.getCantidad();
+                    if (mayor || ins.delta < mejor.delta) {
+                        mejor = ins;
+                        mejorFraccion = fraccion;
+                    }
+                }
+            }
+            if (mejor == null) {
+                for (Pedido f : aplicadas) {
+                    s.olvidar(f);
+                }
+                return false;
+            }
+            aplicar(s, mejor, mejorFraccion, ctx);
+            aplicadas.add(mejorFraccion);
+            restante -= mejorFraccion.getCantidad();
+        }
+        if (!aplicadas.contains(p)) {
+            s.olvidar(p);   // el pedido quedó representado por sus fracciones
+        }
+        return true;
     }
 
     /** Aplica una inserción sobre la solución. */

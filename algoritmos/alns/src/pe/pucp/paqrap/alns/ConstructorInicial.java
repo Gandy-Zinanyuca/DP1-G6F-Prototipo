@@ -13,9 +13,11 @@ import java.util.List;
  * GENERAR_SOLUCIÓN_INICIAL del ISA (sección 5.1), reutilizada sin modificaciones por ALNS.
  *
  * <p>Construcción determinista —no es otra metaheurística—: los pedidos se ordenan por
- * deadline ascendente y cada uno se inserta en la posición factible de menor costo. Si algún
- * pedido no admite inserción factible, se marca como no asignado y la solución inicial es no
- * factible.</p>
+ * deadline ascendente y cada uno se inserta en la posición factible de menor costo. Si ninguna
+ * unidad admite el pedido completo, se reparte entre varias ({@link
+ * EvaluadorInsercion#insertarFraccionado}), igual que en la solución inicial de Búsqueda Tabú.
+ * Si tampoco así admite inserción factible, se marca como no asignado y la solución inicial es
+ * no factible.</p>
  */
 public final class ConstructorInicial {
 
@@ -32,11 +34,15 @@ public final class ConstructorInicial {
 
         for (Pedido p : ordenados) {
             Insercion mejor = EvaluadorInsercion.mejorInsercion(s, p, ctx);
-            if (mejor == null) {
+            if (mejor != null) {
+                EvaluadorInsercion.aplicar(s, mejor, p, ctx);
+                continue;
+            }
+            // No cabe completo en ninguna unidad: se intenta repartir antes de rendirse.
+            if (!EvaluadorInsercion.insertarFraccionado(s, p, ctx)) {
                 s.marcarNoAsignado(p);
                 break;   // RETORNAR solución inicial no factible
             }
-            EvaluadorInsercion.aplicar(s, mejor, p, ctx);
         }
 
         s.evaluar(ctx);
