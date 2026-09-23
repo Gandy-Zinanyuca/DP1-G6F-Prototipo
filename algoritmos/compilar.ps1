@@ -15,6 +15,8 @@ try {
     if ($Pruebas) {
         & java -cp out pe.pucp.paqrap.RestriccionesEstrictasTest
         if ($LASTEXITCODE -ne 0) { throw 'Fallo en las pruebas compartidas TS/ALNS' }
+        & java -cp out pe.pucp.paqrap.ExperimentacionTest
+        if ($LASTEXITCODE -ne 0) { throw 'Fallo en las pruebas de experimentacion' }
     }
 } finally {
     Pop-Location

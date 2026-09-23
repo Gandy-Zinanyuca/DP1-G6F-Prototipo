@@ -62,8 +62,8 @@ public final class CalculadorRuta {
     ResultadoRuta mejor = null, fallo = null;
     for (int pausa = descansoHecho ? -2 : -1; pausa <= (descansoHecho ? -2 : grupos.size()); pausa++) {
       ResultadoRuta candidata = simular(r, v, origen, salida, turno, grupos, pausa);
-      if (candidata.factible() && (mejor == null || candidata.costo() < mejor.costo() ||
-          (candidata.costo() == mejor.costo() && candidata.fin().isBefore(mejor.fin()))))
+      if (candidata.factible() && (mejor == null || sumaFinales(candidata) < sumaFinales(mejor) ||
+          (sumaFinales(candidata) == sumaFinales(mejor) && candidata.distanciaKm() < mejor.distanciaKm())))
         mejor = candidata;
       fallo = candidata;
     }
@@ -137,6 +137,13 @@ public final class CalculadorRuta {
       return error(r, salida, "averia o mantenimiento solapado");
     return new ResultadoRuta(r, salida, hora, almacen.id(), paradas, trazas, di, df, distancia,
         par.costoFijoVehiculo() + distancia * v.tipo().costoPorKm(), List.of());
+  }
+
+  private long sumaFinales(ResultadoRuta ruta) {
+    var finales = new HashMap<String, LocalDateTime>();
+    for (var parada : ruta.paradas()) for (var parte : parada.partes())
+      finales.merge(parte.pedido().id(), parada.finServicio(), (a,b) -> a.isAfter(b) ? a : b);
+    return finales.values().stream().mapToLong(t -> Duration.between(estado.instante(),t).toMillis()).sum();
   }
 
   private ResultadoRuta error(Ruta r, LocalDateTime t, String error) {

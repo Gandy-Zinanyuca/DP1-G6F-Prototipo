@@ -30,3 +30,7 @@ desktop.ini
 
 # ── Empaquetados que no deben versionarse ────────────────
 *.zip
+
+# Resultados reproducibles de experimentos y simulaciones
+algoritmos/experimentacion/resultados/
+algoritmos/alns/resultados/

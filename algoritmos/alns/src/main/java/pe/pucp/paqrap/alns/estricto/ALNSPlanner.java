@@ -29,16 +29,16 @@ public final class ALNSPlanner implements PlanificadorEstricto {
             throw new IllegalStateException("Inicial invalida");
         long iniciales = ev.evaluaciones();
         double costo = ev.evaluar(actual).objetivo(), mejorCosto = costo;
+        Double primeraMs = ev.evaluar(actual).completa() && !estado.pedidos().isEmpty() ? (System.nanoTime()-inicio)/1e6 : null;
+        Integer primeraIter = primeraMs == null ? null : 0;
         var random = new Random(config.semilla());
         var destroy = new SelectorAdaptativo<Integer>(List.of(0, 1), 1.0, config.reaccion());
         var repair = new SelectorAdaptativo<Boolean>(List.of(false, true), 1.0, config.reaccion());
         var parametrosAceptacion = new pe.pucp.paqrap.alns.ParametrosALNS();
-        parametrosAceptacion.temperaturaInicial = Math.max(1,
-                ev.evaluar(actual).rutas().stream().mapToDouble(ResultadoRuta::costo).sum()
-                        * config.aceptacionInicial());
+        parametrosAceptacion.temperaturaInicial = config.aceptacionInicial();
         parametrosAceptacion.factorEnfriamiento = Math.pow(.01, 1.0 / Math.max(1, config.maxIteraciones()));
         var aceptacion = new CriterioAceptacion(parametrosAceptacion);
-        int iter = 0, sinMejora = 0;
+        int iter = 0, sinMejora = 0, iteracionMejor = 0;
         long candidatos = 0;
         String parada = "MAX_ITERACIONES";
         while (iter < config.maxIteraciones()) {
@@ -81,10 +81,14 @@ public final class ALNSPlanner implements PlanificadorEstricto {
             candidatos += ev.evaluaciones() - antes;
             double premio = 0;
             if (ec.factible()) {
+                if (primeraMs == null && ec.completa()) {
+                    primeraMs = (System.nanoTime()-inicio)/1e6;
+                    primeraIter = iter;
+                }
                 if (ec.objetivo() < mejorCosto - 1e-9) {
                     mejor = candidata;
                     mejorCosto = ec.objetivo();
-                    sinMejora = 0;
+                    sinMejora = 0; iteracionMejor = iter;
                     premio = 8;
                 } else
                     sinMejora++;
@@ -106,6 +110,7 @@ public final class ALNSPlanner implements PlanificadorEstricto {
                 break;
             }
         }
-        return Resultados.crear("ALNS-estricto", mejor, ev, inicio, iter, candidatos, iniciales, parada);
+        return Resultados.crear("ALNS-estricto", mejor, ev, inicio, iter, iteracionMejor, candidatos, iniciales, parada,
+                primeraMs, primeraIter);
     }
 }

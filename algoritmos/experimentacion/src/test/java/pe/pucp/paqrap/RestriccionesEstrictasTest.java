@@ -157,7 +157,17 @@ public final class RestriccionesEstrictasTest {
   var ts0=new TabuSearchPlanner(new ConfiguracionTabu(0,3,3,100,0,7)).planificar(e,parametros(10));
   var al0=new ALNSPlanner(new ConfiguracionALNS(0,3,3,2,.7,.05,0,7)).planificar(e,parametros(10));
   ok(ts0.solucion().equals(al0.solucion()),"inicial diferente");
+  ok(ts0.metricas().iteracionMejor()==0 && al0.metricas().iteracionMejor()==0,"inicial debe registrarse en iteracion cero");
   var ts=tabu().planificar(e,parametros(10));var al=alns().planificar(e,parametros(10));
+  for(var resultado:List.of(ts,al)) {
+   int mejor=resultado.metricas().iteracionMejor();
+   ok(mejor>=0 && mejor<=resultado.metricas().iteraciones(),"iteracion mejor fuera del recorrido");
+   var prefijo=resultado.algoritmo().startsWith("TS")
+    ? new TabuSearchPlanner(new ConfiguracionTabu(mejor,3,6,100,0,7)).planificar(e,parametros(10))
+    : new ALNSPlanner(new ConfiguracionALNS(mejor,6,3,2,.7,.05,0,7)).planificar(e,parametros(10));
+   if(resultado.algoritmo().startsWith("TS"))
+    ok(prefijo.solucion().equals(resultado.solucion()),"TS no recupera la mejor solucion en la iteracion registrada");
+  }
   ok(ts.solucion().equals(tabu().planificar(e,parametros(10)).solucion()),"TS no reproducible");
   ok(al.solucion().equals(alns().planificar(e,parametros(10)).solucion()),"ALNS no reproducible");
   ok(ts.evaluacion().objetivo()<=ts0.evaluacion().objetivo()&&al.evaluacion().objetivo()<=al0.evaluacion().objetivo(),"empeora inicial");

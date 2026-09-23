@@ -6,7 +6,7 @@ El lanzador principal `algoritmos/ejecutar-alns.bat` ejecuta `EjecutarALNS` sobr
 
 `ALNSPlanner.planificar` recibe EstadoOperacion y ParametrosOperacion. Construye la misma solución inicial que TS; selecciona destrucción aleatoria o por cercanía y repara mediante inserción común, ordenada por plazo o aleatoria. Compara usando el objetivo del evaluador compartido y conserva la mejor solución.
 
-Reutiliza `SelectorAdaptativo` y `CriterioAceptacion` del ALNS original. La temperatura se escala con costo operativo, excluyendo la penalización por pendientes. El contrato experimental no recibe Sa/K/Sc. La clase histórica ParametrosALNS se usa internamente únicamente como soporte del criterio de aceptación.
+Reutiliza `SelectorAdaptativo` y `CriterioAceptacion` del ALNS original. El objetivo prioriza completitud y luego holgura; la temperatura inicial es 0.05 en unidades de este objetivo. El contrato experimental no recibe Sa/K/Sc. La clase histórica ParametrosALNS se usa internamente únicamente como soporte del criterio de aceptación.
 
 ## Ejecución y reporte
 
@@ -15,7 +15,7 @@ algoritmos\compilar.bat -Pruebas
 algoritmos\ejecutar-alns.bat algoritmos/alns/data/ventas.v20260909/ventas.202609.txt algoritmos/alns/data/bloqueos.v20260909/bloqueo.2609.txt algoritmos/alns/data/mant.preventivo.09.10.txt 2026-09-01T08:00 20 20262
 ```
 
-Argumentos opcionales finales: iteraciones, semilla, presupuesto-ms. Se imprime cobertura, pendientes, costo, km, tiempo y factibilidad. Para experimentación usar el [comparador](../README.md#experimentación-conjunta).
+Argumentos opcionales finales: iteraciones, semilla, presupuesto-ms y opciones experimentales. Se imprime Ta, holgura promedio/minima, completitud o colapso, cobertura, costo, km y utilizacion. Cada ejecucion exporta CSV; ver [guia comun](../README.md).
 
 ```mermaid
 sequenceDiagram

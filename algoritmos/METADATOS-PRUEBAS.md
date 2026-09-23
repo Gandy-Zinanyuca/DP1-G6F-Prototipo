@@ -1,50 +1,64 @@
-# Metadatos de la comparación común
+# Metadatos y reglas experimentales
 
-## Qué se compara
+## Protocolo
 
-ALNS adaptado y TS utilizan el mismo `EstadoOperacion`, `ParametrosOperacion`, `GeneradorSolucionInicial`, `EvaluadorFactibilidad`, `CalculadorRuta` y `PathFinder`. Las pruebas verifican la igualdad de las soluciones con cero iteraciones y la reproducibilidad por semilla.
+Cada combinacion escenario/nivel/instancia se prepara fuera de los motores. CompararAlgoritmos carga una sola entrada inmutable, ejecuta TS y ALNS con la misma semilla y repite con cada semilla especificada. Ambos reconstruyen la misma inicial determinista; no reutilizan caches ni estado aleatorio de otra corrida. El calentamiento tiene dos iteraciones por motor y se excluye de las filas.
 
-El ALNS histórico de `algorithms` conserva su arnés mensual independiente y no forma parte de estos resultados. Su selector adaptativo y aceptación se reutilizan en la adaptación experimental. Las diferencias de exploración son deliberadas: TS usa vecindarios y memoria tabú; ALNS destruye y repara partes.
+## Objetivo y completitud
 
-## Modelo compartido
+EvaluadorFactibilidad minimiza:
+~~~
+paquetesPendientes + 0.5 - atan(holguraMediaDePedidosCompletos / 60) / pi
+~~~
 
-- Entrada: instante, pedidos pendientes, vehículos, almacenes, bloqueos, averías, mantenimientos, rutas en curso y descansos realizados.
-- Carga CLI: pedidos registrados hasta el instante, deadline como máximo T+24h, orden por plazo y límite de 400. No descuenta entregas de ejecuciones anteriores.
-- Servicio de 60 minutos; por defecto el plazo incluye su finalización.
-- Turnos de 8 horas con origen 07:00, retorno dentro del turno y descanso de 60 minutos dentro de la banda relativa [60,420].
-- Velocidades TA=40, TM=25, TB=12 km/h; almacenes central (25,15), NO (12,38), este (55,27).
-- Partes predefinidas de hasta 4 unidades; inventario agregado e integridad de cantidades.
-- Objetivo común = costo operativo + 1 000 000 × paquetes pendientes. El costo operativo incluye S/50 por vehículo usado.
-- Rutas asignadas factibles pueden coexistir con demanda pendiente: `factible` y `completa` se reportan por separado.
+Si no hay pedidos completos, el termino de calidad vale 0.5. Este termino esta estrictamente entre 0 y 1, de modo que un paquete pendiente menos siempre tiene prioridad. Entre soluciones completas el objetivo es estrictamente decreciente respecto a la holgura media. El costo monetario no interviene. El parametro historico penalizacionPaquetePendiente se conserva por compatibilidad, pero ya no determina este objetivo.
 
-Las reglas son las del núcleo estricto actual; comparabilidad no significa cumplimiento de todas las propuestas del informe. No se implementaron nuevos intercambios de cantidades ni reoptimización de sufijos de rutas activas. El cargador CLI no genera averías ni rutas en curso; esos casos se inyectan desde Java y se ejercitan en las regresiones.
+La busqueda puede explorar soluciones incompletas. Ambos motores conservan la mejor solucion, por lo que una completa encontrada no puede ser desplazada por una incompleta. La ausencia de completitud al final se registra como COLAPSO_PLANIFICACION; no demuestra imposibilidad matematica.
 
-## Parámetros y protocolo
+## Metricas y valores ausentes
 
-TS: tenencia 7, 400 candidatos por iteración. ALNS: destrucción máxima 4 partes, segmento 5, reacción 0.7, temperatura inicial igual al 5% del costo operativo inicial (mínimo 1); enfriamiento hasta el 1% en el límite de iteraciones. La penalización por pendientes no infla la temperatura.
+| Campo | Definicion |
+| --- | --- |
+| Ta_ms | Tiempo de inicializacion, construccion, busqueda y calculo del resultado; excluye carga, auditoria y exportacion |
+| holgura_promedio_min | Promedio por pedido de deadline menos fin de servicio de su ultima parte |
+| holgura_minima_min | Minimo de esos margenes |
+| Ta_primera_completa_ms | Tiempo hasta primera solucion completa encontrada; incluye inicial |
+| iteracion_primera_completa | 0 si la inicial es completa; vacio si no se encuentra |
+| iteracion_mejor | Iteracion de la mejor solucion devuelta; 0 para inicial |
+| distancia_km | Suma de desplazamientos, incluyendo acceso a almacen y retorno |
+| tiempo_rutas_min | Suma de salida a retorno, incluyendo servicio, espera y descanso |
+| vehiculos | Vehiculos con ruta no vacia |
+| utilizacion_capacidad | Carga asignada / suma de capacidades de vehiculos utilizados; fraccion 0..1 |
+| cobertura_pedidos / cobertura_paquetes | Fracciones 0..1 sobre demanda de la entrada |
+| costo_soles | Costo fijo por vehiculo y distancia, solo complementario |
+| colapso | Si quedan paquetes pendientes en una entrada no vacia |
+| instante_colapso | Instante de la entrada evaluada; no tiempo simulado transcurrido |
+| causa_colapso / parada | SIN_SOLUCION_COMPLETA y razon de fin de busqueda; no diagnostico de imposibilidad |
 
-ALNS dispone de destrucción aleatoria y por cercanía, y reparación por inserción con orden por plazo o aleatorio. La segunda reparación no es arrepentimiento. Los dos motores parten del mismo constructor determinista.
+Holguras vacias cuando hay colapso o no hay demanda. No promediar solo pedidos faciles de una corrida incompleta. SIN_DEMANDA debe separarse del denominador al reportar tasa de exito/colapso. Los pedidos completos son entregas planificadas, no entregas ya ejecutadas por un simulador.
 
-La ejecución individual acepta iteraciones, semilla y presupuesto en ms. Cero ms desactiva el reloj. El experimento conjunto registra calentamiento y alterna el orden entre semillas. Comparar con un presupuesto temporal común y un límite de iteraciones suficientemente alto; revisar el tiempo realmente consumido. Los límites son cooperativos, no interrupciones estrictas. Con reloj la trayectoria puede cambiar entre equipos aun usando la misma semilla.
+## Restricciones comunes
 
-El contador de candidatos no mide lo mismo: TS cuenta vecinos y ALNS evaluaciones realizadas durante reparación. No usarlo como un presupuesto homogéneo. Igual número de iteraciones tampoco equivale a igual esfuerzo.
+Servicio 60 min, plazo incluye fin de servicio, turno 480 min con origen 07:00, descanso 60 min en banda relativa [60,420], retorno antes de fin de turno. Se aplican capacidad, stock, disponibilidad, bloqueos temporales, averias y mantenimiento. Partes de hasta 4 unidades. La flota y almacenes son los del cargador comun.
 
-## Archivos y trazabilidad
+La ruta prueba horarios de descanso y prefiere menores tiempos finales por pedido; la evaluacion global utiliza la ultima parte entre todos los vehiculos. Es una heuristica de horarios, no una optimizacion exacta.
 
-Las entradas siguen los formatos:
-- Ventas: `DDdHHhMMm:x,y,cCliente,cantidad,plazoHoras`.
-- Bloqueos: `DDdHHhMMm-DDdHHhMMm:x1,y1,...`.
-- Mantenimiento: `AAAAMMDD:unidad`.
+## Configuracion y trazabilidad
 
-Cada experimento guarda hashes SHA-256 de las tres entradas, instante, conteos de selección/exclusión, parámetros, presupuesto, semillas, objetivo inicial, Java, SO y procesadores. Para identificar el código registrar también `git rev-parse HEAD` y `git status --short`; el informe generado no captura Git automáticamente.
+TS: tenencia 7, hasta 400 candidatos por iteracion. ALNS: destruccion maxima 4 partes, segmento 5, reaccion 0.7, temperatura inicial 0.05 en unidades del nuevo objetivo, enfriamiento hasta el 1% al final. ALNS conserva dos destrucciones (aleatoria/cercania) y dos ordenes de reparacion (plazo/aleatorio). No incorpora aun los operadores especializados de incidencia del ALNS historico.
 
-No sobrescribe directorios con resultados existentes. Los CSV contienen costo, objetivo, cobertura, pendientes, km, tiempos, utilización, iteraciones, factibilidad y parada. Los informes por semilla incluyen caminos y horarios para auditoría.
+Las columnas identifican escenario, nivel, factor, instancia, hash del estado, semilla, repeticion, algoritmo, instante, limites y resultados. README generado incluye hashes de archivos, parametros operativos, version Java y entorno; estado.txt conserva la entrada. Registrar tambien git rev-parse HEAD y git status --short. CSV UTF-8, separador coma, punto decimal, comillas escapadas y ausentes como celdas vacias.
 
-## Validación realizada
+Las filas TS y ALNS se emparejan por combinacion y semilla. Conservar todos los colapsos y reportar tasa de colapso por motor; holgura pareada solo donde ambos completaron. Esta seleccion debe declararse en el analisis. No equiparar candidatos o iteraciones como esfuerzo identico.
 
-- 15 grupos de pruebas compartidas: memoria tabú, aspiración, división, plazo, turno, descanso, mantenimiento, avería, stock, bloqueo, integridad, vecindarios, replanificación, comparabilidad y validación de entrada.
-- [Septiembre, 20 iteraciones](experimentacion/resultados/comparable-septiembre/README.md): 3 semillas por motor; 36 pedidos considerados; 29 completos y 27 paquetes pendientes.
-- [Octubre, 20 iteraciones](experimentacion/resultados/comparable-octubre/README.md): 3 semillas por motor; 36 pedidos considerados; 26 completos y 46 paquetes pendientes.
-- [Septiembre, presupuesto 1000 ms](experimentacion/resultados/comparable-tiempo/README.md): 3 semillas por motor, límite alto de iteraciones; salida por tiempo y rutas factibles. El tiempo observado refleja el pequeño exceso de una operación en curso.
+## Limites
 
-Son 18 ejecuciones reales auditadas. Todas mantienen o mejoran el objetivo inicial. Estas muestras verifican la comparación y no prueban superioridad estadística ni cobertura mensual completa.
+El cargador lee un mes y selecciona por instante y horizonte; no reconstruye operaciones previas. Factor de carga escala cantidades con techo. Las etiquetas E1/E2/E3 no generan incidencias automaticamente. Los archivos determinan bloqueos y mantenimiento; --averias permite intervalos adicionales. Rutas en curso pueden suministrarse por la API Java, pero no desde el CLI actual.
+
+El comparador evalua una combinacion por invocacion. Para estimar ultimo nivel soportado se debe ejecutar la secuencia de niveles con la misma instancia y semillas y analizar sus filas; no se infiere a partir de una corrida aislada. No se calcula duracion mensual hasta colapso con este ejecutor.
+
+Los resultados del objetivo antiguo basado en costo no son comparables con este esquema 2. Se conservaron localmente pero dejaron de versionarse.
+
+## Verificacion
+
+Las regresiones compartidas comprueban restricciones, inicial comun y reproducibilidad. ExperimentacionTest comprueba ultima parte, fin de servicio, completitud, colapso, ausencia de demanda, prioridad de holgura y exportacion individual/pareada.

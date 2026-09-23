@@ -1,4 +1,10 @@
-# Experimentación numérica: duración hasta el colapso
+# Experimentacion pareada por EstadoOperacion
+
+La ejecucion vigente TS/ALNS, las metricas de Ta y holgura, los CSV individuales y el protocolo de colapso de planificacion se describen en la [guia comun](../README.md) y los [metadatos](../METADATOS-PRUEBAS.md). Ambos motores usan la misma instancia y semillas. No mezclar estos CSV con el script R historico descrito abajo.
+
+## Referencia historica: duracion hasta el colapso
+
+El contenido siguiente pertenece al simulador historico de ALNS; TS estricto no esta conectado a ese simulador. Sus hipotesis y comandos no constituyen la comparacion pareada actual.
 
 Compara ALNS y Búsqueda Tabú por **cuánto dura la simulación hasta el colapso**: el algoritmo
 que dura más es mejor. La métrica por defecto es `dias_simulados`, el tiempo simulado desde el

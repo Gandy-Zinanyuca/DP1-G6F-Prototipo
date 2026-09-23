@@ -1,60 +1,82 @@
-# ALNS y Tabu Search comparables
+# TS y ALNS: experimentacion pareada
 
-Los lanzadores principales ejecutan TS y ALNS sobre el mismo `EstadoOperacion`, constructor inicial, `EvaluadorFactibilidad`, caminos y parámetros operativos. Se compilan con JDK 17, sin Maven.
+JDK 17, sin Maven. Ejecutar desde la raiz del repositorio. Los dos motores usan el mismo EstadoOperacion inmutable, constructor inicial determinista, evaluador y caminos.
 
-## Compilar y probar
+## Compilar y verificar
 
-Desde la raíz del repositorio en Windows:
-
-```bat
+~~~bat
 algoritmos\compilar.bat -Pruebas
-```
+~~~
 
-La salida es `algoritmos/out`. Se compilan ambos motores juntos para verificar el contrato común; se ejecutan por separado. Los valores antiguos `-Algoritmo alns` y `-Algoritmo tabu` se aceptan por compatibilidad, pero la construcción sigue siendo conjunta.
+Incluye las 15 regresiones compartidas y las pruebas de holgura, completitud, colapso, reproducibilidad y exportacion. TS tambien dispone de:
+~~~bat
+java -cp algoritmos/out pe.pucp.paqrap.RestriccionesTabuTest
+~~~
 
-## Ejecutar cada algoritmo
+## Una ejecucion por algoritmo
 
-Ambos comandos tienen exactamente los mismos argumentos:
+~~~bat
+algoritmos\ejecutar-tabu.bat algoritmos/alns/data/ventas.v20260909/ventas.202609.txt algoritmos/alns/data/bloqueos.v20260909/bloqueo.2609.txt algoritmos/alns/data/mant.preventivo.09.10.txt 2026-09-01T08:00 20 20262 0 --salida algoritmos/experimentacion/resultados/ts-01
+algoritmos\ejecutar-alns.bat algoritmos/alns/data/ventas.v20260909/ventas.202609.txt algoritmos/alns/data/bloqueos.v20260909/bloqueo.2609.txt algoritmos/alns/data/mant.preventivo.09.10.txt 2026-09-01T08:00 20 20262 0 --salida algoritmos/experimentacion/resultados/alns-01
+~~~
 
-```bat
-algoritmos\ejecutar-alns.bat algoritmos/alns/data/ventas.v20260909/ventas.202609.txt algoritmos/alns/data/bloqueos.v20260909/bloqueo.2609.txt algoritmos/alns/data/mant.preventivo.09.10.txt 2026-09-01T08:00 20 20262
-algoritmos\ejecutar-tabu.bat algoritmos/alns/data/ventas.v20260909/ventas.202609.txt algoritmos/alns/data/bloqueos.v20260909/bloqueo.2609.txt algoritmos/alns/data/mant.preventivo.09.10.txt 2026-09-01T08:00 20 20262
-```
+Argumentos: ventas, bloqueos, mantenimiento, instante, [iteraciones=100], [semilla=20262], [presupuesto-ms=0]. Las opciones con -- se colocan despues de los argumentos posicionales. La ejecucion individual siempre exporta un CSV propio; sin --salida crea una carpeta unica en algoritmos/experimentacion/resultados.
 
-Argumentos: ventas, bloqueos, mantenimiento, instante ISO, [iteraciones], [semilla], [presupuesto-ms].
-Predeterminados: 100 iteraciones, semilla 20262, presupuesto 0 (sin reloj). Un presupuesto positivo se aplica a ambos motores, incluyendo su construcción inicial. Es un límite cooperativo: una operación en curso puede terminar después del plazo.
+## Comparacion pareada
 
-El reporte final incluye pedidos leídos/considerados/completos, paquetes pendientes, cobertura, vehículos, utilización, costo operativo, distancia, objetivo, tiempo, iteraciones, candidatos, factibilidad y motivo de parada. La salida se audita con una nueva instancia del evaluador común.
+~~~bat
+java -cp algoritmos/out pe.pucp.paqrap.CompararAlgoritmos algoritmos/alns/data/ventas.v20260909/ventas.202609.txt algoritmos/alns/data/bloqueos.v20260909/bloqueo.2609.txt algoritmos/alns/data/mant.preventivo.09.10.txt 2026-09-01T08:00 algoritmos/experimentacion/resultados/pares-01 20 20262,20263,20264 0 --escenario E1 --carga base --instancia septiembre-01
+~~~
 
-## Experimentación conjunta
+Para cada semilla ejecuta TS y luego ALNS sobre la misma entrada, con caches y generadores aleatorios nuevos. Cada motor reconstruye la misma solucion inicial determinista dentro de Ta. La inmutabilidad conserva las condiciones iniciales, y se verifica que el estado no cambie. Hay dos iteraciones de calentamiento por motor excluidas de los resultados.
 
-Para comprobar reproducibilidad con 20 iteraciones y tres semillas:
+Genera:
 
-```bat
-java -cp algoritmos/out pe.pucp.paqrap.CompararAlgoritmos algoritmos/alns/data/ventas.v20260909/ventas.202609.txt algoritmos/alns/data/bloqueos.v20260909/bloqueo.2609.txt algoritmos/alns/data/mant.preventivo.09.10.txt 2026-09-01T08:00 algoritmos/experimentacion/resultados/nueva-prueba 20 20262,20263,20264
-```
+- metricas.csv: todas las ejecuciones.
+- TS-estricto.csv y ALNS-estricto.csv: resultados separados.
+- README.md: parametros, hashes de entrada, configuracion y entorno.
+- estado.txt: contenido exacto de la entrada preparada.
+- Un informe por algoritmo/semilla/repeticion con rutas, horarios y pendientes.
 
-Para comparar calidad bajo el mismo presupuesto de tiempo, usar un límite de iteraciones alto y añadir, por ejemplo, 1000 milisegundos:
+La carpeta debe ser nueva o vacia. Los resultados se escriben por corrida; un colapso no interrumpe las demas repeticiones. Un error de entrada o una solucion invalida si interrumpe la ejecucion, para no confundir defectos con colapso.
 
-```bat
-java -cp algoritmos/out pe.pucp.paqrap.CompararAlgoritmos algoritmos/alns/data/ventas.v20260909/ventas.202609.txt algoritmos/alns/data/bloqueos.v20260909/bloqueo.2609.txt algoritmos/alns/data/mant.preventivo.09.10.txt 2026-09-01T08:00 algoritmos/experimentacion/resultados/nueva-prueba-tiempo 100000 20262,20263,20264 1000
-```
+## Escenarios y niveles
 
-Usar una carpeta nueva o vacía. Se guardan `metricas.csv`, un README de metadatos y un informe por motor/semilla con rutas, horarios y pendientes. Se realizan dos iteraciones de calentamiento por motor y se alterna el orden entre semillas. El comparador audita factibilidad, objetivo y no empeoramiento respecto de la inicial común.
-
-## Arquitectura y alcance
-
-| Componente | Responsabilidad |
+| Opcion | Significado |
 | --- | --- |
-| `comun/src/main/java/.../estricto` | Dominio, carga, constructor, evaluación, métricas y caminos utilizados por ambos |
-| `alns/src/main/java/.../estricto` | ALNS adaptado al núcleo común |
-| `tabu/src/main/java` | Tabu Search |
-| `experimentacion/src/main/java` | Lanzadores individuales, reporte y comparación |
-| `experimentacion/src/test/java` | Pruebas de reglas, reproducibilidad e igualdad de la inicial |
-| `alns/src/pe` | ALNS histórico de algorithms, conservado fuera del experimento común |
+| --escenario E1/E2/E3 | Identificador experimental; no altera automaticamente las incidencias |
+| --carga etiqueta | Nombre del nivel de carga |
+| --instancia etiqueta | Identificador de la instancia |
+| --factor-carga 1.5 | Multiplica cantidades y redondea hacia arriba; conserva pedidos, destinos y deadlines |
+| --max-pedidos 400 | Limite externo de pedidos considerados |
+| --horizonte-horas 24 | Incluye deadlines hasta T + horizonte |
+| --averias archivo.txt | Intervalos: vehiculo;inicio-ISO;fin-ISO |
+| --salida carpeta | Solo ejecucion individual; el comparador tiene salida posicional |
 
-El ALNS comparable reutiliza la selección adaptativa y el criterio de aceptación originales, con operadores adaptados a `PartePedido`. No es una medición de la cartera completa del ALNS histórico. El ALNS histórico se compila mediante `algoritmos/alns/compilar.bat` y su arnés `simular.bat` permanece disponible; no mezclar sus resultados con los del experimento común.
+Para E2 repetir el comparador con factores crecientes (por ejemplo 1, 1.5, 2), la misma lista de semillas y una carpeta diferente por nivel. Para E3 proporcionar los archivos de bloqueos/mantenimiento correspondientes y, cuando aplique, --averias. E1 usa las condiciones base de los archivos: la etiqueta no elimina bloqueos ni mantenimientos.
 
-Las pruebas actuales son fotografías de la operación: seleccionan pedidos registrados hasta T, cuyo plazo vence como máximo en T+24 horas, con límite 400. No reconstruyen entregas anteriores ni simulan todo el mes. Ambos reciben exactamente la misma selección. La gestión del lote está fuera de los motores.
+Las mismas etiquetas, archivos, instante y factor deben usarse para los dos algoritmos; el comparador lo hace automaticamente. El estado_sha256 permite comprobar identidad del estado en los CSV.
 
-Consultar [metadatos y resultados](METADATOS-PRUEBAS.md), [ALNS](alns/README.md) y [TS](tabu/README.md). La documentación anterior y los archivos de GUI permanecen recuperables en Git. No se necesitan dependencias externas; una futura integración de Maven puede organizar módulos común, ALNS, TS y experimentación sin cambiar estos contratos.
+## Interpretacion
+
+- COMPLETA: todos los paquetes tienen una entrega planificada factible.
+- COLAPSO_PLANIFICACION: al terminar la busqueda quedan paquetes pendientes.
+- SIN_DEMANDA: no hay pedidos considerados; no cuenta como colapso ni como exito con entregas.
+
+La consola muestra Ta (ms), holgura promedio y minima (min), distancia (km), suma de tiempos de rutas (min), vehiculos utilizados, utilizacion de capacidad, costo, cobertura y pendientes. Tambien muestra iteraciones, primera solucion completa, mejor iteracion y motivo de parada.
+
+La holgura es deadline menos fin de servicio de la ultima parte del pedido, con una observacion por pedido. Se exporta solo para soluciones completas no vacias. En colapso y sin demanda queda vacia en CSV y se muestra N/A. Nunca sustituirla por cero para el analisis.
+
+Los CSV incluyen las corridas fallidas. Para comparar holgura de forma pareada, emparejar por escenario, carga, instancia, estado_sha256 y semilla y usar pares completos; reportar tambien colapsos y cantidad de pares excluidos. Ta se registra incluso en colapso.
+
+## Alcance y reproducibilidad
+
+El objetivo prioriza menos paquetes pendientes y despues mayor holgura promedio; costo y distancia son complementarios. Consultar [definiciones y metadatos](METADATOS-PRUEBAS.md).
+
+Estas ejecuciones son instantaneas de planificacion, con una salida por vehiculo. No reconstruyen entregas anteriores ni simulan todo el mes: pedidos antiguos vencidos pueden provocar colapso inmediato. Preparar un lote representativo antes del estudio. La carga por defecto limita a 400 pedidos con registro <= T y deadline <= T+24h; las exclusiones quedan registradas.
+
+Con presupuesto 0 se reproduce el recorrido con la misma semilla, configuracion y version de codigo. Ta siempre puede variar. Un limite temporal positivo es cooperativo y puede excederse; igual numero de iteraciones no representa igual trabajo para TS y ALNS.
+
+Las carpetas de resultados estan ignoradas por Git; los antiguos archivos quedan locales y en el historial. Registrar el commit y si hay cambios locales junto con los metadatos para identificar la version ejecutada.
+
+El simulador mensual historico de algoritmos/alns/src/pe conserva su contrato propio. Sus CSV y analisis de dias hasta colapso no se mezclan con esta comparacion por EstadoOperacion. Ver [ALNS](alns/README.md) y [TS](tabu/README.md).

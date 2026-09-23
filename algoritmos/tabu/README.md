@@ -50,3 +50,8 @@ sequenceDiagram
 ```
 
 Consultar [metadatos y reglas](../METADATOS-PRUEBAS.md) y [comandos de comparación](../README.md). La experimentación actual es por fotografía, no por simulación continua mensual.
+## Registro de la mejor solución
+
+`iteracionMejor` indica la primera iteración que encontró el mejor objetivo devuelto; vale 0 si se conserva la solución inicial. Se incluye en el resumen de consola y en la columna `iteracion_mejor` de los nuevos CSV del comparador. Con presupuesto temporal desactivado, la misma entrada, configuración y semilla permiten repetir el recorrido.
+
+El objetivo compartido prioriza menos paquetes pendientes y luego mayor holgura promedio por pedido. La salida distingue COMPLETA, COLAPSO_PLANIFICACION y SIN_DEMANDA; holgura N/A si hay pendientes. Cada ejecucion exporta un CSV, con Ta, holguras, distancia, tiempo de rutas, vehiculos y utilizacion. Las opciones --escenario, --carga, --instancia y --salida se describen en la guia comun.

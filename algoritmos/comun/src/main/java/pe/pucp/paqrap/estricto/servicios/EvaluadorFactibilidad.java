@@ -77,9 +77,12 @@ public final class EvaluadorFactibilidad {
     for (var a : estado.almacenes())
       if (!a.ilimitado() && stock.getOrDefault(a.id(), 0L) > a.stock())
         errores.add("Stock excedido: " + a.id());
-    double costo = resultados.stream().mapToDouble(ResultadoRuta::costo).sum();
+    var holgura = Holguras.calcular(estado.pedidos(), resultados);
+    // Calidad entre 0 y 1: un paquete menos siempre tiene prioridad sobre la holgura.
+    double calidad = holgura.promedioMin() == null ? 0.5
+        : 0.5 - Math.atan(holgura.promedioMin() / 60.0) / Math.PI;
     return new EvaluacionSolucion(resultados, errores,
-        errores.isEmpty() ? costo + pendientes * par.penalizacionPaquetePendiente() : Double.POSITIVE_INFINITY,
+        errores.isEmpty() ? pendientes + calidad : Double.POSITIVE_INFINITY,
         Math.toIntExact(pendientes));
   }
 

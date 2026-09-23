@@ -28,11 +28,13 @@ public final class TabuSearchPlanner implements PlanificadorEstricto {
         if (!evaluacion.factible())
             throw new IllegalStateException("Inicial invalida");
         double mejorCosto = evaluacion.objetivo();
+        Double primeraMs = evaluacion.completa() && !estado.pedidos().isEmpty() ? (System.nanoTime()-inicio)/1e6 : null;
+        Integer primeraIter = primeraMs == null ? null : 0;
         var tabu = new TabuList();
         var random = new Random(config.semilla());
         var asignacion = new AssignmentNeighborhood();
         var ruteo = new RoutingNeighborhood();
-        int iter = 0, sinMejora = 0;
+        int iter = 0, sinMejora = 0, iteracionMejor = 0;
         long candidatos = 0;
         String parada = "MAX_ITERACIONES";
         while (iter < config.maxIteraciones()) {
@@ -69,12 +71,16 @@ public final class TabuSearchPlanner implements PlanificadorEstricto {
                 break;
             }
             var elegido = selector.elegido();
+            if (primeraMs == null && selector.evaluacion().completa()) {
+                primeraMs = (System.nanoTime()-inicio)/1e6;
+                primeraIter = iter;
+            }
             actual = elegido.solucion();
             tabu.registrar(elegido.movimiento(), iter, config.tenenciaTabu());
             if (selector.evaluacion().objetivo() < mejorCosto - 1e-9) {
                 mejor = actual;
                 mejorCosto = selector.evaluacion().objetivo();
-                sinMejora = 0;
+                sinMejora = 0; iteracionMejor = iter;
             } else
                 sinMejora++;
             if (sinMejora >= config.sinMejoraMax()) {
@@ -82,7 +88,8 @@ public final class TabuSearchPlanner implements PlanificadorEstricto {
                 break;
             }
         }
-        return Resultados.crear("TS-estricto", mejor, ev, inicio, iter, candidatos, iniciales, parada);
+        return Resultados.crear("TS-estricto", mejor, ev, inicio, iter, iteracionMejor, candidatos, iniciales, parada,
+                primeraMs, primeraIter);
     }
 
     private boolean tiempoAgotado(long inicio) {
