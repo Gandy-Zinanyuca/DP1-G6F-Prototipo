@@ -33,6 +33,10 @@ public class Mantenimiento {
         return diaDelMes;
     }
 
+    public java.time.LocalDate getFecha() {
+        return java.time.LocalDate.of(anio, mes, diaDelMes);
+    }
+
     public String getCodigoUnidad() {
         return codigoUnidad;
     }

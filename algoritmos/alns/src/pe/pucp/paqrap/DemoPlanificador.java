@@ -3,64 +3,65 @@ package pe.pucp.paqrap;
 import pe.pucp.paqrap.alns.ParametrosALNS;
 import pe.pucp.paqrap.datos.Instancia;
 import pe.pucp.paqrap.modelo.Almacen;
-import pe.pucp.paqrap.modelo.Pedido;
-import pe.pucp.paqrap.modelo.Turnos;
-import pe.pucp.paqrap.modelo.Vehiculo;
-import pe.pucp.paqrap.planificador.ContextoPlanificacion;
 import pe.pucp.paqrap.planificador.ParametrosPlanificador;
 import pe.pucp.paqrap.planificador.PlanificadorALNS;
-import pe.pucp.paqrap.solucion.Ruta;
-import pe.pucp.paqrap.solucion.Solucion;
+import pe.pucp.paqrap.simulacion.FuentesDeDatos;
+import pe.pucp.paqrap.simulacion.ParametrosSimulacion;
+import pe.pucp.paqrap.simulacion.ResultadoSimulacion;
+import pe.pucp.paqrap.simulacion.Simulador;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Programa de prueba del componente planificador.
+ * Programa de ejecución del componente planificador sobre los archivos del curso.
  *
- * <p>No es el simulador del proyecto: es el arnés mínimo que permite ejecutar el algoritmo
- * sobre los archivos reales de ventas y bloqueos, verificar que las asignaciones de rutas
- * cumplen las restricciones y medir el desempeño. El simulador completo —reloj continuo,
- * generación de averías, visualizador— se construye sobre estas mismas clases.</p>
- *
- * <p>El avance temporal que aplica es deliberadamente simple: cada ciclo planifica, <b>ejecuta
- * completas</b> las rutas asignadas (marca los pedidos como entregados, deja cada unidad en su
- * almacén de retorno y descuenta el inventario) y salta al siguiente ciclo. Basta para mostrar
- * la reoptimización entre ciclos y para validar la asignación de rutas, que es el alcance de
- * esta entrega.</p>
+ * <p>Construye la instancia con el mes del archivo de ventas y la simula con {@link Simulador}:
+ * reloj de Sa minutos, despacho progresivo de rutas, entregas registradas al llegar y meses
+ * encadenados. Dos modos:</p>
+ * <ul>
+ *   <li><b>Por ciclos</b> (por defecto): simula {@code --ciclos N} ciclos de planificación con
+ *       la configuración de operación diaria.</li>
+ *   <li><b>Hasta el colapso</b> ({@code --colapso}): sin límite de ciclos, encadenando los meses
+ *       siguientes que existan en las mismas carpetas, hasta que un pedido no pueda entregarse a
+ *       tiempo. Usa la configuración de colapso de ALNS.</li>
+ * </ul>
  *
  * <h2>Uso</h2>
  * <pre>
  *   java -cp out pe.pucp.paqrap.DemoPlanificador &lt;ventas.txt&gt; [bloqueos.txt] [mantenimiento.txt]
- *                                                [--dia N] [--hora N] [--ciclos N] [--sa MIN] [--k N]
- *                                                [--iteraciones N] [--semilla N] [--anio AAAA] [--mes MM]
- *                                                [--traza]
+ *        [--colapso] [--dia N] [--hora N] [--ciclos N] [--sa MIN] [--k N] [--iteraciones N]
+ *        [--semilla N] [--anio AAAA] [--mes MM] [--detalle] [--traza]
+ *        [--csv-ciclos archivo.csv] [--csv-resumen archivo.csv]
  * </pre>
  *
  * <p>El año y el mes se deducen del nombre del archivo de ventas ({@code ventas.AAAAMM.txt}); con
- * {@code --anio} y {@code --mes} se pueden forzar. Determinan qué mantenimientos aplican.</p>
- * <pre>
- * </pre>
+ * {@code --anio} y {@code --mes} se pueden forzar. Los meses siguientes se buscan en la carpeta
+ * del archivo de ventas ({@code ventas.AAAAMM.txt}) y en la del archivo de bloqueos
+ * ({@code bloqueo.AAMM.txt}).</p>
  */
 public final class DemoPlanificador {
 
     public static void main(String[] args) throws Exception {
         if (args.length < 1) {
             System.out.println("Uso: java pe.pucp.paqrap.DemoPlanificador <ventas.txt> "
-                    + "[bloqueos.txt] [mantenimiento.txt] [--dia N] [--hora N] [--ciclos N] "
-                    + "[--sa MIN] [--k N] [--iteraciones N] [--semilla N] [--anio AAAA] [--mes MM] [--traza]");
+                    + "[bloqueos.txt] [mantenimiento.txt] [--colapso] [--dia N] [--hora N] [--ciclos N] "
+                    + "[--sa MIN] [--k N] [--iteraciones N] [--semilla N] [--anio AAAA] [--mes MM] "
+                    + "[--detalle] [--traza] [--csv-ciclos archivo] [--csv-resumen archivo]");
             return;
         }
 
         Path ventas = Paths.get(args[0]);
         Path bloqueos = null;
         Path mantenimiento = null;
-        int diaInicial = 1;
-        int horaInicial = 7;
+        ParametrosSimulacion parSim = new ParametrosSimulacion();
+        parSim.horaInicial = 7;
         int ciclos = 8;
+        boolean colapso = false;
         Long saMinutos = null;
         Integer k = null;
         Integer iteraciones = null;
@@ -72,8 +73,14 @@ public final class DemoPlanificador {
         List<String> posicionales = new ArrayList<>();
         for (int i = 1; i < args.length; i++) {
             switch (args[i]) {
+                case "--colapso":
+                    colapso = true;
+                    break;
                 case "--dia":
-                    diaInicial = Integer.parseInt(args[++i]);
+                    parSim.diaInicial = Integer.parseInt(args[++i]);
+                    break;
+                case "--hora":
+                    parSim.horaInicial = Integer.parseInt(args[++i]);
                     break;
                 case "--ciclos":
                     ciclos = Integer.parseInt(args[++i]);
@@ -90,6 +97,15 @@ public final class DemoPlanificador {
                 case "--traza":
                     traza = true;
                     break;
+                case "--detalle":
+                    parSim.detalle = true;
+                    break;
+                case "--csv-ciclos":
+                    parSim.csvCiclos = Paths.get(args[++i]);
+                    break;
+                case "--csv-resumen":
+                    parSim.csvResumen = Paths.get(args[++i]);
+                    break;
                 case "--sa":
                     saMinutos = Long.parseLong(args[++i]);
                     break;
@@ -98,9 +114,6 @@ public final class DemoPlanificador {
                     break;
                 case "--iteraciones":
                     iteraciones = Integer.parseInt(args[++i]);
-                    break;
-                case "--hora":
-                    horaInicial = Integer.parseInt(args[++i]);
                     break;
                 default:
                     posicionales.add(args[i]);
@@ -112,6 +125,7 @@ public final class DemoPlanificador {
         if (posicionales.size() > 1) {
             mantenimiento = Paths.get(posicionales.get(1));
         }
+        Path carpetaBloqueos = bloqueos == null ? null : bloqueos.toAbsolutePath().getParent();
         if (bloqueos != null && !Files.exists(bloqueos)) {
             bloqueos = null;
         }
@@ -144,16 +158,9 @@ public final class DemoPlanificador {
                 Instancia.MOTOS_POR_DEFECTO,
                 Instancia.BICICLETAS_POR_DEFECTO);
 
-        System.out.println("=====================================================================");
-        System.out.println(" PaqRap · Componente planificador · ALNS");
-        System.out.println("=====================================================================");
-        System.out.printf("Periodo simulado: %04d-%02d%n", anio, mes);
-        System.out.println(instancia);
-        System.out.println("Almacenes: " + instancia.getAlmacenes());
-        System.out.println();
-
-        ParametrosPlanificador parPlan = new ParametrosPlanificador();
-        PlanificadorALNS planificador = PlanificadorALNS.paraOperacionDiaria();
+        PlanificadorALNS planificador = colapso
+                ? PlanificadorALNS.paraColapso()
+                : PlanificadorALNS.paraOperacionDiaria();
         ParametrosALNS parAlns = planificador.getParametros();
         parAlns.traza = traza;
         if (saMinutos != null) {
@@ -166,146 +173,45 @@ public final class DemoPlanificador {
             parAlns.maxIteraciones = iteraciones;
         }
         planificador.reiniciarMotor(semilla);
-        int sa = (int) parAlns.saMinutos;
-        int sc = (int) parAlns.scMinutos();
-        System.out.printf("Sa=%d min · K=%d · Sc=%d min · maxIteraciones=%d%n%n",
-                sa, parAlns.k, sc, parAlns.maxIteraciones);
-
-        List<Pedido> pedidosVivos = new ArrayList<>(instancia.getPedidos());
-
-        int minuto = Turnos.aMinutos(diaInicial, horaInicial, 0);
-        int entregadosAcumulados = 0;
-        double kmAcumulados = 0;
-        double solesAcumulados = 0;
-        boolean colapso = false;
-        Solucion planVigente = null;
-
-        for (int c = 0; c < ciclos; c++) {
-            liberarUnidadesQueRegresaron(instancia, minuto);
-
-            // Una unidad en ruta sigue siendo asignable: su nueva ruta parte del almacén de retorno
-            // a partir de su hora de regreso (momento = máx(T, disponibilidad), ISA 5.1). En este
-            // arnés no se generan averías, así que ninguna unidad queda no disponible.
-            List<String> noDisponibles = new ArrayList<>();
-
-            ContextoPlanificacion ctx = ContextoPlanificacion.construir(
-                    instancia, minuto, sc, pedidosVivos, noDisponibles, parPlan);
-
-            System.out.printf("--- Ciclo %d · %s · pedidos por atender: %d · unidades: %d · "
-                            + "bloqueos vigentes: %d%n",
-                    c + 1, Turnos.formatear(minuto),
-                    ctx.getPedidosPorAtender().size(),
-                    ctx.getUnidadesAsignables().size(),
-                    ctx.getMapa().getBloqueosVigentes().size());
-
-            if (ctx.getPedidosPorAtender().isEmpty()) {
-                minuto += sa;
-                System.out.println("    (sin pedidos en la ventana de consumo)");
-                continue;
-            }
-
-            Solucion plan = planificador.planificar(ctx, planVigente);
-            System.out.print(planificador.resumenUltimaEjecucion());
-
-            if (!plan.esFactible()) {
-                System.out.println("    COLAPSO LOGÍSTICO: no existe plan factible en "
-                        + Turnos.formatear(minuto));
-                colapso = true;
-                break;
-            }
-
-            planVigente = plan.copia();
-            Resumen r = ejecutarPlan(plan, ctx);
-            entregadosAcumulados += r.entregados;
-            kmAcumulados += plan.getDistanciaTotalKm();
-            solesAcumulados += plan.getCostoOperacionSoles();
-
-            System.out.printf("    asignados=%d en %d rutas · km=%.0f · S/ %.2f%n",
-                    r.entregados, plan.numeroUnidadesUsadas(), plan.getDistanciaTotalKm(),
-                    plan.getCostoOperacionSoles());
-
-            if (c == 0) {
-                System.out.println();
-                System.out.println("    Asignación de rutas del primer ciclo:");
-                imprimirAsignacion(plan);
-                System.out.println();
-            }
-
-            minuto += sa;
-
-            // Recarga diaria de los almacenes intermedios a las 23:59:59 (LE033).
-            if (Turnos.minutoDelDia(minuto) < sa) {
-                for (Almacen a : instancia.getAlmacenes()) {
-                    a.recargar();
-                }
-            }
-        }
+        parSim.saMinutos = (int) parAlns.saMinutos;
+        parSim.scMinutos = (int) parAlns.scMinutos();
+        parSim.maxCiclos = colapso ? 0 : ciclos;
 
         System.out.println("=====================================================================");
-        System.out.printf(" Resumen: %d pedidos entregados · %.0f km · S/ %.2f%s%n",
-                entregadosAcumulados, kmAcumulados, solesAcumulados, colapso ? " · COLAPSO" : "");
+        System.out.println(" PaqRap · Componente planificador · ALNS"
+                + (colapso ? " · simulación hasta el colapso" : ""));
         System.out.println("=====================================================================");
-    }
+        System.out.printf("Mes inicial: %04d-%02d · %s%n", anio, mes, instancia);
+        System.out.println("Almacenes: " + instancia.getAlmacenes());
+        System.out.printf("Sa=%d min · K=%d · Sc=%d min · maxIteraciones=%d · proporciónDestrucción=%.2f"
+                        + " · semilla=%d · %s%n%n",
+                parSim.saMinutos, parAlns.k, parSim.scMinutos, parAlns.maxIteraciones,
+                parAlns.proporcionDestruccion, semilla,
+                colapso ? "sin límite de ciclos" : "ciclos=" + ciclos);
 
-    /** Contadores del avance de un ciclo. */
-    private static class Resumen {
-        int entregados;
-    }
+        YearMonth mesInicial = YearMonth.of(anio, mes);
+        FuentesDeDatos fuentes = new FuentesDeDatos(ventas.toAbsolutePath().getParent(), carpetaBloqueos);
+        Simulador simulador = new Simulador(instancia, mesInicial, fuentes, planificador, parSim,
+                new ParametrosPlanificador(), System.out);
 
-    /**
-     * Ejecuta el plan: da por entregados los pedidos de cada ruta, mueve las unidades a su
-     * almacén de retorno y descuenta el inventario consumido (LE032).
-     */
-    private static Resumen ejecutarPlan(Solucion plan, ContextoPlanificacion ctx) {
-        Resumen resumen = new Resumen();
-        for (Ruta r : plan.getRutas()) {
-            if (r.estaVacia()) {
-                continue;
-            }
-            Vehiculo v = r.getVehiculo();
-            int[] llegadas = r.getMinutosLlegada();
+        ResultadoSimulacion r = simulador.getResultado();
+        r.parametros.put("algoritmo", planificador.nombre());
+        r.parametros.put("escenario", colapso ? "colapso" : "ciclos");
+        r.parametros.put("mes_inicial", mesInicial.toString());
+        r.parametros.put("semilla", String.valueOf(semilla));
+        r.parametros.put("sa_min", String.valueOf(parSim.saMinutos));
+        r.parametros.put("k", String.valueOf(parAlns.k));
+        r.parametros.put("max_iteraciones", String.valueOf(parAlns.maxIteraciones));
+        r.parametros.put("proporcion_destruccion", String.valueOf(parAlns.proporcionDestruccion));
 
-            for (int i = 0; i < r.tamanio(); i++) {
-                Pedido p = r.getSecuencia().get(i);
-                p.setUnidadAsignada(v.getCodigo());
-                p.setMinutoEntregaEstimado(llegadas[i]);
-                p.setMinutoEntregaReal(llegadas[i]);
-                p.setEstado(Pedido.Estado.ENTREGADO);
-                resumen.entregados++;
-                r.getAlmacenOrigen().descontar(p.getCantidad());
-            }
-            v.setPosicion(r.getAlmacenRetorno().getUbicacion());
-            v.setMinutoDisponibleDesde(r.getMinutoRetorno());
-            v.setEstado(Vehiculo.Estado.EN_RUTA);
-            if (r.getMinutoInicioAlimentacion() >= 0) {
-                v.setTurnoDeUltimaAlimentacion(Turnos.inicioTurno(r.getMinutoInicioAlimentacion()));
-            }
+        simulador.ejecutar();
+
+        System.out.println("=====================================================================");
+        if (r.fin == ResultadoSimulacion.Fin.COLAPSO) {
+            System.out.println(" COLAPSO LOGÍSTICO en " + simulador.formatear(r.minutoFinal));
         }
-        return resumen;
-    }
-
-    /**
-     * Devuelve al estado disponible las unidades que ya completaron su recorrido. En el
-     * simulador definitivo esto lo hace el avance del reloj; aquí basta con comparar el minuto
-     * de retorno registrado al despachar la ruta.
-     */
-    private static void liberarUnidadesQueRegresaron(Instancia instancia, int minuto) {
-        for (Vehiculo v : instancia.getFlota()) {
-            if (v.getEstado() == Vehiculo.Estado.EN_RUTA
-                    && v.getMinutoDisponibleDesde() <= minuto) {
-                v.setEstado(Vehiculo.Estado.DISPONIBLE);
-            }
-        }
-    }
-
-    /** Imprime la asignación de rutas tal como la consumiría el visualizador. */
-    private static void imprimirAsignacion(Solucion plan) {
-        for (Ruta r : plan.getRutas()) {
-            if (r.estaVacia()) {
-                continue;
-            }
-            System.out.println("    " + r.toString().replace("\n", "\n    "));
-        }
+        System.out.print(r);
+        System.out.println("=====================================================================");
     }
 
     private DemoPlanificador() {

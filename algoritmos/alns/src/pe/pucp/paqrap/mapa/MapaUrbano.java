@@ -64,7 +64,7 @@ public class MapaUrbano {
     private final Map<Long, List<int[]>> cierresPorArco = new HashMap<>();
 
     /** Intervalos de todos los bloqueos, para descartar Dijkstra cuando no hay ninguno activo. */
-    private final int[][] intervalosGlobales;
+    private int[][] intervalosGlobales;
 
     private int instanteActual = -1;
     private List<Bloqueo> vigentes = new ArrayList<>();
@@ -77,7 +77,33 @@ public class MapaUrbano {
     };
 
     public MapaUrbano(List<Bloqueo> bloqueos) {
-        this.bloqueos = bloqueos;
+        this.bloqueos = new ArrayList<>(bloqueos);
+        indexarBloqueos();
+    }
+
+    /**
+     * Incorpora bloqueos de un periodo posterior (la simulación encadena meses). Invalida los
+     * caminos memorizados, que pudieron calcularse sin conocer estos cierres.
+     */
+    public void agregarBloqueos(List<Bloqueo> nuevos) {
+        bloqueos.addAll(nuevos);
+        indexarBloqueos();
+    }
+
+    /**
+     * Descarta los bloqueos que terminaron antes del minuto indicado: ya no afectan ningún
+     * camino futuro y solo encarecerían la búsqueda en simulaciones de varios meses.
+     */
+    public void descartarBloqueosTerminadosAntesDe(int minuto) {
+        if (bloqueos.removeIf(b -> b.getMinutoFin() < minuto)) {
+            indexarBloqueos();
+        }
+    }
+
+    private void indexarBloqueos() {
+        cierresPorArco.clear();
+        cache.clear();
+        instanteActual = -1;
         intervalosGlobales = new int[bloqueos.size()][];
         for (int i = 0; i < bloqueos.size(); i++) {
             Bloqueo b = bloqueos.get(i);

@@ -15,6 +15,7 @@ import pe.pucp.paqrap.solucion.Solucion;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -195,6 +196,8 @@ public class ALNS {
             Solucion candidato = actual.copia();
             List<Pedido> removidos = destruccion.operador(iDestruccion)
                     .destruir(candidato, grado, ctx, aleatorio);
+            // Las fracciones removidas de un mismo pedido se reinsertan juntas.
+            removidos = candidato.consolidar(removidos);
             reparacion.operador(iReparacion).reparar(candidato, removidos, ctx, aleatorio);
 
             double costoCandidato = candidato.evaluar(ctx);
@@ -295,11 +298,19 @@ public class ALNS {
                 porReinsertar.add(p);
             }
         }
+        porReinsertar = heredada.consolidar(porReinsertar);
         new InsercionGolosa().reparar(heredada, porReinsertar, ctx, aleatorio);
         heredada.evaluar(ctx);
         return heredada;
     }
 
+    /**
+     * Hereda del plan previo las partes que siguen pendientes de planificar: su pedido está en
+     * el contexto actual, la parte no fue despachada y su unidad sigue siendo asignable. La
+     * cobertura se lleva por cantidad, porque un pedido puede estar repartido entre varias
+     * rutas o haberse despachado solo en parte. Lo que queda sin cubrir se marca como no
+     * asignado para reinsertarlo.
+     */
     private Solucion heredarAsignacionesVigentes(ContextoPlanificacion ctx, Solucion planPrevio) {
         Solucion heredada = new Solucion();
         Map<String, Vehiculo> asignables = new HashMap<>();
@@ -307,41 +318,40 @@ public class ALNS {
             asignables.put(v.getCodigo(), v);
         }
 
-        List<Pedido> vigentes = ctx.getPedidosPorAtender();
+        Map<Pedido, Integer> porCubrir = new IdentityHashMap<>();
+        for (Pedido p : ctx.getPedidosPorAtender()) {
+            porCubrir.put(p.getOriginal(), p.getCantidad());
+        }
+
         for (Ruta rutaAnterior : planPrevio.getRutas()) {
             Vehiculo vehiculo = asignables.get(rutaAnterior.getVehiculo().getCodigo());
             if (vehiculo == null) {
-                marcarVigentesComoNoAsignados(heredada, rutaAnterior, vigentes);
                 continue;
             }
             Ruta nueva = heredada.rutaDe(vehiculo, rutaAnterior.getAlmacenOrigen());
             for (Pedido p : rutaAnterior.getSecuencia()) {
-                if (!vigentes.contains(p)) {
-                    continue;
+                int restante = porCubrir.getOrDefault(p.getOriginal(), 0);
+                if (p.getEstado() != Pedido.Estado.REGISTRADO || p.getCantidad() > restante
+                        || nueva.contienePedido(p)) {
+                    continue;   // despachada, ya cubierta o fuera del contexto actual
                 }
                 if (heredada.hayStock(ctx, rutaAnterior.getAlmacenOrigen(), p.getCantidad())) {
                     heredada.asignar(nueva, nueva.tamanio(), p);
-                } else {
-                    heredada.marcarNoAsignado(p);
+                    porCubrir.put(p.getOriginal(), restante - p.getCantidad());
                 }
             }
             nueva.recalcular(ctx);
         }
 
-        for (Pedido p : vigentes) {
-            if (heredada.unidadDe(p) == null && !heredada.getNoAsignados().contains(p)) {
+        for (Pedido p : ctx.getPedidosPorAtender()) {
+            int restante = porCubrir.get(p.getOriginal());
+            if (restante == p.getCantidad()) {
                 heredada.marcarNoAsignado(p);
+            } else if (restante > 0) {
+                heredada.marcarNoAsignado(p.fraccion(restante));
             }
         }
         return heredada;
-    }
-
-    private void marcarVigentesComoNoAsignados(Solucion destino, Ruta ruta, List<Pedido> vigentes) {
-        for (Pedido p : ruta.getSecuencia()) {
-            if (vigentes.contains(p)) {
-                destino.marcarNoAsignado(p);
-            }
-        }
     }
 
     private List<Pedido> liberarRutasInfactibles(Solucion solucion, ContextoPlanificacion ctx) {

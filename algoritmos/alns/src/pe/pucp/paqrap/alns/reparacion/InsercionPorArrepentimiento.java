@@ -26,7 +26,8 @@ import java.util.Random;
  *         1 elemento    → arrepentimiento ← arrepentimientoSinAlternativa
  *         0 elementos   → indefinido
  *     pedidoElegido ← mayor arrepentimiento entre los que tienen inserción factible
- *     SI no existe → marcar restantes como no asignados ; salir
+ *     SI no existe → repartir entre varias unidades el de menor deadline (o marcarlo no
+ *                    asignado si tampoco es posible), retirarlo de removidos y continuar
  *     aplicar mejor inserción de pedidoElegido ; retirarlo de removidos
  * </pre>
  *
@@ -81,10 +82,21 @@ public class InsercionPorArrepentimiento implements OperadorReparacion {
             }
 
             if (elegido == null) {
+                // Ninguno cabe completo: se reparte el más urgente entre varias unidades.
+                Pedido urgente = pendientes.get(0);
                 for (Pedido p : pendientes) {
-                    solucion.marcarNoAsignado(p);
+                    if (p.getMinutoLimite() < urgente.getMinutoLimite()
+                            || (p.getMinutoLimite() == urgente.getMinutoLimite()
+                                && p.getId() < urgente.getId())) {
+                        urgente = p;
+                    }
                 }
-                break;
+                if (!EvaluadorInsercion.insertarFraccionado(solucion, urgente, ctx)) {
+                    solucion.marcarNoAsignado(urgente);
+                }
+                pendientes.remove(urgente);
+                memoria.clear();
+                continue;
             }
 
             EvaluadorInsercion.aplicar(solucion, mejorDelElegido, elegido, ctx);

@@ -18,7 +18,8 @@ import java.util.Random;
  * <pre>
  * PARA CADA pedido en removidos, en orden de deadline ascendente
  *     mejorInserción ← inserción factible de menor costo (todo vehículo, toda posición)
- *     SI no existe → marcar pedido como no asignado
+ *     SI no existe → repartir el pedido entre varias unidades
+ *     SI tampoco es posible → marcar pedido como no asignado
  *     SINO aplicar mejorInserción
  * </pre>
  */
@@ -32,10 +33,10 @@ public class InsercionGolosa implements OperadorReparacion {
 
         for (Pedido p : ordenados) {
             Insercion mejor = EvaluadorInsercion.mejorInsercion(solucion, p, ctx);
-            if (mejor == null) {
-                solucion.marcarNoAsignado(p);
-            } else {
+            if (mejor != null) {
                 EvaluadorInsercion.aplicar(solucion, mejor, p, ctx);
+            } else if (!EvaluadorInsercion.insertarFraccionado(solucion, p, ctx)) {
+                solucion.marcarNoAsignado(p);
             }
         }
     }
