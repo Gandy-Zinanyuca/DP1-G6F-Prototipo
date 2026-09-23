@@ -26,7 +26,9 @@ public final class CalculadorRuta {
   public CalculadorRuta(EstadoOperacion e, ParametrosOperacion p) {
     estado = e;
     par = p;
-    finder = new PathFinder(new GridMap(e.bloqueos()));
+    // bloquearNodos=true: un nodo bloqueado no se puede atravesar ni admite giro lateral (solo permite
+    // volver por donde se llego), cerrando todas las calles incidentes a ese nodo durante el bloqueo.
+    finder = new PathFinder(new GridMap(e.bloqueos(), true));
   }
 
   private Camino camino(Nodo a, Nodo b, LocalDateTime t, Vehiculo v) {

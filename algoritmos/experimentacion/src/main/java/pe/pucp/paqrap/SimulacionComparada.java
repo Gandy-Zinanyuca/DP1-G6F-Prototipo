@@ -197,7 +197,10 @@ public final class SimulacionComparada {
 
     public static void main(String[] args) throws Exception {
         if (args.length < 6 || args.length > 12) throw new IllegalArgumentException(
-                "Uso: SimulacionComparada TS|ALNS|AMBOS carpetaVentas carpetaBloqueos mantenimiento AAAA-MM salida [iteraciones=300] [semillas=1,2,3] [maxCiclos=0] [Sa=10] [factorCarga=1] [averias.csv]");
+                "Uso: SimulacionComparada TS|ALNS|AMBOS carpetaVentas carpetaBloqueos mantenimiento AAAA-MM salida [iteraciones=300] [semillas=1,2,3] [maxCiclos=0] [Sa=10] [factorCarga=1] [averias.csv]\n"
+                + "maxCiclos=0 (por defecto) es el modo oficial de comparacion 'hasta el colapso o fin de datos', sin limite de dias.\n"
+                + "Para una ventana acotada use maxCiclos=720 con Sa=10 (5 dias completos).\n"
+                + "Sin archivo de averias, no se modelan averias (solo bloqueos y mantenimiento).");
         String seleccion = args[0].toUpperCase(Locale.ROOT);
         if (!Set.of("TS", "ALNS", "AMBOS").contains(seleccion)) throw new IllegalArgumentException("Algoritmo desconocido");
         int iter = args.length > 6 ? Integer.parseInt(args[6]) : 300;
@@ -211,7 +214,8 @@ public final class SimulacionComparada {
         for (String s : semillas.split(",", -1)) if (!semillasValidas.add(Long.parseLong(s.trim())))
             throw new IllegalArgumentException("Semilla repetida");
         var datos = cargar(Path.of(args[1]), Path.of(args[2]), Path.of(args[3]), YearMonth.parse(args[4]));
-        if (args.length > 11) {
+        boolean averiasPorArchivo = args.length > 11;
+        if (averiasPorArchivo) {
             var averias = new ArrayList<Averia>();
             for (String linea : Files.readAllLines(Path.of(args[11]), StandardCharsets.UTF_8)) {
                 linea = linea.replace("\uFEFF", "").trim();
@@ -234,7 +238,8 @@ public final class SimulacionComparada {
         for (var pedido : datos.pedidos()) digest.update(pedido.toString().getBytes(StandardCharsets.UTF_8));
         Files.writeString(salida.resolve("metadatos.txt"), "Instancia SHA-256: " + HexFormat.of().formatHex(digest.digest())
                 + "\nIteraciones=" + iter + "; semillas=" + semillas + "; Sa=" + sa + "; ciclos=" + ciclos + "; factor=" + factor
-                + "\nTS: tenencia=7, candidatos=400; ALNS: destruccion=4, segmento=5, reaccion=0.7, temperatura=0.05; presupuesto temporal=0\n",
+                + "\nTS: tenencia=7, candidatos=400; ALNS: destruccion=4, segmento=5, reaccion=0.7, temperatura=0.05; presupuesto temporal=0"
+                + "\nAverias: " + (averiasPorArchivo ? "fijas desde " + args[11] : "no modeladas (solo bloqueos y mantenimiento)") + "\n",
                 StandardOpenOption.APPEND);
         try (var resumen = Files.newBufferedWriter(salida.resolve("resumen.csv"), StandardCharsets.UTF_8)) {
             resumen.write("algoritmo,semilla,factor_carga,fin,instante_final,duracion_dias,ciclos,pedidos_completos,paquetes_entregados,holgura_real_promedio_min,holgura_real_minima_min,ejecuciones,Ta_total_ms,Ta_promedio_ms,Ta_max_ms,distancia_despachada_km,tiempo_rutas_despachadas_min,vehiculos_utilizados,utilizacion_capacidad\n");

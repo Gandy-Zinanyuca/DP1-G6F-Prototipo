@@ -26,15 +26,37 @@ Prueba corta de ambos motores: 12 ciclos de 10 minutos, 2 iteraciones y semilla 
 java "-Dfile.encoding=UTF-8" -cp algoritmos/out pe.pucp.paqrap.SimulacionComparada AMBOS $ventas $bloqueos $mantenimiento 2026-01 algoritmos/experimentacion/resultados/prueba-corta 2 1 12 10 1
 ```
 
-Campana TS hasta colapso o fin de datos, tres semillas:
+Campana oficial de comparacion, hasta el colapso o fin de datos (solo bloqueos y mantenimiento, sin averias), diez semillas:
 
 ```powershell
-java "-Dfile.encoding=UTF-8" -cp algoritmos/out pe.pucp.paqrap.SimulacionComparada TS $ventas $bloqueos $mantenimiento 2026-01 algoritmos/experimentacion/resultados/campana-ts 300 1,2,3 0 10 1
+java "-Dfile.encoding=UTF-8" -cp algoritmos/out pe.pucp.paqrap.SimulacionComparada AMBOS $ventas $bloqueos $mantenimiento 2026-01 algoritmos/experimentacion/resultados/campana-colapso 300 20262,20263,20264,20265,20266,20267,20268,20269,20270,20271
 ```
 
-Para ALNS usar `ALNS` y otra carpeta. Para comparacion pareada usar `AMBOS`: ejecuta TS y despues ALNS para cada semilla, restaurando toda la simulacion. La carpeta debe ser nueva; no se sobrescriben corridas.
+(`maxCiclos`, `Sa` y `factor` quedan en sus valores por defecto: 0 = sin limite, 10 y 1.)
 
-Argumentos: algoritmo, carpeta de ventas, carpeta de bloqueos, mantenimiento, mes inicial `AAAA-MM`, salida, iteraciones (300), semillas (1,2,3), maximo de ciclos (0 = sin limite), Sa en minutos (10), factor de demanda (1), archivo opcional de averias. Los parentesis indican valores predeterminados. Averias: una linea `TA01;2026-01-01T08:00;2026-01-01T12:00`, sin cabecera.
+Variante acotada a 5 dias (`maxCiclos=720` con `Sa=10`, 720 x 10 min = 7200 min), util para comparar bajo un horizonte fijo en vez de duracion hasta el colapso:
+
+```powershell
+java "-Dfile.encoding=UTF-8" -cp algoritmos/out pe.pucp.paqrap.SimulacionComparada AMBOS $ventas $bloqueos $mantenimiento 2026-01 algoritmos/experimentacion/resultados/campana-5dias 300 20262,20263,20264 720 10 1
+```
+
+Para ALNS o TS solo, usar ese algoritmo y otra carpeta. Para comparacion pareada usar `AMBOS`: ejecuta TS y despues ALNS para cada semilla, restaurando toda la simulacion. La carpeta debe ser nueva; no se sobrescriben corridas.
+
+Argumentos: algoritmo, carpeta de ventas, carpeta de bloqueos, mantenimiento, mes inicial `AAAA-MM`, salida, iteraciones (300), semillas (1,2,3), maximo de ciclos (0), Sa en minutos (10), factor de demanda (1), archivo opcional de averias. Los parentesis indican valores predeterminados. Averias por archivo: una linea `TA01;2026-01-01T08:00;2026-01-01T12:00`, sin cabecera.
+
+### Modo oficial de comparacion: hasta el colapso
+
+`maxCiclos=0` (el valor por defecto) es el modo oficial para comparar TS y ALNS: cada motor corre sobre la misma instancia y semilla hasta que su propio plan de un ciclo quede incompleto (`COLAPSO_PLANIFICACION`) o se agote la demanda (`FIN_DE_DATOS`). La metrica principal es `duracion_dias` en `resumen.csv`: el algoritmo que aguanta mas dias sin colapsar, bajo identica instancia/semilla, es el que mejor generaliza. A diferencia del pipeline historico en R (obsoleto, solo tenia datos de ALNS), este modo es simetrico: TS y ALNS de una misma semilla ven exactamente los mismos bloqueos y mantenimientos.
+
+Use `maxCiclos=720` con `Sa=10` solo cuando se necesite acotar la corrida a una ventana fija de 5 dias (por ejemplo, para limitar tiempo de computo o comparar bajo un horizonte comun cuando ninguno de los dos colapsa). No mezcle resumenes de ambos modos en el mismo analisis: son metricas distintas (duracion hasta colapso vs. desempeno en una ventana fija).
+
+### Averias: no modeladas por defecto
+
+Por indicacion del curso (1INF54, 2026-2), las averias **no** se generan automaticamente: solo se activan si se pasa explicitamente un archivo de averias (`vehiculo;inicio-ISO;fin-ISO`). El modelo oficial del curso define 3 tipos de averia con reglas propias que el `Averia(vehiculo, inicio, fin)` actual no captura del todo (tipo 1: 2 h fuera de servicio; tipo 2: fuera de servicio hasta el final del siguiente turno, la unidad permanece 4 h en el lugar y luego se traslada instantaneamente con su carga no trasvasada al almacen central; tipo 3: al menos 2 dias, retorna en el turno 15:00-23:00, permanece 4 h en el lugar y luego igualmente se traslada con su carga al almacen central). Implementar esas reglas (reubicacion de la unidad y de los paquetes al almacen central) queda pendiente; hasta entonces, las campanas de comparacion corren solo con bloqueos y mantenimiento.
+
+### Bloqueos: nodo bloqueado = cierra toda la interseccion
+
+Un nodo que forma parte de un tramo bloqueado no se puede atravesar ni admite giro lateral: la unica salida es volver por donde se llego (vuelta en U), tal como especifica el curso. `CalculadorRuta` construye el `GridMap` con `bloquearNodos=true`, que cierra las 4 calles incidentes a cada nodo del tramo bloqueado durante todo el intervalo (no solo las aristas de la poligonal); antes solo se cerraban las aristas de la poligonal misma, lo que permitia girar hacia una calle perpendicular no bloqueada en ese mismo nodo. El curso 2026-2 solo entrega poligonos abiertos (siempre se puede llegar a todos los puntos de la poligonal), que es el unico caso que `Bloqueo`/`BloqueoParser` validan hoy.
 
 ## Escenarios y reglas
 

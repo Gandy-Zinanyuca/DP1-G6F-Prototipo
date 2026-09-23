@@ -1,12 +1,20 @@
 # Experimentacion pareada por EstadoOperacion
 
-Para pruebas cronologicas de **ambos algoritmos**, con repeticion por semillas y parada hasta colapso, consultar [SIMULACION-COMPARADA.md](SIMULACION-COMPARADA.md). Sus resultados se versionan en Git.
+Framework oficial de comparacion TS vs ALNS: [SimulacionComparada](SIMULACION-COMPARADA.md), sembrado y corriendo por defecto hasta el colapso o fin de datos (`maxCiclos=0`; use `maxCiclos=720` con `Sa=10` para una ventana acotada de 5 dias). Es el unico framework simetrico entre ambos motores (misma instancia, mismos bloqueos y mantenimiento para TS y ALNS de cada semilla; las averias no se modelan por defecto, ver nota en [SIMULACION-COMPARADA.md](SIMULACION-COMPARADA.md#averias-no-modeladas-por-defecto)) y sus resultados se versionan en Git.
 
 La ejecucion vigente TS/ALNS, las metricas de Ta y holgura, los CSV individuales y el protocolo de colapso de planificacion se describen en la [guia comun](../README.md) y los [metadatos](../METADATOS-PRUEBAS.md). Ambos motores usan la misma instancia y semillas. No mezclar estos CSV con el script R historico descrito abajo.
 
-## Referencia historica: duracion hasta el colapso
+Para el analisis estadistico de una campana de `SimulacionComparada` (comparacion **pareada** por semilla, ya que TS y ALNS de una misma semilla comparten instancia), use `analisis_colapso_pareado.py` (Python; no requiere R):
 
-El contenido siguiente pertenece al simulador historico de ALNS; TS estricto no esta conectado a ese simulador. Sus hipotesis y comandos no constituyen la comparacion pareada actual.
+```bash
+python analisis_colapso_pareado.py --entrada resultados/campana-colapso --salida resultados/campana-colapso/analisis
+```
+
+Ver la cabecera del script para las opciones (`--metrica`, `--alfa`, `--delta`, `--alternativa`, `--incluir-censuradas`).
+
+## Referencia historica (obsoleta para la comparacion actual): duracion hasta el colapso
+
+**No usar este pipeline para comparar TS y ALNS.** El contenido siguiente pertenece al simulador historico de ALNS (`alns/src/pe/pucp/paqrap/simulacion/Simulador.java`, obsoleto); TS estricto nunca se conecto a ese simulador y no existen corridas de Tabu equivalentes (`alns/resultados/experimentos/alns/*` solo tiene datos de ALNS). Sus hipotesis, scripts (`experimentos_colapso.*`, `analisis_colapso.R`) y comandos quedan documentados por trazabilidad, pero la comparacion pareada vigente usa exclusivamente `SimulacionComparada` (arriba). El modo "hasta el colapso" (duracion abierta) sigue disponible ahi con `maxCiclos=0` si se necesita esa metrica dentro del framework nuevo y simetrico.
 
 Compara ALNS y Búsqueda Tabú por **cuánto dura la simulación hasta el colapso**: el algoritmo
 que dura más es mejor. La métrica por defecto es `dias_simulados`, el tiempo simulado desde el
