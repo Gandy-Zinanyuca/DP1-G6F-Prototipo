@@ -1,0 +1,72 @@
+=====================================================================
+ PaqRap · Componente planificador · ALNS · simulación hasta el colapso
+=====================================================================
+Mes inicial: 2026-12 · Instancia[5000 pedidos, 37 unidades, 599 bloqueos, 3 almacenes]
+Almacenes: [ALM-CENTRAL(25,15)[ilimitado], ALM-NOROESTE(12,38)[1000/1000], ALM-ESTE(55,27)[1000/1000]]
+Recargas en ruta: no · reprogramación: no
+Sa=10 min · K=7 · Sc=70 min · maxIteraciones=300 · proporciónDestrucción=0.10 · semilla=1 · sin límite de ciclos
+
+Pedidos pendientes al inicio (2026-12-01 00:00): 0 (0 del mes anterior); 0 con plazo vencido antes del inicio quedan fuera del periodo simulado
+
+[2026-12-01] entregados=157 fraccionados=1 en curso/pendientes=49 rutas=77 km=3842 · planificador 144 ejec. 5.70 s (Ta prom. 39.6 ms)
+[2026-12-02] entregados=366 fraccionados=7 en curso/pendientes=53 rutas=168 km=8216 · planificador 144 ejec. 5.69 s (Ta prom. 39.5 ms)
+[2026-12-03] entregados=612 fraccionados=18 en curso/pendientes=70 rutas=292 km=13732 · planificador 144 ejec. 6.31 s (Ta prom. 43.9 ms)
+[2026-12-04] entregados=840 fraccionados=31 en curso/pendientes=53 rutas=404 km=18716 · planificador 144 ejec. 6.13 s (Ta prom. 42.6 ms)
+[2026-12-05] entregados=1086 fraccionados=49 en curso/pendientes=59 rutas=540 km=24308 · planificador 144 ejec. 6.86 s (Ta prom. 47.6 ms)
+[2026-12-06] entregados=1320 fraccionados=76 en curso/pendientes=51 rutas=659 km=29942 · planificador 144 ejec. 7.03 s (Ta prom. 48.8 ms)
+[2026-12-07] entregados=1568 fraccionados=99 en curso/pendientes=61 rutas=792 km=35608 · planificador 144 ejec. 7.53 s (Ta prom. 52.3 ms)
+[2026-12-08] entregados=1802 fraccionados=116 en curso/pendientes=45 rutas=912 km=40812 · planificador 144 ejec. 6.49 s (Ta prom. 45.0 ms)
+[2026-12-09] entregados=2012 fraccionados=118 en curso/pendientes=34 rutas=1010 km=45208 · planificador 144 ejec. 4.02 s (Ta prom. 27.9 ms)
+[2026-12-10] entregados=2225 fraccionados=118 en curso/pendientes=57 rutas=1115 km=50160 · planificador 144 ejec. 5.57 s (Ta prom. 38.7 ms)
+[2026-12-11] entregados=2455 fraccionados=121 en curso/pendientes=40 rutas=1225 km=54906 · planificador 144 ejec. 6.19 s (Ta prom. 43.0 ms)
+[2026-12-12] entregados=2653 fraccionados=121 en curso/pendientes=42 rutas=1321 km=59406 · planificador 144 ejec. 5.00 s (Ta prom. 34.7 ms)
+[2026-12-13] entregados=2894 fraccionados=125 en curso/pendientes=55 rutas=1437 km=64570 · planificador 144 ejec. 6.32 s (Ta prom. 43.9 ms)
+[2026-12-14] entregados=3140 fraccionados=133 en curso/pendientes=52 rutas=1568 km=70178 · planificador 144 ejec. 6.89 s (Ta prom. 47.8 ms)
+[2026-12-15] entregados=3391 fraccionados=148 en curso/pendientes=47 rutas=1690 km=75476 · planificador 144 ejec. 7.27 s (Ta prom. 50.5 ms)
+[2026-12-16] entregados=3646 fraccionados=157 en curso/pendientes=71 rutas=1829 km=81702 · planificador 144 ejec. 13.50 s (Ta prom. 93.8 ms)
+[2026-12-17] entregados=3922 fraccionados=183 en curso/pendientes=82 rutas=1980 km=87902 · planificador 144 ejec. 8.47 s (Ta prom. 58.8 ms)
+[2026-12-18] entregados=4195 fraccionados=199 en curso/pendientes=56 rutas=2114 km=94012 · planificador 144 ejec. 6.31 s (Ta prom. 43.8 ms)
+[2026-12-19] entregados=4439 fraccionados=205 en curso/pendientes=51 rutas=2225 km=98978 · planificador 144 ejec. 7.07 s (Ta prom. 49.1 ms)
+[2026-12-20] entregados=4682 fraccionados=213 en curso/pendientes=60 rutas=2350 km=104484 · planificador 144 ejec. 8.75 s (Ta prom. 60.8 ms)
+[2026-12-21] entregados=4918 fraccionados=219 en curso/pendientes=37 rutas=2467 km=109516 · planificador 144 ejec. 9.77 s (Ta prom. 67.8 ms)
+[2026-12-22] entregados=4996 fraccionados=219 en curso/pendientes=4 rutas=2507 km=111162 · planificador 129 ejec. 2.88 s (Ta prom. 22.3 ms)
+[2026-12-23] entregados=5000 fraccionados=219 en curso/pendientes=0 rutas=2507 km=111162 · planificador 0 ejec. 0.00 s (Ta prom. 0.0 ms)
+[2026-12-24] entregados=5000 fraccionados=219 en curso/pendientes=0 rutas=2507 km=111162 · planificador 0 ejec. 0.00 s (Ta prom. 0.0 ms)
+[2026-12-25] entregados=5000 fraccionados=219 en curso/pendientes=0 rutas=2507 km=111162 · planificador 0 ejec. 0.00 s (Ta prom. 0.0 ms)
+[2026-12-26] entregados=5000 fraccionados=219 en curso/pendientes=0 rutas=2507 km=111162 · planificador 0 ejec. 0.00 s (Ta prom. 0.0 ms)
+[2026-12-27] entregados=5000 fraccionados=219 en curso/pendientes=0 rutas=2507 km=111162 · planificador 0 ejec. 0.00 s (Ta prom. 0.0 ms)
+[2026-12-28] entregados=5000 fraccionados=219 en curso/pendientes=0 rutas=2507 km=111162 · planificador 0 ejec. 0.00 s (Ta prom. 0.0 ms)
+    [2026-12-29 22:50] mes 2027-01 cargado: 5000 pedidos, 657 bloqueos
+[2026-12-29] entregados=5000 fraccionados=219 en curso/pendientes=0 rutas=2507 km=111162 · planificador 0 ejec. 0.00 s (Ta prom. 0.0 ms)
+[2026-12-30] entregados=5000 fraccionados=219 en curso/pendientes=0 rutas=2507 km=111162 · planificador 0 ejec. 0.00 s (Ta prom. 0.0 ms)
+[2026-12-31] entregados=5000 fraccionados=219 en curso/pendientes=0 rutas=2507 km=111162 · planificador 6 ejec. 0.16 s (Ta prom. 26.1 ms)
+[2027-01-01] entregados=5228 fraccionados=222 en curso/pendientes=52 rutas=2636 km=116948 · planificador 144 ejec. 6.22 s (Ta prom. 43.2 ms)
+[2027-01-02] entregados=5476 fraccionados=246 en curso/pendientes=69 rutas=2776 km=122780 · planificador 144 ejec. 6.65 s (Ta prom. 46.2 ms)
+[2027-01-03] entregados=5734 fraccionados=280 en curso/pendientes=60 rutas=2917 km=128944 · planificador 144 ejec. 7.62 s (Ta prom. 52.9 ms)
+[2027-01-04] entregados=5979 fraccionados=289 en curso/pendientes=40 rutas=3035 km=133672 · planificador 144 ejec. 7.12 s (Ta prom. 49.4 ms)
+--- Ciclo 5116 · 2027-01-05 12:30 · pedidos por atender: 81 · unidades: 37
+ALNS: resultado NO FACTIBLE (Ta=13 ms)
+      - pedido no asignado P6219
+    ---------------------------------------------------------------- diagnóstico
+    [demanda] 81 pedidos / 413 paquetes en la ventana (59 ya registrados, 22 por registrarse hasta 2027-01-05 13:40); por plazo (h: pedidos/paquetes) 4:7/43, 8:13/66, 12:14/71, 18:12/56, 36:35/177
+    [demanda] capacidad de la flota en un viaje: 408 paquetes (101% ocupada por la ventana); el plan usa 37 rutas y 37 viajes con 408 paquetes, 37 viajes llenos; reprograma 0 pedidos / 0 paquetes
+    [flota] 37 unidades asignables (2 libres en T, 35 en ruta); 0 en mantenimiento ese día
+    [pedido] P6219[c3340 (52,27) q=5 lim=38d01h40m]: registro 2027-01-05 13:40, plazo 36 h, límite 2027-01-07 01:40 (holgura desde T: 2230 min), 3 km del almacén más cercano
+    [pedido]   solo en una ruta vacía: factible en 25 de 37 unidades (mejor llegada 2027-01-05 14:39); motivos: {capacidad excedida=12}
+    [pedido]   en un segundo viaje tras la ruta del plan: factible en 25 unidades (mejor llegada 2027-01-05 16:47)
+    [pedido]   solo, sin bloqueos: factible en 25 unidades
+    [replan] sin bloqueos: no_factible · desde cero (sin plan previo): no_factible · arrepentimiento desde vacío: no_factible (1 sin asignar)
+    [conclusión] causa=un_viaje_por_unidad; ventana=81 pedidos/413 paquetes; capacidad_viaje=408; solo_factible=25; segundo_viaje=25; sin_bloqueos=no_factible; desde_cero=no_factible; arrepentimiento=no_factible; mantenimiento=0
+=====================================================================
+ COLAPSO LOGÍSTICO en 2027-01-05 12:30
+ Fin de la simulación : COLAPSO
+ Causa del colapso    : no existe plan factible: pedido no asignado P6219
+ Diagnóstico          : causa=un_viaje_por_unidad; ventana=81 pedidos/413 paquetes; capacidad_viaje=408; solo_factible=25; segundo_viaje=25; sin_bloqueos=no_factible; desde_cero=no_factible; arrepentimiento=no_factible; mantenimiento=0
+ Periodo simulado     : 2026-12-01T00:00 -> 2027-01-05T12:30 (35.52 días, 2 meses cargados)
+ Tiempo real          : 185.47 s (planificador: 184.70 s en 3811 ejecuciones; Ta prom. 48.5 ms, máx. 235.6 ms)
+ Ciclos               : 5115
+ Pedidos              : 6197 registrados (0 pendientes al inicio) · 6107 entregados · 294 fraccionados · 33500 paquetes
+ Rutas despachadas    : 3118 rutas · 3118 viajes · 137164 km · S/ 842290.00
+ Viajes/unidad/día    : auto 2.62 · moto 2.59 · bicicleta 1.90
+ Reprogramación       : 0 ciclos reprogramaron pedidos (máx. 0 paquetes en un ciclo)
+=====================================================================

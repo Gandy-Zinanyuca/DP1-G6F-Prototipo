@@ -7,6 +7,7 @@ import pe.pucp.paqrap.alns.destruccion.RemocionPorAveria;
 import pe.pucp.paqrap.alns.destruccion.RemocionRelacionadaShaw;
 import pe.pucp.paqrap.alns.reparacion.InsercionGolosa;
 import pe.pucp.paqrap.alns.reparacion.InsercionPorArrepentimiento;
+import pe.pucp.paqrap.modelo.Almacen;
 import pe.pucp.paqrap.modelo.Pedido;
 import pe.pucp.paqrap.modelo.Vehiculo;
 import pe.pucp.paqrap.planificador.ContextoPlanificacion;
@@ -65,6 +66,11 @@ public class ALNS {
         public List<String> errores = new ArrayList<>();
         public double costoInicial;
         public double costoFinal;
+        /** Origen de la solución inicial: "heredado", "desde cero" o "único" (sin plan previo). */
+        public String origenInicial = "único";
+        /** Pedidos y paquetes que el mejor plan reprograma para un ciclo posterior. */
+        public int pedidosPostergados;
+        public int paquetesPostergados;
         public double[] pesosDestruccion = new double[0];
         public double[] pesosReparacion = new double[0];
         public String[] nombresDestruccion = new String[0];
@@ -86,9 +92,10 @@ public class ALNS {
                 }
                 return sb.toString();
             }
-            sb.append(String.format("ALNS: %d iteraciones en %d ms | costo S/ %.2f -> S/ %.2f "
-                            + "(mejor en iter %d)%n",
-                    iteraciones, milisegundos, costoInicial, costoFinal, iteracionMejor));
+            sb.append(String.format("ALNS: %d iteraciones en %d ms | costo %.2f -> %.2f "
+                            + "(mejor en iter %d) | inicial %s | reprogramados %d pedidos / %d paquetes%n",
+                    iteraciones, milisegundos, costoInicial, costoFinal, iteracionMejor, origenInicial,
+                    pedidosPostergados, paquetesPostergados));
             sb.append(String.format("      candidatos evaluados=%d factibles=%d noFactibles=%d | "
                             + "aceptados=%d rechazados=%d nuevosMejores=%d%n",
                     candidatosEvaluados, candidatosFactibles, candidatosNoFactibles,
@@ -151,17 +158,37 @@ public class ALNS {
      * Ejecuta ALNS sobre los pedidos considerados del contexto, reutilizando el plan vigente
      * cuando existe. Las rutas que siguen siendo compatibles se heredan; los pedidos de rutas
      * afectadas por unidades no disponibles o arcos bloqueados se liberan y se reinsertan.
+     *
+     * <p>Con plan previo se construyen dos soluciones iniciales: la heredada —retiene los
+     * pedidos del plan vigente que aún no salieron y los reevalúa junto con los nuevos— y la de
+     * GENERAR_SOLUCIÓN_INICIAL desde cero. ALNS parte de la mejor: la factible, y entre dos
+     * factibles, la de menor costo. Así la reoptimización incremental no puede dejar el plan en
+     * un estado peor que el que se obtendría replanificando.</p>
      */
     public Solucion resolver(ContextoPlanificacion ctx, Solucion planPrevio) {
         long inicioReal = System.nanoTime();
         estadisticas = new Estadisticas();
         Random aleatorio = new Random(par.semilla);
 
-        Solucion solucionInicial = (planPrevio == null)
-                ? ConstructorInicial.construir(ctx)
-                : construirDesdePlanPrevio(ctx, planPrevio, aleatorio);
-        double costoInicial = solucionInicial.evaluar(ctx);
+        Solucion solucionInicial;
+        double costoInicial;
+        if (planPrevio == null) {
+            solucionInicial = ConstructorInicial.construir(ctx);
+            costoInicial = solucionInicial.evaluar(ctx);
+        } else {
+            Solucion heredada = construirDesdePlanPrevio(ctx, planPrevio, aleatorio);
+            double costoHeredada = heredada.evaluar(ctx);
+            Solucion desdeCero = ConstructorInicial.construir(ctx);
+            double costoDesdeCero = desdeCero.evaluar(ctx);
+            boolean usarDesdeCero = desdeCero.esFactible()
+                    && (!heredada.esFactible() || costoDesdeCero < costoHeredada);
+            solucionInicial = usarDesdeCero ? desdeCero : heredada;
+            costoInicial = usarDesdeCero ? costoDesdeCero : costoHeredada;
+            estadisticas.origenInicial = usarDesdeCero ? "desde cero" : "heredado";
+        }
         estadisticas.costoInicial = costoInicial;
+        estadisticas.pedidosPostergados = solucionInicial.getPedidosPostergados();
+        estadisticas.paquetesPostergados = solucionInicial.getPaquetesPostergados();
 
         if (!solucionInicial.esFactible()) {
             estadisticas.factible = false;
@@ -253,6 +280,8 @@ public class ALNS {
         estadisticas.factible = mejorGlobal.esFactible();
         estadisticas.errores = mejorGlobal.getErrores();
         estadisticas.costoFinal = costoMejor;
+        estadisticas.pedidosPostergados = mejorGlobal.getPedidosPostergados();
+        estadisticas.paquetesPostergados = mejorGlobal.getPaquetesPostergados();
         estadisticas.pesosDestruccion = destruccion.getPesos();
         estadisticas.pesosReparacion = reparacion.getPesos();
         estadisticas.usosDestruccion = destruccion.getUsosAcumulados();
@@ -328,16 +357,19 @@ public class ALNS {
             if (vehiculo == null) {
                 continue;
             }
-            Ruta nueva = heredada.rutaDe(vehiculo, rutaAnterior.getAlmacenOrigen());
+            Ruta nueva = heredada.rutaDe(vehiculo, origenHeredado(ctx, rutaAnterior, vehiculo));
             for (Pedido p : rutaAnterior.getSecuencia()) {
                 int restante = porCubrir.getOrDefault(p.getOriginal(), 0);
                 if (p.getEstado() != Pedido.Estado.REGISTRADO || p.getCantidad() > restante
                         || nueva.contienePedido(p)) {
                     continue;   // despachada, ya cubierta o fuera del contexto actual
                 }
-                if (heredada.hayStock(ctx, rutaAnterior.getAlmacenOrigen(), p.getCantidad())) {
-                    heredada.asignar(nueva, nueva.tamanio(), p);
+                heredada.asignar(nueva, nueva.tamanio(), p);
+                nueva.recalcular(ctx);
+                if (heredada.stockAlcanza(ctx)) {
                     porCubrir.put(p.getOriginal(), restante - p.getCantidad());
+                } else {
+                    heredada.olvidar(p);   // sin stock: se reinsertará con el resto
                 }
             }
             nueva.recalcular(ctx);
@@ -352,6 +384,25 @@ public class ALNS {
             }
         }
         return heredada;
+    }
+
+    /**
+     * Almacén de origen de la ruta heredada. Si la unidad ya salió con los primeros viajes de
+     * su ruta, los viajes pendientes parten del almacén donde terminó el último viaje
+     * despachado (su posición actual); si no, se conserva el origen elegido.
+     */
+    private static Almacen origenHeredado(ContextoPlanificacion ctx, Ruta rutaAnterior, Vehiculo vehiculo) {
+        for (Pedido p : rutaAnterior.getSecuencia()) {
+            if (p.getEstado() != Pedido.Estado.REGISTRADO) {
+                for (Almacen a : ctx.getAlmacenes()) {
+                    if (a.getUbicacion().equals(vehiculo.getPosicion())) {
+                        return a;
+                    }
+                }
+                break;
+            }
+        }
+        return rutaAnterior.getAlmacenOrigen();
     }
 
     private List<Pedido> liberarRutasInfactibles(Solucion solucion, ContextoPlanificacion ctx) {

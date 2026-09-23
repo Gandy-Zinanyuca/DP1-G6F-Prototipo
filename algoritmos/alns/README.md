@@ -98,17 +98,26 @@ java -Dfile.encoding=UTF-8 -cp out pe.pucp.paqrap.DemoPlanificador data\ventas.v
 Opciones de `DemoPlanificador`: `--colapso` (sin límite de ciclos, configuración de colapso de
 ALNS), `--dia N`, `--hora N`, `--ciclos N`, `--sa MIN` (Sa), `--k N` (K), `--iteraciones N`,
 `--semilla N`, `--anio AAAA`, `--mes MM` (por defecto se deducen del nombre del archivo de ventas),
-`--detalle`, `--traza`, `--csv-ciclos archivo` (una fila por ciclo) y `--csv-resumen archivo`
-(agrega una fila por corrida). Cuando un pedido no puede entregarse a tiempo, reporta
+`--detalle`, `--traza`, `--csv-ciclos archivo` (una fila por ciclo), `--csv-resumen archivo`
+(agrega una fila por corrida), `--max-viajes N` (viajes por ruta, 3), `--sin-recargas`,
+`--holgura-reprogramacion MIN` (240) y `--sin-reprogramacion`. Cuando un pedido no puede entregarse a tiempo, reporta
 `COLAPSO LOGÍSTICO` y se detiene.
 
 ### Modelo de simulación
 
 - **Reloj discreto**: el planificador se ejecuta cada Sa minutos sobre la cantidad aún no
   despachada de los pedidos de la ventana (pendientes más los registrados en `(T, T+Sc]`).
-- **Despacho progresivo**: en cada ciclo solo se despachan las rutas que salen antes del ciclo
-  siguiente; el resto del plan se replanifica con la información nueva. Una unidad despachada
-  queda comprometida hasta que regresa al almacén.
+- **Rutas con recarga** (enunciado del curso, pregunta 10): una unidad lleva varios pedidos en
+  cada viaje y, cuando el siguiente pedido ya no cabe, vuelve al almacén más cercano con stock,
+  recarga y sigue repartiendo; hasta `--max-viajes` viajes por ruta (3 por defecto).
+- **Reprogramación**: un pedido con holgura mayor a `--holgura-reprogramacion` (240 min) puede
+  quedar para un ciclo posterior si así se cumple con pedidos más urgentes; cada paquete
+  reprogramado penaliza el costo, así que solo se reprograma cuando no cabe ahora.
+- **Plan inicial**: cada ciclo construye el plan heredado (retiene los pedidos del plan vigente
+  que aún no salieron y los reevalúa con los nuevos) y uno desde cero, y ALNS parte del mejor.
+- **Despacho progresivo por viaje**: en cada ciclo solo se despachan los viajes que salen antes
+  del ciclo siguiente; el resto del plan se replanifica con la información nueva. Una unidad
+  despachada queda comprometida hasta que llega al almacén donde termina su viaje.
 - **Entregas**: un pedido se marca como entregado solo cuando el reloj alcanza la llegada de su
   última parte.
 - **Pedidos fraccionados**: si ninguna unidad admite un pedido completo, se reparte entre varias.
@@ -122,8 +131,26 @@ ALNS), `--dia N`, `--hora N`, `--ciclos N`, `--sa MIN` (Sa), `--k N` (K), `--ite
 - **Meses encadenados**: cuando la ventana se acerca al fin del último mes cargado, se cargan las
   ventas y los bloqueos del mes siguiente (`ventas.AAAAMM.txt`, `bloqueo.AAMM.txt` en las mismas
   carpetas).
-- **Colapso**: el planificador no encuentra un plan factible, una entrega llega tarde o vence el
-  plazo de un pedido sin despachar.
+- **Colapso**: un pedido que ya no puede reprogramarse no cabe en ningún plan factible, una
+  entrega llega tarde o vence el plazo de un pedido sin despachar. Al colapsar se imprime un
+  **diagnóstico** (demanda frente a capacidad, pedido aislado, prueba sin bloqueos, replanificación
+  desde cero, mantenimiento) y su resumen queda en la columna `diagnostico_colapso` del CSV.
+- `--sin-recargas` y `--sin-reprogramacion` reproducen el modelo anterior (un viaje por ruta y
+  todo pedido de la ventana asignado en el plan), para comparar.
+
+### Validación de las recargas y la reprogramación
+
+Prueba del 2026-09-23 (semilla 1, 300 iteraciones, Sa=10, K=7), arrancando el 2026-12-01 00:00 y
+encadenando meses. Logs en `resultados/pruebas/`.
+
+| Modelo | Resultado | Ta promedio |
+|---|---|---|
+| Anterior (`--sin-recargas --sin-reprogramacion`) | Colapso el 2027-01-05 12:30 (un viaje por unidad: la ventana pedía 413 paquetes y la flota lleva 408 por viaje) | ~50 ms |
+| Recargas (máx. 3 viajes) + reprogramación + plan inicial desde cero | **Sin colapso hasta el 2027-02-08** (último día completo; 12 101 pedidos entregados, todo enero sin atrasos) | ~150–1000 ms según la carga |
+
+La corrida del modelo nuevo **se detuvo manualmente** por tiempo de cómputo: **solo se probó hasta
+el 2027-02-08**, así que no se sabe todavía cuándo colapsa. La campaña de 6 semillas de
+`resultados/experimentos/alns` corresponde al modelo anterior.
 
 **Verificación.** Comprueba factibilidad, que ALNS no empeora la solución inicial, las métricas de
 candidatos, la cartera de operadores (5 + 2), reproducibilidad, integridad, capacidad, plazos e

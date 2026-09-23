@@ -142,6 +142,15 @@ public class ContextoPlanificacion {
         return cantidadRequerida.getOrDefault(pedido.getOriginal(), 0);
     }
 
+    /**
+     * Indica si el pedido puede reprogramarse a un ciclo posterior: la reprogramación está
+     * permitida y su hora límite está a más de la holgura mínima del instante T.
+     */
+    public boolean esPostergable(Pedido pedido) {
+        return parametros.permitirPostergacion
+                && pedido.getMinutoLimite() - minutoActual > parametros.holguraMinimaPostergacionMin;
+    }
+
     /** Indica si la unidad tiene mantenimiento preventivo programado el día simulado indicado. */
     public boolean enMantenimiento(String codigoUnidad, int dia) {
         return mantenimientos.contains(codigoUnidad + "#" + dia);

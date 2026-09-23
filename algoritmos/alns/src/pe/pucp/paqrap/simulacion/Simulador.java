@@ -111,6 +111,9 @@ public class Simulador {
         this.siguienteId = 1;
         agregarPedidos(instancia.getPedidos());
         resultado.mesesCargados = 1;
+        for (Vehiculo v : instancia.getFlota()) {
+            resultado.unidadesPorTipo.merge(v.getTipo().name(), 1, Integer::sum);
+        }
     }
 
     public ResultadoSimulacion getResultado() {
@@ -194,9 +197,16 @@ public class Simulador {
                             ctx.getUnidadesAsignables().size());
                     salida.print(planificador.resumenUltimaEjecucion());
                     colapsar("no existe plan factible: " + String.join("; ", primeros(plan.getErrores(), 3)));
+                    resultado.diagnosticoColapso = new DiagnosticoColapso(instancia, ctx, plan, planVigente,
+                            planificador, par, parPlan, pedidosVivos, salida, this::formatear).ejecutar();
                     break;
                 }
 
+                resultado.maxPaquetesPostergados = Math.max(resultado.maxPaquetesPostergados,
+                        plan.getPaquetesPostergados());
+                if (plan.getPaquetesPostergados() > 0) {
+                    resultado.ciclosConPostergacion++;
+                }
                 int despachadas = despachar(plan, t + par.saMinutos);
                 escribirCiclo(csv, t, ctx, ta, true, despachadas, plan.getCostoOperacionSoles());
                 if (par.detalle) {
@@ -329,10 +339,12 @@ public class Simulador {
     // ------------------------------------------------------------------ avance
 
     /**
-     * Despacha las rutas del plan que salen antes del siguiente ciclo: descuenta el inventario
-     * del almacén de origen, compromete la unidad hasta su regreso y deja sus paradas en curso.
+     * Despacha, viaje por viaje, lo que sale antes del siguiente ciclo. Un viaje despachado
+     * descuenta su carga del almacén donde carga y compromete a la unidad hasta que llega al
+     * almacén donde termina; sus paradas quedan en curso. Los viajes siguientes de la ruta no se
+     * despachan todavía: siguen en el plan vigente y se replanifican en el próximo ciclo.
      *
-     * @return número de rutas despachadas
+     * @return número de rutas con al menos un viaje despachado
      */
     private int despachar(Solucion plan, int siguienteCiclo) {
         int despachadas = 0;
@@ -342,26 +354,38 @@ public class Simulador {
             }
             Vehiculo v = r.getVehiculo();
             int[] llegadas = r.getMinutosLlegada();
-            for (int i = 0; i < r.tamanio(); i++) {
-                Pedido parte = r.getSecuencia().get(i);
-                parte.setUnidadAsignada(v.getCodigo());
-                parte.setMinutoEntregaEstimado(llegadas[i]);
-                if (parte.esFraccion()) {
-                    parte.setEstado(Pedido.Estado.EN_RUTA);
+            List<Ruta.Viaje> viajes = r.getViajes();
+            int enviados = 0;
+            for (Ruta.Viaje viaje : viajes) {
+                if (enviados > 0 && viaje.getSalida() >= siguienteCiclo) {
+                    break;
                 }
-                parte.registrarDespacho(parte.getCantidad());
-                paradasEnCurso.add(new Parada(parte, llegadas[i]));
+                for (int i = viaje.getDesde(); i < viaje.getHasta(); i++) {
+                    Pedido parte = r.getSecuencia().get(i);
+                    parte.setUnidadAsignada(v.getCodigo());
+                    parte.setMinutoEntregaEstimado(llegadas[i]);
+                    if (parte.esFraccion()) {
+                        parte.setEstado(Pedido.Estado.EN_RUTA);
+                    }
+                    parte.registrarDespacho(parte.getCantidad());
+                    paradasEnCurso.add(new Parada(parte, llegadas[i]));
+                }
+                viaje.getAlmacenCarga().descontar(viaje.getCarga());
+                resultado.viajesDespachados++;
+                resultado.viajesPorTipo.merge(v.getTipo().name(), 1, Integer::sum);
+                resultado.kmRecorridos += viaje.getDistanciaKm();
+                resultado.costoSoles += viaje.getDistanciaKm() * v.getTipo().getCostoPorKm();
+                enviados++;
             }
-            r.getAlmacenOrigen().descontar(r.getCargaTotal());
-            v.setPosicion(r.getAlmacenRetorno().getUbicacion());
-            v.setMinutoDisponibleDesde(r.getMinutoRetorno());
+            Ruta.Viaje ultimo = viajes.get(enviados - 1);
+            v.setPosicion(ultimo.getAlmacenFin().getUbicacion());
+            v.setMinutoDisponibleDesde(ultimo.getFin());
             v.setEstado(Vehiculo.Estado.EN_RUTA);
-            if (r.getMinutoInicioAlimentacion() >= 0) {
+            int viajeComida = r.viajeDeAlimentacion();
+            if (viajeComida >= 0 && viajeComida < enviados) {
                 v.setTurnoDeUltimaAlimentacion(Turnos.inicioTurno(r.getMinutoInicioAlimentacion()));
             }
             resultado.rutasDespachadas++;
-            resultado.kmRecorridos += r.getDistanciaKm();
-            resultado.costoSoles += r.costoOperacion();
             despachadas++;
         }
         return despachadas;

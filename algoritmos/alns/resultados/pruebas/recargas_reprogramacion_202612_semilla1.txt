@@ -1,0 +1,87 @@
+=====================================================================
+ PaqRap · Componente planificador · ALNS · simulación hasta el colapso
+=====================================================================
+Mes inicial: 2026-12 · Instancia[5000 pedidos, 37 unidades, 599 bloqueos, 3 almacenes]
+Almacenes: [ALM-CENTRAL(25,15)[ilimitado], ALM-NOROESTE(12,38)[1000/1000], ALM-ESTE(55,27)[1000/1000]]
+Recargas en ruta: sí (hasta 3 viajes por ruta) · reprogramación: sí (holgura > 240 min)
+Sa=10 min · K=7 · Sc=70 min · maxIteraciones=300 · proporciónDestrucción=0.10 · semilla=1 · sin límite de ciclos
+
+Pedidos pendientes al inicio (2026-12-01 00:00): 0 (0 del mes anterior); 0 con plazo vencido antes del inicio quedan fuera del periodo simulado
+
+[2026-12-01] entregados=129 fraccionados=0 en curso/pendientes=77 rutas=64 km=3180 · planificador 144 ejec. 18.98 s (Ta prom. 131.8 ms)
+[2026-12-02] entregados=339 fraccionados=0 en curso/pendientes=80 rutas=162 km=7686 · planificador 144 ejec. 20.97 s (Ta prom. 145.6 ms)
+[2026-12-03] entregados=563 fraccionados=2 en curso/pendientes=119 rutas=264 km=12212 · planificador 144 ejec. 43.51 s (Ta prom. 302.2 ms)
+[2026-12-04] entregados=793 fraccionados=5 en curso/pendientes=100 rutas=370 km=16824 · planificador 144 ejec. 46.18 s (Ta prom. 320.7 ms)
+[2026-12-05] entregados=1041 fraccionados=10 en curso/pendientes=104 rutas=486 km=21942 · planificador 144 ejec. 44.04 s (Ta prom. 305.8 ms)
+[2026-12-06] entregados=1266 fraccionados=15 en curso/pendientes=105 rutas=586 km=26536 · planificador 144 ejec. 59.56 s (Ta prom. 413.6 ms)
+[2026-12-07] entregados=1512 fraccionados=26 en curso/pendientes=117 rutas=713 km=32074 · planificador 144 ejec. 64.26 s (Ta prom. 446.3 ms)
+[2026-12-08] entregados=1748 fraccionados=32 en curso/pendientes=99 rutas=831 km=37152 · planificador 144 ejec. 48.54 s (Ta prom. 337.1 ms)
+[2026-12-09] entregados=1973 fraccionados=35 en curso/pendientes=73 rutas=930 km=41038 · planificador 144 ejec. 15.40 s (Ta prom. 106.9 ms)
+[2026-12-10] entregados=2190 fraccionados=36 en curso/pendientes=92 rutas=1027 km=45482 · planificador 144 ejec. 24.15 s (Ta prom. 167.7 ms)
+[2026-12-11] entregados=2404 fraccionados=38 en curso/pendientes=91 rutas=1120 km=49660 · planificador 144 ejec. 26.43 s (Ta prom. 183.5 ms)
+[2026-12-12] entregados=2614 fraccionados=39 en curso/pendientes=81 rutas=1213 km=54182 · planificador 144 ejec. 30.26 s (Ta prom. 210.1 ms)
+[2026-12-13] entregados=2843 fraccionados=41 en curso/pendientes=106 rutas=1313 km=58840 · planificador 144 ejec. 49.41 s (Ta prom. 343.1 ms)
+[2026-12-14] entregados=3093 fraccionados=43 en curso/pendientes=99 rutas=1438 km=63880 · planificador 144 ejec. 55.38 s (Ta prom. 384.6 ms)
+[2026-12-15] entregados=3328 fraccionados=44 en curso/pendientes=110 rutas=1548 km=68780 · planificador 144 ejec. 41.36 s (Ta prom. 287.2 ms)
+[2026-12-16] entregados=3571 fraccionados=49 en curso/pendientes=146 rutas=1666 km=73932 · planificador 144 ejec. 72.34 s (Ta prom. 502.3 ms)
+[2026-12-17] entregados=3850 fraccionados=57 en curso/pendientes=154 rutas=1803 km=79692 · planificador 144 ejec. 81.04 s (Ta prom. 562.8 ms)
+[2026-12-18] entregados=4119 fraccionados=62 en curso/pendientes=132 rutas=1926 km=84976 · planificador 144 ejec. 59.88 s (Ta prom. 415.8 ms)
+[2026-12-19] entregados=4377 fraccionados=66 en curso/pendientes=113 rutas=2046 km=90438 · planificador 144 ejec. 57.44 s (Ta prom. 398.9 ms)
+[2026-12-20] entregados=4616 fraccionados=73 en curso/pendientes=126 rutas=2161 km=95168 · planificador 144 ejec. 78.01 s (Ta prom. 541.7 ms)
+[2026-12-21] entregados=4860 fraccionados=79 en curso/pendientes=95 rutas=2278 km=100458 · planificador 144 ejec. 56.43 s (Ta prom. 391.8 ms)
+[2026-12-22] entregados=4995 fraccionados=79 en curso/pendientes=5 rutas=2330 km=102606 · planificador 142 ejec. 11.91 s (Ta prom. 83.8 ms)
+[2026-12-23] entregados=5000 fraccionados=79 en curso/pendientes=0 rutas=2330 km=102606 · planificador 0 ejec. 0.00 s (Ta prom. 0.0 ms)
+[2026-12-24] entregados=5000 fraccionados=79 en curso/pendientes=0 rutas=2330 km=102606 · planificador 0 ejec. 0.00 s (Ta prom. 0.0 ms)
+[2026-12-25] entregados=5000 fraccionados=79 en curso/pendientes=0 rutas=2330 km=102606 · planificador 0 ejec. 0.00 s (Ta prom. 0.0 ms)
+[2026-12-26] entregados=5000 fraccionados=79 en curso/pendientes=0 rutas=2330 km=102606 · planificador 0 ejec. 0.00 s (Ta prom. 0.0 ms)
+[2026-12-27] entregados=5000 fraccionados=79 en curso/pendientes=0 rutas=2330 km=102606 · planificador 0 ejec. 0.00 s (Ta prom. 0.0 ms)
+[2026-12-28] entregados=5000 fraccionados=79 en curso/pendientes=0 rutas=2330 km=102606 · planificador 0 ejec. 0.00 s (Ta prom. 0.0 ms)
+    [2026-12-29 22:50] mes 2027-01 cargado: 5000 pedidos, 657 bloqueos
+[2026-12-29] entregados=5000 fraccionados=79 en curso/pendientes=0 rutas=2330 km=102606 · planificador 0 ejec. 0.00 s (Ta prom. 0.0 ms)
+[2026-12-30] entregados=5000 fraccionados=79 en curso/pendientes=0 rutas=2330 km=102606 · planificador 0 ejec. 0.00 s (Ta prom. 0.0 ms)
+[2026-12-31] entregados=5000 fraccionados=79 en curso/pendientes=0 rutas=2330 km=102606 · planificador 6 ejec. 0.13 s (Ta prom. 22.3 ms)
+[2027-01-01] entregados=5193 fraccionados=79 en curso/pendientes=87 rutas=2441 km=107426 · planificador 144 ejec. 21.28 s (Ta prom. 147.8 ms)
+[2027-01-02] entregados=5417 fraccionados=80 en curso/pendientes=128 rutas=2547 km=112098 · planificador 144 ejec. 36.22 s (Ta prom. 251.5 ms)
+[2027-01-03] entregados=5676 fraccionados=93 en curso/pendientes=118 rutas=2672 km=117624 · planificador 144 ejec. 64.62 s (Ta prom. 448.8 ms)
+[2027-01-04] entregados=5924 fraccionados=102 en curso/pendientes=95 rutas=2793 km=122726 · planificador 144 ejec. 57.77 s (Ta prom. 401.2 ms)
+[2027-01-05] entregados=6194 fraccionados=111 en curso/pendientes=138 rutas=2941 km=129176 · planificador 144 ejec. 72.59 s (Ta prom. 504.1 ms)
+[2027-01-06] entregados=6479 fraccionados=124 en curso/pendientes=145 rutas=3085 km=135028 · planificador 144 ejec. 63.57 s (Ta prom. 441.5 ms)
+[2027-01-07] entregados=6735 fraccionados=141 en curso/pendientes=116 rutas=3216 km=140580 · planificador 144 ejec. 94.34 s (Ta prom. 655.2 ms)
+[2027-01-08] entregados=6976 fraccionados=146 en curso/pendientes=113 rutas=3342 km=145568 · planificador 144 ejec. 69.05 s (Ta prom. 479.5 ms)
+[2027-01-09] entregados=7231 fraccionados=150 en curso/pendientes=158 rutas=3464 km=150898 · planificador 144 ejec. 81.47 s (Ta prom. 565.8 ms)
+[2027-01-10] entregados=7509 fraccionados=169 en curso/pendientes=140 rutas=3614 km=157036 · planificador 144 ejec. 80.67 s (Ta prom. 560.2 ms)
+[2027-01-11] entregados=7783 fraccionados=184 en curso/pendientes=124 rutas=3742 km=162514 · planificador 144 ejec. 80.33 s (Ta prom. 557.9 ms)
+[2027-01-12] entregados=8043 fraccionados=198 en curso/pendientes=124 rutas=3870 km=168146 · planificador 144 ejec. 78.56 s (Ta prom. 545.6 ms)
+[2027-01-13] entregados=8303 fraccionados=209 en curso/pendientes=121 rutas=4006 km=173614 · planificador 144 ejec. 80.06 s (Ta prom. 556.0 ms)
+[2027-01-14] entregados=8543 fraccionados=215 en curso/pendientes=107 rutas=4124 km=178522 · planificador 144 ejec. 70.96 s (Ta prom. 492.8 ms)
+[2027-01-15] entregados=8792 fraccionados=220 en curso/pendientes=110 rutas=4242 km=183784 · planificador 144 ejec. 47.26 s (Ta prom. 328.2 ms)
+[2027-01-16] entregados=9048 fraccionados=226 en curso/pendientes=111 rutas=4374 km=189650 · planificador 144 ejec. 48.94 s (Ta prom. 339.9 ms)
+[2027-01-17] entregados=9307 fraccionados=232 en curso/pendientes=125 rutas=4496 km=194980 · planificador 144 ejec. 58.60 s (Ta prom. 406.9 ms)
+[2027-01-18] entregados=9567 fraccionados=249 en curso/pendientes=134 rutas=4638 km=200836 · planificador 144 ejec. 95.62 s (Ta prom. 664.0 ms)
+[2027-01-19] entregados=9818 fraccionados=274 en curso/pendientes=137 rutas=4776 km=206450 · planificador 144 ejec. 53.82 s (Ta prom. 373.8 ms)
+[2027-01-20] entregados=9994 fraccionados=280 en curso/pendientes=6 rutas=4842 km=209170 · planificador 144 ejec. 12.79 s (Ta prom. 88.8 ms)
+[2027-01-21] entregados=10000 fraccionados=280 en curso/pendientes=0 rutas=4846 km=209294 · planificador 15 ejec. 0.16 s (Ta prom. 10.4 ms)
+[2027-01-22] entregados=10000 fraccionados=280 en curso/pendientes=0 rutas=4846 km=209294 · planificador 0 ejec. 0.00 s (Ta prom. 0.0 ms)
+[2027-01-23] entregados=10000 fraccionados=280 en curso/pendientes=0 rutas=4846 km=209294 · planificador 0 ejec. 0.00 s (Ta prom. 0.0 ms)
+[2027-01-24] entregados=10000 fraccionados=280 en curso/pendientes=0 rutas=4846 km=209294 · planificador 0 ejec. 0.00 s (Ta prom. 0.0 ms)
+[2027-01-25] entregados=10000 fraccionados=280 en curso/pendientes=0 rutas=4846 km=209294 · planificador 0 ejec. 0.00 s (Ta prom. 0.0 ms)
+[2027-01-26] entregados=10000 fraccionados=280 en curso/pendientes=0 rutas=4846 km=209294 · planificador 0 ejec. 0.00 s (Ta prom. 0.0 ms)
+[2027-01-27] entregados=10000 fraccionados=280 en curso/pendientes=0 rutas=4846 km=209294 · planificador 0 ejec. 0.00 s (Ta prom. 0.0 ms)
+[2027-01-28] entregados=10000 fraccionados=280 en curso/pendientes=0 rutas=4846 km=209294 · planificador 0 ejec. 0.00 s (Ta prom. 0.0 ms)
+    [2027-01-29 22:50] mes 2027-02 cargado: 5000 pedidos, 595 bloqueos
+[2027-01-29] entregados=10000 fraccionados=280 en curso/pendientes=0 rutas=4846 km=209294 · planificador 0 ejec. 0.00 s (Ta prom. 0.0 ms)
+[2027-01-30] entregados=10000 fraccionados=280 en curso/pendientes=0 rutas=4846 km=209294 · planificador 0 ejec. 0.00 s (Ta prom. 0.0 ms)
+[2027-01-31] entregados=10000 fraccionados=280 en curso/pendientes=0 rutas=4846 km=209294 · planificador 5 ejec. 0.05 s (Ta prom. 10.9 ms)
+[2027-02-01] entregados=10163 fraccionados=280 en curso/pendientes=101 rutas=4933 km=213258 · planificador 144 ejec. 18.44 s (Ta prom. 128.1 ms)
+[2027-02-02] entregados=10406 fraccionados=284 en curso/pendientes=123 rutas=5049 km=218162 · planificador 144 ejec. 61.52 s (Ta prom. 427.2 ms)
+[2027-02-03] entregados=10659 fraccionados=299 en curso/pendientes=134 rutas=5189 km=223986 · planificador 144 ejec. 81.47 s (Ta prom. 565.8 ms)
+[2027-02-04] entregados=10937 fraccionados=320 en curso/pendientes=139 rutas=5348 km=230330 · planificador 144 ejec. 133.84 s (Ta prom. 929.5 ms)
+[2027-02-05] entregados=11193 fraccionados=345 en curso/pendientes=136 rutas=5494 km=236582 · planificador 144 ejec. 49.30 s (Ta prom. 342.4 ms)
+[2027-02-06] entregados=11481 fraccionados=374 en curso/pendientes=157 rutas=5665 km=243822 · planificador 144 ejec. 135.31 s (Ta prom. 939.7 ms)
+[2027-02-07] entregados=11789 fraccionados=414 en curso/pendientes=171 rutas=5853 km=251718 · planificador 144 ejec. 149.44 s (Ta prom. 1037.8 ms)
+[2027-02-08] entregados=12101 fraccionados=443 en curso/pendientes=148 rutas=6029 km=259212 · planificador 144 ejec. 155.38 s (Ta prom. 1079.0 ms)
+=====================================================================
+ CORRIDA DETENIDA MANUALMENTE el 2026-09-23 a las 14:16 (hora real), sin colapso.
+ Último día simulado completo: 2027-02-08. Solo se probó hasta esa fecha: no se sabe
+ cuándo colapsaría. Se detuvo por tiempo de cómputo (~1 s por ejecución del planificador).
+=====================================================================

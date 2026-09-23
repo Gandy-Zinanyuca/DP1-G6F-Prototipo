@@ -37,6 +37,7 @@ import java.util.List;
  *        [--colapso] [--dia N] [--hora N] [--ciclos N] [--sa MIN] [--k N] [--iteraciones N]
  *        [--semilla N] [--anio AAAA] [--mes MM] [--detalle] [--traza]
  *        [--csv-ciclos archivo.csv] [--csv-resumen archivo.csv]
+ *        [--sin-recargas] [--max-viajes N] [--sin-reprogramacion] [--holgura-reprogramacion MIN]
  * </pre>
  *
  * <p>El año y el mes se deducen del nombre del archivo de ventas ({@code ventas.AAAAMM.txt}); con
@@ -51,7 +52,8 @@ public final class DemoPlanificador {
             System.out.println("Uso: java pe.pucp.paqrap.DemoPlanificador <ventas.txt> "
                     + "[bloqueos.txt] [mantenimiento.txt] [--colapso] [--dia N] [--hora N] [--ciclos N] "
                     + "[--sa MIN] [--k N] [--iteraciones N] [--semilla N] [--anio AAAA] [--mes MM] "
-                    + "[--detalle] [--traza] [--csv-ciclos archivo] [--csv-resumen archivo]");
+                    + "[--detalle] [--traza] [--csv-ciclos archivo] [--csv-resumen archivo] "
+                    + "[--sin-recargas] [--max-viajes N] [--sin-reprogramacion] [--holgura-reprogramacion MIN]");
             return;
         }
 
@@ -69,6 +71,7 @@ public final class DemoPlanificador {
         Integer anio = null;
         Integer mes = null;
         boolean traza = false;
+        ParametrosPlanificador parPlan = new ParametrosPlanificador();
 
         List<String> posicionales = new ArrayList<>();
         for (int i = 1; i < args.length; i++) {
@@ -102,6 +105,18 @@ public final class DemoPlanificador {
                     break;
                 case "--csv-ciclos":
                     parSim.csvCiclos = Paths.get(args[++i]);
+                    break;
+                case "--sin-recargas":
+                    parPlan.permitirRecargas = false;
+                    break;
+                case "--max-viajes":
+                    parPlan.maxViajesPorRuta = Integer.parseInt(args[++i]);
+                    break;
+                case "--sin-reprogramacion":
+                    parPlan.permitirPostergacion = false;
+                    break;
+                case "--holgura-reprogramacion":
+                    parPlan.holguraMinimaPostergacionMin = Integer.parseInt(args[++i]);
                     break;
                 case "--csv-resumen":
                     parSim.csvResumen = Paths.get(args[++i]);
@@ -183,6 +198,9 @@ public final class DemoPlanificador {
         System.out.println("=====================================================================");
         System.out.printf("Mes inicial: %04d-%02d · %s%n", anio, mes, instancia);
         System.out.println("Almacenes: " + instancia.getAlmacenes());
+        System.out.printf("Recargas en ruta: %s · reprogramación: %s%n",
+                parPlan.permitirRecargas ? "sí (hasta " + parPlan.maxViajesPorRuta + " viajes por ruta)" : "no",
+                parPlan.permitirPostergacion ? "sí (holgura > " + parPlan.holguraMinimaPostergacionMin + " min)" : "no");
         System.out.printf("Sa=%d min · K=%d · Sc=%d min · maxIteraciones=%d · proporciónDestrucción=%.2f"
                         + " · semilla=%d · %s%n%n",
                 parSim.saMinutos, parAlns.k, parSim.scMinutos, parAlns.maxIteraciones,
@@ -192,7 +210,7 @@ public final class DemoPlanificador {
         YearMonth mesInicial = YearMonth.of(anio, mes);
         FuentesDeDatos fuentes = new FuentesDeDatos(ventas.toAbsolutePath().getParent(), carpetaBloqueos);
         Simulador simulador = new Simulador(instancia, mesInicial, fuentes, planificador, parSim,
-                new ParametrosPlanificador(), System.out);
+                parPlan, System.out);
 
         ResultadoSimulacion r = simulador.getResultado();
         r.parametros.put("algoritmo", planificador.nombre());
@@ -203,6 +221,9 @@ public final class DemoPlanificador {
         r.parametros.put("k", String.valueOf(parAlns.k));
         r.parametros.put("max_iteraciones", String.valueOf(parAlns.maxIteraciones));
         r.parametros.put("proporcion_destruccion", String.valueOf(parAlns.proporcionDestruccion));
+        r.parametros.put("recargas_en_ruta", parPlan.permitirRecargas ? "max" + parPlan.maxViajesPorRuta + "viajes" : "no");
+        r.parametros.put("reprogramacion", parPlan.permitirPostergacion
+                ? "holgura>" + parPlan.holguraMinimaPostergacionMin + "min" : "no");
 
         simulador.ejecutar();
 
