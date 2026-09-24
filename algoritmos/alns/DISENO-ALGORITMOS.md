@@ -21,17 +21,20 @@ inventario), tres tipos de unidad, hora límite por pedido y bloqueos de calles 
 **Restricciones duras** (una sola violación hace no factible la solución; un incumplimiento de
 plazo es colapso logístico):
 
-- capacidad de la unidad;
+- capacidad de la unidad **en cada viaje** y a lo sumo `maxViajesPorRuta` viajes por ruta (§4.4);
 - llegada a cada destino no posterior a su hora límite; 1 hora de entrega por destinatario;
 - disponibilidad de la unidad y ausencia de mantenimiento preventivo durante toda la ruta;
 - caminos calculados con CAMINO_MÁS_RÁPIDO respetando los bloqueos en la hora real de cruce;
-- todos los pedidos considerados asignados exactamente una vez;
+- la cantidad de cada pedido considerado cubierta exactamente, completa en una unidad o
+  repartida entre varias (ver §4.3), salvo los pedidos **reprogramables** (§4.5);
 - regreso a un almacén;
 - *adicionales al EVALUAR del ISA*: inventario no negativo en almacenes intermedios, hora de
   alimentación separada 1 h de los cambios de turno, y confinamiento al turno si
   `limitarRutaAlTurno` está activo.
 
-**Costo** (solo compara soluciones factibles): `Σ_r distanciaKm(r) × costoPorKm(τ(r))`.
+**Costo** (solo compara soluciones factibles): `Σ_r distanciaKm(r) × costoPorKm(τ(r))` más
+`penalizaciónPorPaquete × paquetes reprogramados` (1 000 000 por paquete: domina cualquier
+diferencia de distancia, así que solo se reprograma lo que no cabe).
 
 **Pedidos considerados en el instante T** (ventana de consumo `Sc = Sa × K`): los pendientes —no
 entregados, registrados hasta T— más los registrados en `(T, T + Sc]`. La ruta sale en
@@ -45,7 +48,7 @@ entregados, registrados hasta T— más los registrados en `(T, T + Sc]`. La rut
 Solucion                                   Ruta
  ├── rutas          : unidad → Ruta         ├── vehiculo, almacenOrigen, secuencia   (primarios)
  ├── noAsignados    : pedidos               └── derivados: distanciaKm, llegadas, salidas de
- ├── ubicacion      : pedido → unidad           tramo, retorno, alimentación, factible, motivo
+ ├── ubicacion      : parte → unidad            tramo, retorno, alimentación, factible, motivo
  ├── consumoAlmacen : almacén → unidades
  └── errores        : resultado de EVALUAR
 
@@ -58,11 +61,14 @@ orden estable y una semilla única garantizan reproducibilidad (LE008).
 
 ### 2.1 CAMINO_MÁS_RÁPIDO (`MapaUrbano.caminoMasRapido`)
 
-Cada calle unitaria guarda los intervalos `[inicio, fin)` de los bloqueos que la cierran. Dijkstra
-temporal ordenado por hora de llegada: una calle solo se cruza si el cruce completo no se solapa con
-un cierre; si se solapa, la unidad espera hasta el fin del bloqueo. Atajos exactos: si ningún bloqueo
-está activo durante la ventana de viaje, o si el camino en L no requiere esperas, la llegada
-Manhattan es óptima y no se ejecuta Dijkstra. Los resultados con bloqueos se memorizan.
+Cada calle unitaria guarda los intervalos `[inicio, fin)` de los bloqueos que la cierran (arreglo
+indexado por calle). Búsqueda A* temporal: la cola se ordena por llegada + distancia Manhattan
+restante × tiempo de cruce, cota consistente porque las esperas solo retrasan, así que da la misma
+llegada óptima que Dijkstra explorando menos nodos. Una calle solo se cruza si el cruce completo no
+se solapa con un cierre; si se solapa, la unidad espera hasta el fin del bloqueo. Atajos exactos: si
+ningún bloqueo está activo durante la ventana de viaje (búsqueda binaria sobre los intervalos), o si
+el camino en L no requiere esperas, la llegada Manhattan es óptima y no se ejecuta la búsqueda. Los
+resultados con bloqueos se memorizan.
 
 ---
 
@@ -90,7 +96,7 @@ RETORNAR mejorGlobal
 
 | Pieza del ISA | Implementación |
 |---|---|
-| GENERAR_SOLUCIÓN_INICIAL | `ConstructorInicial`: deadline ascendente, mejor inserción factible; si un pedido no cabe → no factible |
+| GENERAR_SOLUCIÓN_INICIAL | `ConstructorInicial`: deadline ascendente, mejor inserción factible; si no cabe completo en ninguna unidad se reparte (§4.3); si tampoco → no factible |
 | DETERMINAR_GRADO_DESTRUCCIÓN | `máx(1, round(total × proporción × (1 − 0,7·ocupación)))`; la reducción por ocupación se desactiva con `destruccionAdaptativaPorOcupacion` |
 | SELECCIONAR_OPERADOR | `SelectorAdaptativo.seleccionar`: ruleta con `valorAleatorio ≤ acumulado` |
 | ACTUALIZAR_PESOS | `peso ← peso·(1 − r) + r·(puntuaciónSegmento/usosSegmento)` |
@@ -125,9 +131,122 @@ Los dos operadores de dominio no usan el grado de destrucción.
 evaluando la ruta, y en unidades ociosas prueba cada almacén de origen con stock. El reparador por
 arrepentimiento memoriza las inserciones por (pedido, unidad) e invalida solo la unidad modificada.
 
+### 4.3 Pedidos repartidos entre unidades
+
+Un pedido puede dividirse entre vehículos. Las rutas transportan *partes*: el pedido completo o
+una fracción (`Pedido.fraccion(q)`: mismo id, destino, registro y hora límite, cantidad `q`).
+
+```
+INSERTAR_FRACCIONADO(pedido)          // solo si ninguna unidad admite el pedido completo
+restante ← cantidad
+MIENTRAS restante > 0
+    PARA CADA unidad disponible que no lleve ya una parte del pedido
+        q ← mín(restante, capacidad libre) ; mejor inserción factible de una fracción de q
+    aplicar la fracción de mayor q (desempate: menor costo)
+    SI no existe → deshacer lo aplicado ; fallar
+    restante ← restante − q
+```
+
+- Lo usan `ConstructorInicial` y los dos reparadores como alternativa antes de marcar un pedido
+  como no asignado (el de arrepentimiento reparte primero el pendiente de menor deadline).
+- Tras cada destrucción, las partes removidas de un mismo pedido se fusionan
+  (`Solucion.consolidar`) para reinsertarlas juntas y fraccionar solo si hace falta.
+- EVALUAR verifica la cobertura por cantidad: Σ partes asignadas = cantidad pendiente del pedido.
+- Se evalúa igual que la solución inicial de Búsqueda Tabú, que también fracciona como último
+  recurso, para que ambos algoritmos resuelvan el mismo problema.
+
+### 4.4 Rutas con recarga (viajes múltiples)
+
+El curso permite que una unidad recargue en cualquier almacén con stock y siga repartiendo
+(preguntas y respuestas, pregunta 10; la hoja Flota fija un mínimo de viajes diarios: auto 3,
+moto 6, bicicleta 2,1). La ruta sigue siendo *(unidad, almacén de origen, secuencia)*; los viajes
+se **derivan** de la secuencia:
+
+```
+carga ← 0 ; almacén ← origen
+PARA CADA pedido de la secuencia
+    SI carga + cantidad > capacidad
+        ir al almacén más cercano con stock para el siguiente viaje ; recargar ; carga ← 0
+    entregar ; carga ← carga + cantidad
+regresar al almacén más cercano
+```
+
+- Los operadores no cambian: la posición en que se inserta un pedido decide también si la unidad
+  sigue la ruta o vuelve antes a recargar.
+- Capacidad por viaje; a lo sumo `maxViajesPorRuta` viajes (3), que acota el horizonte de la ruta
+  y el costo de la búsqueda; el plan se rehace cada Sa.
+- El inventario se descuenta en el almacén donde carga cada viaje; la solución suma los consumos
+  de todas las rutas (restricción global).
+- La hora de alimentación se ubica en el turno en que arranca la ruta, como antes.
+- Podas de la inserción que no cambian las soluciones factibles: se descarta la unidad si el
+  pedido no cabe ni usando todos sus viajes, se deja de probar posiciones una vez que la parada
+  previa llega después de la hora límite del pedido, y el inventario solo se revisa en los
+  almacenes intermedios que usa la ruta modificada.
+
+### 4.5 Reprogramación de pedidos con holgura
+
+Un pedido cuya hora límite está a más de `holguraMinimaPostergacionMin` (240 min) del instante T
+puede quedar sin asignar en el plan: se atenderá en un ciclo posterior. No hace infactible la
+solución, pero cada paquete reprogramado suma la penalización al costo. GENERAR_SOLUCIÓN_INICIAL
+sigue igual, salvo que un pedido que no cabe y es reprogramable no detiene la construcción (sí la
+detiene uno que no lo es). Un pedido que ya no es reprogramable y no cabe provoca el colapso.
+
+### 4.6 Solución inicial con plan previo
+
+```
+heredada ← plan vigente sin lo despachado, con los pedidos nuevos insertados (voraz)
+desdeCero ← GENERAR_SOLUCIÓN_INICIAL
+inicial ← la factible; entre dos factibles, la de menor costo
+```
+
+La reoptimización incremental ya no puede dejar un plan infactible cuando replanificar desde cero
+lo resolvería (causa de la mitad de los colapsos en la campaña con el modelo anterior).
+
 ---
 
-## 5. Parámetros (`ParametrosALNS`)
+## 5. Simulación y escenario de colapso (`simulacion.Simulador`)
+
+```
+t ← día 1, 00:00 del mes inicial
+REPETIR
+    cargar el mes siguiente si t + Sc + 48 h lo alcanza (ventas y bloqueos desplazados)
+    registrar entregas con llegada ≤ t ; liberar unidades que regresaron
+    SI una entrega llegó tarde → COLAPSO
+    SI cambió el día → recargar almacenes intermedios
+    SI vence el plazo de un pedido sin despachar → COLAPSO
+    ctx ← pedidos de la ventana (solo la cantidad no despachada) y unidades disponibles
+    plan ← ALNS(ctx, planVigente)
+    SI plan no es factible → COLAPSO
+    despachar los viajes que salen antes de t + Sa ; planVigente ← plan
+    t ← t + Sa
+HASTA colapso, fin de los datos o límite de ciclos
+```
+
+- **Despacho progresivo por viaje**: un viaje despachado compromete la unidad hasta que llega al
+  almacén donde termina y descuenta el inventario del almacén donde carga; los viajes siguientes
+  y las demás rutas se replanifican en el ciclo siguiente partiendo del plan vigente.
+- **Diagnóstico del colapso** (`DiagnosticoColapso`): demanda de la ventana frente a la capacidad
+  de un viaje, si el pedido cabe solo o en un segundo viaje, la misma prueba y una replanificación
+  sin bloqueos, replanificación desde cero, arrepentimiento desde vacío y mantenimientos.
+- **Entregas**: un pedido pasa a entregado cuando el reloj alcanza la llegada de su última parte.
+  Todas las partes conservan registro, destino y hora límite del pedido, y cada una debe llegar
+  antes de esa hora.
+- **Pendientes en el punto de inicio**: los pedidos registrados antes del arranque con plazo
+  vigente se mantienen, incluidos los del mes anterior (y sus bloqueos vigentes). Al cambiar de
+  mes, los pendientes y las rutas en curso continúan sin corte.
+- **Reloj global**: minutos desde el día 1 del mes inicial; los mantenimientos se ubican por fecha
+  de calendario, así que siguen aplicando al encadenar meses. Los bloqueos ya terminados se
+  descartan al cargar cada mes.
+- **Métricas** (`ResultadoSimulacion`): instante y causa del colapso, días simulados, ciclos,
+  tiempo real de la corrida, Σ Ta con su promedio y máximo, pedidos registrados, entregados y
+  fraccionados, rutas, km y costo. `--csv-resumen` agrega una fila por corrida y `--csv-ciclos`
+  guarda una fila por ciclo.
+- El modo `--colapso` usa `PlanificadorALNS.paraColapso()` (destrucción de 0,10) y sin límite de
+  ciclos; `--iteraciones` reemplaza su número de iteraciones.
+
+---
+
+## 6. Parámetros (`ParametrosALNS`)
 
 El ISA no fija valores; los siguientes son puntos de partida para la calibración.
 
@@ -150,7 +269,7 @@ aceptados, rechazados, nuevasMejores, iteraciónMejor, Ta (ms), factible, errore
 
 ---
 
-## 6. Puntos a reflejar en el ISA
+## 7. Puntos a reflejar en el ISA
 
 1. EVALUAR debe listar el inventario de almacenes intermedios, la hora de alimentación y el turno
    como restricciones duras, y las estructuras deben incluir `Almacen`.
@@ -158,9 +277,14 @@ aceptados, rechazados, nuevasMejores, iteraciónMejor, Ta (ms), factible, errore
 3. La ventana de pedidos incluye los pendientes registrados antes de T además de `(T, T+Sc]`.
 4. Forma concreta de la reducción por ocupación: `proporción × (1 − 0,7·ocupación)`.
 5. vehicle-failure removal considera también unidades averiadas (no solo mantenimiento).
-6. EVALUAR de ALNS es una implementación equivalente dentro de este módulo, no la misma clase
+6. Los pedidos pueden repartirse entre varias unidades (§4.3): GENERAR_SOLUCIÓN_INICIAL y
+   APLICAR_REPARACIÓN fraccionan antes de declarar un pedido no asignado, y EVALUAR verifica la
+   cobertura por cantidad.
+7. EVALUAR de ALNS es una implementación equivalente dentro de este módulo, no la misma clase
    que la de TS (módulos Java separados).
-7. Con el esquema de puntuación del ISA, una iteración en la que blocked-arc o vehicle-failure no
+8. Con el esquema de puntuación del ISA, una iteración en la que blocked-arc o vehicle-failure no
    remueven nada produce un candidato de igual costo que se acepta con
    `puntuacionAceptacionNoMejora`; esos operadores ganan peso sin aportar. Conviene decidir si una
    destrucción vacía debe puntuar como rechazo.
+9. Rutas con recarga (§4.4), reprogramación con penalización (§4.5) y solución inicial con
+   plan previo (§4.6) extienden EVALUAR y GENERAR_SOLUCIÓN_INICIAL del ISA.

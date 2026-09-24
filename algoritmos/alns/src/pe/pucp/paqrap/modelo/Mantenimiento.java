@@ -3,9 +3,12 @@ package pe.pucp.paqrap.modelo;
 /**
  * Mantenimiento preventivo programado de una unidad.
  *
- * <p>Formato del archivo {@code mant.preventivo}: {@code AAAAMMDD:TXNN}, una línea por
- * unidad y fecha. La unidad queda fuera de servicio durante todo el día indicado, por lo que
- * el planificador la excluye del conjunto de unidades asignables de ese día.</p>
+ * <p>
+ * Formato del archivo {@code mant.preventivo}: {@code AAAAMMDD:TXNN}, una línea
+ * por unidad y fecha. La unidad queda fuera de servicio durante todo el día
+ * indicado, por lo que el planificador la excluye del conjunto de unidades
+ * asignables de ese día.
+ * </p>
  */
 public class Mantenimiento {
 
@@ -33,11 +36,17 @@ public class Mantenimiento {
         return diaDelMes;
     }
 
+    public java.time.LocalDate getFecha() {
+        return java.time.LocalDate.of(anio, mes, diaDelMes);
+    }
+
     public String getCodigoUnidad() {
         return codigoUnidad;
     }
 
-    /** Indica si el mantenimiento afecta al día simulado indicado del mes cargado. */
+    /**
+     * Indica si el mantenimiento afecta al día simulado indicado del mes cargado.
+     */
     public boolean afectaDia(int anioSimulado, int mesSimulado, int dia) {
         return anio == anioSimulado && mes == mesSimulado && diaDelMes == dia;
     }

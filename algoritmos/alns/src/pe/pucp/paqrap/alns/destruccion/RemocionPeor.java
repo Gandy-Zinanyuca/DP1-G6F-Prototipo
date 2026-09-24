@@ -23,9 +23,12 @@ import java.util.Random;
  *     retirar pedido de su ruta en parcial
  * </pre>
  *
- * <p>Retirar un pedido solo altera el costo de su ruta, así que costo(parcial) − costo(parcial
- * sin pedido) = costo(ruta) − costo(ruta sin pedido). Tras cada retiro solo se recalculan los
- * valores de los pedidos de la ruta modificada; los demás no cambian.</p>
+ * <p>
+ * Retirar un pedido solo altera el costo de su ruta, así que costo(parcial) −
+ * costo(parcial sin pedido) = costo(ruta) − costo(ruta sin pedido). Tras cada
+ * retiro solo se recalculan los valores de los pedidos de la ruta modificada;
+ * los demás no cambian.
+ * </p>
  */
 public class RemocionPeor implements OperadorDestruccion {
 

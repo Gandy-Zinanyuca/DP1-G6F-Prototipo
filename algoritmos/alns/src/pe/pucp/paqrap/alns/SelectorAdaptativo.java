@@ -4,14 +4,16 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Mecanismo adaptativo del ALNS (ISA 5.2): SELECCIONAR_OPERADOR y ACTUALIZAR_PESOS.
+ * Mecanismo adaptativo del ALNS (ISA 5.2): SELECCIONAR_OPERADOR y
+ * ACTUALIZAR_PESOS.
  *
  * <ol>
- *   <li>Selección por ruleta: se sortea un valor uniforme en [0, Σ pesos) y se elige el primer
- *       operador cuyo peso acumulado lo alcance.</li>
- *   <li>Cada operador acumula puntuaciónSegmento y usosSegmento en cada iteración.</li>
- *   <li>Al cerrar el segmento: peso ← peso · (1 − r) + r · (puntuaciónSegmento / usosSegmento)
- *       para los operadores usados, y los contadores se reinician.</li>
+ * <li>Selección por ruleta: se sortea un valor uniforme en [0, Σ pesos) y se
+ * elige el primer operador cuyo peso acumulado lo alcance.</li>
+ * <li>Cada operador acumula puntuaciónSegmento y usosSegmento en cada
+ * iteración.</li>
+ * <li>Al cerrar el segmento: peso ← peso · (1 − r) + r · (puntuaciónSegmento /
+ * usosSegmento) para los operadores usados, y los contadores se reinician.</li>
  * </ol>
  *
  * @param <T> tipo de operador administrado (destrucción o reparación)

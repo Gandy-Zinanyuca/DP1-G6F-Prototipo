@@ -15,15 +15,21 @@ import java.util.List;
 /**
  * Lector del archivo mensual de ventas (LE003, LE009).
  *
- * <p>Formato de línea: {@code DDdHHhMMm:x,y,cCCCC,cantidad,plazo}, por ejemplo
- * {@code 01d01h30m:56,30,c4910,02,36}. Los campos son, en orden: instante de registro del
- * pedido, coordenadas del nodo de destino, código de cliente, cantidad de producto P y plazo
- * comprometido en horas (36 regular; 4, 8, 12 o 18 priorizado).</p>
+ * <p>
+ * Formato de línea: {@code DDdHHhMMm:x,y,cCCCC,cantidad,plazo}, por ejemplo
+ * {@code 01d01h30m:56,30,c4910,02,36}. Los campos son, en orden: instante de
+ * registro del pedido, coordenadas del nodo de destino, código de cliente,
+ * cantidad de producto P y plazo comprometido en horas (36 regular; 4, 8, 12 o
+ * 18 priorizado).
+ * </p>
  *
- * <p>La lectura es determinista: los pedidos se numeran de forma correlativa en el orden en
- * que aparecen en el archivo, de modo que dos ejecuciones sobre la misma entrada producen los
- * mismos identificadores (LE008, LE009). Las líneas malformadas se omiten y se contabilizan
- * en {@link Resultado#omitidos} sin abortar la carga (LE011).</p>
+ * <p>
+ * La lectura es determinista: los pedidos se numeran de forma correlativa en el
+ * orden en que aparecen en el archivo, de modo que dos ejecuciones sobre la
+ * misma entrada producen los mismos identificadores (LE008, LE009). Las líneas
+ * malformadas se omiten y se contabilizan en {@link Resultado#omitidos} sin
+ * abortar la carga (LE011).
+ * </p>
  */
 public final class CargadorVentas {
 
@@ -44,10 +50,20 @@ public final class CargadorVentas {
     }
 
     public static Resultado cargar(Path archivo) throws IOException {
+        return cargar(archivo, 0, 1);
+    }
+
+    /**
+     * Carga un archivo mensual cuyo día 1, 00:00, corresponde al minuto
+     * {@code desplazamiento} del reloj de la simulación; se usa al encadenar meses.
+     * Los pedidos se numeran desde {@code idInicial} para que los identificadores
+     * no se repitan entre meses.
+     */
+    public static Resultado cargar(Path archivo, int desplazamiento, int idInicial) throws IOException {
         List<Pedido> pedidos = new ArrayList<>();
         List<String> motivos = new ArrayList<>();
         int omitidos = 0;
-        int siguienteId = 1;
+        int siguienteId = idInicial;
         int numeroLinea = 0;
 
         try (BufferedReader br = Files.newBufferedReader(archivo, StandardCharsets.UTF_8)) {
@@ -59,7 +75,7 @@ public final class CargadorVentas {
                     continue;
                 }
                 try {
-                    pedidos.add(parsear(linea, siguienteId));
+                    pedidos.add(parsear(linea, siguienteId, desplazamiento));
                     siguienteId++;
                 } catch (RuntimeException e) {
                     omitidos++;
@@ -71,12 +87,12 @@ public final class CargadorVentas {
     }
 
     /** Parsea una línea del archivo de ventas al modelo de pedido. */
-    static Pedido parsear(String linea, int id) {
+    static Pedido parsear(String linea, int id, int desplazamiento) {
         int sep = linea.indexOf(':');
         if (sep < 0) {
             throw new IllegalArgumentException("falta el separador ':'");
         }
-        int minutoRegistro = parsearInstante(linea.substring(0, sep));
+        int minutoRegistro = desplazamiento + parsearInstante(linea.substring(0, sep));
         String[] campos = linea.substring(sep + 1).split(",");
         if (campos.length != 5) {
             throw new IllegalArgumentException("se esperaban 5 campos, hay " + campos.length);
@@ -99,7 +115,10 @@ public final class CargadorVentas {
         return new Pedido(id, cliente, destino, cantidad, minutoRegistro, plazo);
     }
 
-    /** Convierte el sello de tiempo {@code DDdHHhMMm} a minutos absolutos de simulación. */
+    /**
+     * Convierte el sello de tiempo {@code DDdHHhMMm} a minutos absolutos de
+     * simulación.
+     */
     static int parsearInstante(String sello) {
         String s = sello.trim();
         int posD = s.indexOf('d');

@@ -14,13 +14,18 @@ import java.util.List;
 /**
  * Lector del archivo mensual de bloqueos de calles (LE073, LE075, LE081).
  *
- * <p>Formato de línea: {@code DDdHHhMMm-DDdHHhMMm:x1,y1,x2,y2,...,xn,yn}, por ejemplo
- * {@code 01d02h22m-01d04h42m:25,45,45,45,45,40}. El primer campo es el intervalo de vigencia
- * y el segundo una polilínea de nodos cuyos tramos quedan cerrados en ambos sentidos.</p>
+ * <p>
+ * Formato de línea: {@code DDdHHhMMm-DDdHHhMMm:x1,y1,x2,y2,...,xn,yn}, por
+ * ejemplo {@code 01d02h22m-01d04h42m:25,45,45,45,45,40}. El primer campo es el
+ * intervalo de vigencia y el segundo una polilínea de nodos cuyos tramos quedan
+ * cerrados en ambos sentidos.
+ * </p>
  *
- * <p>Se rechazan las líneas con número impar de coordenadas, con vértices fuera de la
- * retícula (LE081) o con intervalo invertido, informando el motivo sin interrumpir la carga
- * del resto del archivo.</p>
+ * <p>
+ * Se rechazan las líneas con número impar de coordenadas, con vértices fuera de
+ * la retícula (LE081) o con intervalo invertido, informando el motivo sin
+ * interrumpir la carga del resto del archivo.
+ * </p>
  */
 public final class CargadorBloqueos {
 
@@ -40,6 +45,14 @@ public final class CargadorBloqueos {
     }
 
     public static Resultado cargar(Path archivo) throws IOException {
+        return cargar(archivo, 0);
+    }
+
+    /**
+     * Carga un archivo mensual cuyo día 1, 00:00, corresponde al minuto
+     * {@code desplazamiento} del reloj de la simulación; se usa al encadenar meses.
+     */
+    public static Resultado cargar(Path archivo, int desplazamiento) throws IOException {
         List<Bloqueo> bloqueos = new ArrayList<>();
         List<String> motivos = new ArrayList<>();
         int omitidos = 0;
@@ -54,7 +67,7 @@ public final class CargadorBloqueos {
                     continue;
                 }
                 try {
-                    bloqueos.add(parsear(linea));
+                    bloqueos.add(parsear(linea, desplazamiento));
                 } catch (RuntimeException e) {
                     omitidos++;
                     motivos.add("Línea " + numeroLinea + ": " + e.getMessage());
@@ -64,7 +77,7 @@ public final class CargadorBloqueos {
         return new Resultado(bloqueos, omitidos, motivos);
     }
 
-    static Bloqueo parsear(String linea) {
+    static Bloqueo parsear(String linea, int desplazamiento) {
         int sep = linea.indexOf(':');
         if (sep < 0) {
             throw new IllegalArgumentException("falta el separador ':'");
@@ -74,8 +87,8 @@ public final class CargadorBloqueos {
         if (guion < 0) {
             throw new IllegalArgumentException("intervalo sin guion separador");
         }
-        int inicio = CargadorVentas.parsearInstante(intervalo.substring(0, guion));
-        int fin = CargadorVentas.parsearInstante(intervalo.substring(guion + 1));
+        int inicio = desplazamiento + CargadorVentas.parsearInstante(intervalo.substring(0, guion));
+        int fin = desplazamiento + CargadorVentas.parsearInstante(intervalo.substring(guion + 1));
         if (fin < inicio) {
             throw new IllegalArgumentException("intervalo invertido");
         }
@@ -86,9 +99,7 @@ public final class CargadorBloqueos {
         }
         List<Coordenada> vertices = new ArrayList<>(campos.length / 2);
         for (int i = 0; i < campos.length; i += 2) {
-            Coordenada c = new Coordenada(
-                    Integer.parseInt(campos[i].trim()),
-                    Integer.parseInt(campos[i + 1].trim()));
+            Coordenada c = new Coordenada(Integer.parseInt(campos[i].trim()), Integer.parseInt(campos[i + 1].trim()));
             if (!c.dentroDelMapa()) {
                 throw new IllegalArgumentException("vértice fuera de la retícula: " + c);
             }

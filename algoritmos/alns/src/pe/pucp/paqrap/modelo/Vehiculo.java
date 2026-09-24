@@ -3,20 +3,19 @@ package pe.pucp.paqrap.modelo;
 /**
  * Unidad de transporte de la flota.
  *
- * <p>La instancia representa el estado de la unidad en el instante en que arranca un ciclo
- * de planificación: dónde está, desde cuándo queda libre y si ya consumió su hora de
- * alimentación en el turno vigente. El planificador nunca modifica este estado; construye
- * rutas sobre él y devuelve la asignación al simulador, que es quien avanza el reloj.</p>
+ * <p>
+ * La instancia representa el estado de la unidad en el instante en que arranca
+ * un ciclo de planificación: dónde está, desde cuándo queda libre y si ya
+ * consumió su hora de alimentación en el turno vigente. El planificador nunca
+ * modifica este estado; construye rutas sobre él y devuelve la asignación al
+ * simulador, que es quien avanza el reloj.
+ * </p>
  */
 public class Vehiculo {
 
     /** Estados operativos de la unidad (LE042, LE076, LE087, LE089). */
     public enum Estado {
-        DISPONIBLE,
-        EN_RUTA,
-        AVERIADO,
-        EN_MANTENIMIENTO,
-        EN_ALIMENTACION
+        DISPONIBLE, EN_RUTA, AVERIADO, EN_MANTENIMIENTO, EN_ALIMENTACION
     }
 
     private final String codigo;
@@ -96,14 +95,16 @@ public class Vehiculo {
     }
 
     /**
-     * Indica si la unidad admite nuevas asignaciones en el ciclo actual (LE087, LE089):
-     * solo las unidades disponibles o ya en ruta pueden recibir pedidos.
+     * Indica si la unidad admite nuevas asignaciones en el ciclo actual (LE087,
+     * LE089): solo las unidades disponibles o ya en ruta pueden recibir pedidos.
      */
     public boolean asignable() {
         return estado == Estado.DISPONIBLE || estado == Estado.EN_RUTA;
     }
 
-    /** Clave de identidad de la unidad en la solución (una ruta por unidad y ciclo). */
+    /**
+     * Clave de identidad de la unidad en la solución (una ruta por unidad y ciclo).
+     */
     @Override
     public String toString() {
         return codigo + "[" + tipo + " cap=" + getCapacidad() + " @" + posicion + "]";

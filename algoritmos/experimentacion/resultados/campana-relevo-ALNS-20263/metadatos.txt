@@ -1,0 +1,11 @@
+Reglas experimentales v3: bloqueos incluidos, sin averias ni mantenimiento; alimentacion v2
+Argumentos: [ALNS, algoritmos/alns/data/ventas.v20260909, algoritmos/alns/data/bloqueos.v20260909, -, 2026-01, algoritmos/experimentacion/resultados/campana-relevo-ALNS-20263, 300, 20263]
+Java: 17.0.20.1
+Parametros: ParametrosOperacion[servicioMinutos=60, plazoIncluyeServicio=true, turnoMinutos=480, inicioTurnoMinuto=420, descansoDesde=60, descansoHasta=420, descansoMinutos=60, tamanioParte=4, costoFijoVehiculo=50.0, penalizacionPaquetePendiente=1000000.0, velocidades={TM=25.0, TA=40.0, TB=12.0}]
+Almacenes: [Almacen[id=CENTRAL, nodo=(27,14), stock=0, ilimitado=true], Almacen[id=NOROESTE, nodo=(12,38), stock=1000, ilimitado=false], Almacen[id=ESTE, nodo=(57,27), stock=1000, ilimitado=false]]
+Pedidos: 160010
+Solo pedidos registrados; sin anticipacion de demanda. Inicio sin operaciones previas.
+Instancia SHA-256: e34cee7bcc08516fb00dc86e13514bd27bdf743c14b8e0c2d199f9ecda5b35b1
+Iteraciones=300; semillas=20263; Sa=10; ciclos=0; factor=1.0
+TS: tenencia=7, candidatos=400; ALNS: destruccion=4, segmento=5, reaccion=0.7, temperatura=0.05; presupuesto temporal=0
+Averias: excluidas. Mantenimiento: excluido. Bloqueos: archivos mensuales suministrados.

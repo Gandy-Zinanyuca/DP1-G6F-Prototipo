@@ -10,12 +10,20 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * GENERAR_SOLUCIÓN_INICIAL del ISA (sección 5.1), reutilizada sin modificaciones por ALNS.
+ * GENERAR_SOLUCIÓN_INICIAL del ISA (sección 5.1), reutilizada sin
+ * modificaciones por ALNS.
  *
- * <p>Construcción determinista —no es otra metaheurística—: los pedidos se ordenan por
- * deadline ascendente y cada uno se inserta en la posición factible de menor costo. Si algún
- * pedido no admite inserción factible, se marca como no asignado y la solución inicial es no
- * factible.</p>
+ * <p>
+ * Construcción determinista —no es otra metaheurística—: los pedidos se ordenan
+ * por deadline ascendente y cada uno se inserta en la posición factible de
+ * menor costo. Si ninguna unidad admite el pedido completo, se reparte entre
+ * varias ({@link EvaluadorInsercion#insertarFraccionado}), igual que en la
+ * solución inicial de Búsqueda Tabú. Si tampoco así admite inserción factible,
+ * se marca como no asignado: si el pedido todavía tiene holgura para atenderse
+ * en un ciclo posterior ({@link ContextoPlanificacion#esPostergable}) queda
+ * reprogramado y la construcción sigue; si no, la solución inicial es no
+ * factible.
+ * </p>
  */
 public final class ConstructorInicial {
 
@@ -26,17 +34,24 @@ public final class ConstructorInicial {
         Solucion s = new Solucion();
 
         List<Pedido> ordenados = new ArrayList<>(ctx.getPedidosPorAtender());
-        ordenados.sort(Comparator
-                .comparingInt(Pedido::getMinutoLimite)
-                .thenComparingInt(Pedido::getId));       // desempate estable ⇒ reproducible
+        ordenados.sort(Comparator.comparingInt(Pedido::getMinutoLimite).thenComparingInt(Pedido::getId)); // desempate
+                                                                                                          // estable ⇒
+                                                                                                          // reproducible
 
         for (Pedido p : ordenados) {
             Insercion mejor = EvaluadorInsercion.mejorInsercion(s, p, ctx);
-            if (mejor == null) {
-                s.marcarNoAsignado(p);
-                break;   // RETORNAR solución inicial no factible
+            if (mejor != null) {
+                EvaluadorInsercion.aplicar(s, mejor, p, ctx);
+                continue;
             }
-            EvaluadorInsercion.aplicar(s, mejor, p, ctx);
+            // No cabe completo en ninguna unidad: se intenta repartir antes de rendirse.
+            if (!EvaluadorInsercion.insertarFraccionado(s, p, ctx)) {
+                s.marcarNoAsignado(p);
+                if (ctx.esPostergable(p)) {
+                    continue; // reprogramado: se atenderá en un ciclo posterior
+                }
+                break; // RETORNAR solución inicial no factible
+            }
         }
 
         s.evaluar(ctx);

@@ -21,9 +21,12 @@ import java.util.Set;
  *         retirar cada pedido de esa ruta cuyo trayecto use un arco bloqueado
  * </pre>
  *
- * <p>El camino de cada tramo se obtiene con la misma función CAMINO_MÁS_RÁPIDO usada en la
- * evaluación de factibilidad, de modo que un arco se considera afectado bajo el mismo criterio.
- * El operador no usa el grado de destrucción: retira todos los pedidos afectados.</p>
+ * <p>
+ * El camino de cada tramo se obtiene con la misma función CAMINO_MÁS_RÁPIDO
+ * usada en la evaluación de factibilidad, de modo que un arco se considera
+ * afectado bajo el mismo criterio. El operador no usa el grado de destrucción:
+ * retira todos los pedidos afectados.
+ * </p>
  */
 public class RemocionPorArcoBloqueado implements OperadorDestruccion {
 

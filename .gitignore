@@ -30,3 +30,5 @@ desktop.ini
 
 # ── Empaquetados que no deben versionarse ────────────────
 *.zip
+
+# Los resultados experimentales (CSV, TXT, MD y figuras) se versionan.

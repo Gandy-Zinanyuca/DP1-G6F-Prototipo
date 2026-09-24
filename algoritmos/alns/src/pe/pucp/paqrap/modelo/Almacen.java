@@ -3,14 +3,20 @@ package pe.pucp.paqrap.modelo;
 /**
  * Almacén de producto P: uno central de inventario ilimitado y dos intermedios.
  *
- * <p>Posiciones fijas según LE049: central en (25,15), intermedio Nor-Oeste en (12,38) e
- * intermedio Este en (55,27). Los intermedios tienen capacidad configurable con valor por
- * defecto de 1 000 unidades (LE031) y se recargan de forma instantánea a las 23:59:59 de cada
- * día simulado (LE033). El central se trata como inventario ilimitado (LE030).</p>
+ * <p>
+ * Posiciones vigentes: central en (27,14), intermedio Nor-Oeste en (12,38) e
+ * intermedio Este en (57,27). Los intermedios tienen capacidad configurable con
+ * valor por defecto de 1 000 unidades (LE031) y se recargan de forma
+ * instantánea a las 23:59:59 de cada día simulado (LE033). El central se trata
+ * como inventario ilimitado (LE030).
+ * </p>
  *
- * <p>El planificador consume inventario de forma tentativa durante la construcción de rutas:
- * cada ruta descuenta del almacén de origen la suma de las cantidades que carga, y ninguna
- * asignación puede dejar el stock por debajo de cero (LE019).</p>
+ * <p>
+ * El planificador consume inventario de forma tentativa durante la construcción
+ * de rutas: cada ruta descuenta del almacén de origen la suma de las cantidades
+ * que carga, y ninguna asignación puede dejar el stock por debajo de cero
+ * (LE019).
+ * </p>
  */
 public class Almacen {
 
@@ -31,13 +37,13 @@ public class Almacen {
         this.stock = central ? Integer.MAX_VALUE : capacidad;
     }
 
-    /** Construye la configuración estándar de los tres almacenes de PaqRap (LE049). */
+    /**
+     * Construye la configuración estándar de los tres almacenes de PaqRap (LE049).
+     */
     public static Almacen[] configuracionEstandar(int capacidadIntermedios) {
-        return new Almacen[]{
-                new Almacen("ALM-CENTRAL", new Coordenada(25, 15), true, Integer.MAX_VALUE),
+        return new Almacen[] { new Almacen("ALM-CENTRAL", new Coordenada(27, 14), true, Integer.MAX_VALUE),
                 new Almacen("ALM-NOROESTE", new Coordenada(12, 38), false, capacidadIntermedios),
-                new Almacen("ALM-ESTE", new Coordenada(55, 27), false, capacidadIntermedios)
-        };
+                new Almacen("ALM-ESTE", new Coordenada(57, 27), false, capacidadIntermedios) };
     }
 
     public String getId() {
@@ -64,7 +70,10 @@ public class Almacen {
         return central || stock >= cantidad;
     }
 
-    /** Descuenta unidades al asignar un pedido a una ruta (LE032); nunca deja stock negativo. */
+    /**
+     * Descuenta unidades al asignar un pedido a una ruta (LE032); nunca deja stock
+     * negativo.
+     */
     public void descontar(int cantidad) {
         if (central) {
             return;
@@ -75,7 +84,9 @@ public class Almacen {
         stock -= cantidad;
     }
 
-    /** Devuelve unidades al deshacer una asignación tentativa durante la búsqueda. */
+    /**
+     * Devuelve unidades al deshacer una asignación tentativa durante la búsqueda.
+     */
     public void devolver(int cantidad) {
         if (central) {
             return;
@@ -83,7 +94,9 @@ public class Almacen {
         stock = Math.min(capacidad, stock + cantidad);
     }
 
-    /** Recarga instantánea hasta la capacidad máxima a las 23:59:59 (LE033, LE034). */
+    /**
+     * Recarga instantánea hasta la capacidad máxima a las 23:59:59 (LE033, LE034).
+     */
     public void recargar() {
         if (!central) {
             stock = capacidad;
@@ -91,11 +104,13 @@ public class Almacen {
     }
 
     /**
-     * Nivel de semáforo del inventario (LE028, LE029). El almacén central, al ser ilimitado,
-     * se reporta siempre en verde.
+     * Nivel de semáforo del inventario (LE028, LE029). El almacén central, al ser
+     * ilimitado, se reporta siempre en verde.
      *
-     * @param umbralAmbar fracción de capacidad por debajo de la cual el nivel es ámbar
-     * @param umbralRojo  fracción de capacidad por debajo de la cual el nivel es rojo
+     * @param umbralAmbar fracción de capacidad por debajo de la cual el nivel es
+     *                    ámbar
+     * @param umbralRojo  fracción de capacidad por debajo de la cual el nivel es
+     *                    rojo
      */
     public String semaforo(double umbralAmbar, double umbralRojo) {
         if (central) {

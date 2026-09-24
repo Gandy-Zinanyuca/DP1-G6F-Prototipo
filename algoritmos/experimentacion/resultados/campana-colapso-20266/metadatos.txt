@@ -1,0 +1,10 @@
+Simulacion comparable: reglas alimentacion v2 (banda de inicio y hora continua inactiva)
+Argumentos: [AMBOS, algoritmos/alns/data/ventas.v20260909, algoritmos/alns/data/bloqueos.v20260909, algoritmos/alns/data/mant.preventivo.09.10.txt, 2026-01, algoritmos/experimentacion/resultados/campana-colapso-20266, 300, 20266]
+Java: 17.0.20.1
+Parametros: ParametrosOperacion[servicioMinutos=60, plazoIncluyeServicio=true, turnoMinutos=480, inicioTurnoMinuto=420, descansoDesde=60, descansoHasta=420, descansoMinutos=60, tamanioParte=4, costoFijoVehiculo=50.0, penalizacionPaquetePendiente=1000000.0, velocidades={TB=12.0, TA=40.0, TM=25.0}]
+Pedidos: 160010
+Solo pedidos registrados; sin anticipacion de demanda. Inicio sin operaciones previas.
+Instancia SHA-256: e983f08911fa0b94bc16198cc2828f4fa061192c0cf4d7d7ab91017b8398037f
+Iteraciones=300; semillas=20266; Sa=10; ciclos=0; factor=1.0
+TS: tenencia=7, candidatos=400; ALNS: destruccion=4, segmento=5, reaccion=0.7, temperatura=0.05; presupuesto temporal=0
+Averias: no modeladas (solo bloqueos y mantenimiento)

@@ -26,13 +26,17 @@ import java.util.Random;
  *         1 elemento    → arrepentimiento ← arrepentimientoSinAlternativa
  *         0 elementos   → indefinido
  *     pedidoElegido ← mayor arrepentimiento entre los que tienen inserción factible
- *     SI no existe → marcar restantes como no asignados ; salir
+ *     SI no existe → repartir entre varias unidades el de menor deadline (o marcarlo no
+ *                    asignado si tampoco es posible), retirarlo de removidos y continuar
  *     aplicar mejor inserción de pedidoElegido ; retirarlo de removidos
  * </pre>
  *
- * <p>Las inserciones de un pedido en la ruta de una unidad solo cambian cuando esa ruta cambia,
- * así que se memorizan por (pedido, unidad) y, tras cada inserción, se invalida únicamente la
- * unidad modificada (y el inventario del almacén afectado).</p>
+ * <p>
+ * Las inserciones de un pedido en la ruta de una unidad solo cambian cuando esa
+ * ruta cambia, así que se memorizan por (pedido, unidad) y, tras cada
+ * inserción, se invalida únicamente la unidad modificada (y el inventario del
+ * almacén afectado).
+ * </p>
  */
 public class InsercionPorArrepentimiento implements OperadorReparacion {
 
@@ -43,8 +47,7 @@ public class InsercionPorArrepentimiento implements OperadorReparacion {
     }
 
     @Override
-    public void reparar(Solucion solucion, List<Pedido> removidos,
-                       ContextoPlanificacion ctx, Random aleatorio) {
+    public void reparar(Solucion solucion, List<Pedido> removidos, ContextoPlanificacion ctx, Random aleatorio) {
         List<Pedido> pendientes = new ArrayList<>(removidos);
         Map<Pedido, Map<String, List<Insercion>>> memoria = new HashMap<>();
 
@@ -54,8 +57,7 @@ public class InsercionPorArrepentimiento implements OperadorReparacion {
             double mayorArrepentimiento = Double.NEGATIVE_INFINITY;
 
             for (Pedido p : pendientes) {
-                Map<String, List<Insercion>> porUnidad =
-                        memoria.computeIfAbsent(p, k -> new LinkedHashMap<>());
+                Map<String, List<Insercion>> porUnidad = memoria.computeIfAbsent(p, k -> new LinkedHashMap<>());
                 List<Insercion> inserciones = new ArrayList<>();
                 for (Vehiculo v : ctx.getUnidadesAsignables()) {
                     List<Insercion> lista = porUnidad.get(v.getCodigo());
@@ -66,12 +68,11 @@ public class InsercionPorArrepentimiento implements OperadorReparacion {
                     inserciones.addAll(lista);
                 }
                 if (inserciones.isEmpty()) {
-                    continue;   // arrepentimiento indefinido
+                    continue; // arrepentimiento indefinido
                 }
                 inserciones.sort((a, b) -> Double.compare(a.delta, b.delta));
 
-                double arrepentimiento = inserciones.size() >= 2
-                        ? inserciones.get(1).delta - inserciones.get(0).delta
+                double arrepentimiento = inserciones.size() >= 2 ? inserciones.get(1).delta - inserciones.get(0).delta
                         : arrepentimientoSinAlternativa;
                 if (arrepentimiento > mayorArrepentimiento) {
                     mayorArrepentimiento = arrepentimiento;
@@ -81,17 +82,28 @@ public class InsercionPorArrepentimiento implements OperadorReparacion {
             }
 
             if (elegido == null) {
+                // Ninguno cabe completo: se reparte el más urgente entre varias unidades.
+                Pedido urgente = pendientes.get(0);
                 for (Pedido p : pendientes) {
-                    solucion.marcarNoAsignado(p);
+                    if (p.getMinutoLimite() < urgente.getMinutoLimite()
+                            || (p.getMinutoLimite() == urgente.getMinutoLimite() && p.getId() < urgente.getId())) {
+                        urgente = p;
+                    }
                 }
-                break;
+                if (!EvaluadorInsercion.insertarFraccionado(solucion, urgente, ctx)) {
+                    solucion.marcarNoAsignado(urgente);
+                }
+                pendientes.remove(urgente);
+                memoria.clear();
+                continue;
             }
 
             EvaluadorInsercion.aplicar(solucion, mejorDelElegido, elegido, ctx);
             pendientes.remove(elegido);
             memoria.remove(elegido);
 
-            // Invalida lo que la inserción pudo cambiar: la ruta modificada y, si el almacén de
+            // Invalida lo que la inserción pudo cambiar: la ruta modificada y, si el
+            // almacén de
             // origen tiene stock limitado, las rutas vacías que podrían abrir desde él.
             String modificada = mejorDelElegido.vehiculo.getCodigo();
             boolean stockLimitado = !mejorDelElegido.almacenOrigen.esCentral();
