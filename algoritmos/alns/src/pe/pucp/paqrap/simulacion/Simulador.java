@@ -82,6 +82,7 @@ public class Simulador {
     private final List<Pedido> pedidosVivos = new ArrayList<>();
     private final List<Parada> paradasEnCurso = new ArrayList<>();
     private final ResultadoSimulacion resultado = new ResultadoSimulacion();
+    private final AuditoriaAlimentacion auditoria = new AuditoriaAlimentacion();
 
     private final YearMonth mesInicial;
     private YearMonth ultimoMesCargado;
@@ -230,6 +231,8 @@ public class Simulador {
 
         resultado.minutoFinal = t;
         resultado.instanteFinal = instante(t);
+        auditoria.evaluar(instancia.getFlota(), resultado.minutoInicial, t, this::formatear);
+        resultado.auditoriaAlimentacion = auditoria;
         int futuros = 0;
         for (Pedido p : pedidosVivos) {
             if (p.getMinutoRegistro() > t) {
@@ -371,6 +374,7 @@ public class Simulador {
                     paradasEnCurso.add(new Parada(parte, llegadas[i]));
                 }
                 viaje.getAlmacenCarga().descontar(viaje.getCarga());
+                auditoria.registrarViaje(v.getCodigo(), viaje.getSalida(), viaje.getFin());
                 resultado.viajesDespachados++;
                 resultado.viajesPorTipo.merge(v.getTipo().name(), 1, Integer::sum);
                 resultado.kmRecorridos += viaje.getDistanciaKm();
@@ -381,9 +385,12 @@ public class Simulador {
             v.setPosicion(ultimo.getAlmacenFin().getUbicacion());
             v.setMinutoDisponibleDesde(ultimo.getFin());
             v.setEstado(Vehiculo.Estado.EN_RUTA);
-            int viajeComida = r.viajeDeAlimentacion();
-            if (viajeComida >= 0 && viajeComida < enviados) {
-                v.setTurnoDeUltimaAlimentacion(Turnos.inicioTurno(r.getMinutoInicioAlimentacion()));
+            for (Ruta.Comida c : r.comidasEnViajes(enviados)) {
+                auditoria.registrarComida(v.getCodigo(), c.getInicio());
+            }
+            int turnoComida = r.turnoDeAlimentacionEnViajes(enviados);
+            if (turnoComida > v.getTurnoDeUltimaAlimentacion()) {
+                v.setTurnoDeUltimaAlimentacion(turnoComida);
             }
             resultado.rutasDespachadas++;
             despachadas++;

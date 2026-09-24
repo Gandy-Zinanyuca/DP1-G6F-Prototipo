@@ -27,7 +27,11 @@ public class Vehiculo {
     private int minutoDisponibleDesde;
     private int cargaActual;
     private int minutoInicioAlimentacion = -1;
-    private int turnoDeUltimaAlimentacion = -1;
+    /**
+     * Inicio del último turno en que la unidad tomó su hora de alimentación; el primer turno de
+     * la simulación puede empezar en un minuto negativo (23:00 del día anterior).
+     */
+    private int turnoDeUltimaAlimentacion = Integer.MIN_VALUE;
 
     public Vehiculo(String codigo, TipoVehiculo tipo, Coordenada posicionInicial) {
         this.codigo = codigo;

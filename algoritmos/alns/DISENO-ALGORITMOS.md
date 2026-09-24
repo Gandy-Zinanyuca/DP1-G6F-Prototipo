@@ -29,8 +29,8 @@ plazo es colapso logístico):
   repartida entre varias (ver §4.3), salvo los pedidos **reprogramables** (§4.5);
 - regreso a un almacén;
 - *adicionales al EVALUAR del ISA*: inventario no negativo en almacenes intermedios, hora de
-  alimentación separada 1 h de los cambios de turno, y confinamiento al turno si
-  `limitarRutaAlTurno` está activo.
+  alimentación obligatoria en cada turno, separada 1 h de los cambios de turno (§4.7), y
+  confinamiento al turno si `limitarRutaAlTurno` está activo.
 
 **Costo** (solo compara soluciones factibles): `Σ_r distanciaKm(r) × costoPorKm(τ(r))` más
 `penalizaciónPorPaquete × paquetes reprogramados` (1 000 000 por paquete: domina cualquier
@@ -177,10 +177,10 @@ regresar al almacén más cercano
   y el costo de la búsqueda; el plan se rehace cada Sa.
 - El inventario se descuenta en el almacén donde carga cada viaje; la solución suma los consumos
   de todas las rutas (restricción global).
-- La hora de alimentación se ubica en el turno en que arranca la ruta, como antes.
+- La hora de alimentación se ubica en cada turno que abarca la ruta (§4.7).
 - Podas de la inserción que no cambian las soluciones factibles: se descarta la unidad si el
   pedido no cabe ni usando todos sus viajes, se deja de probar posiciones una vez que la parada
-  previa llega después de la hora límite del pedido, y el inventario solo se revisa en los
+  previa llega —aun sin comidas— después de la hora límite del pedido, y el inventario solo se revisa en los
   almacenes intermedios que usa la ruta modificada.
 
 ### 4.5 Reprogramación de pedidos con holgura
@@ -201,6 +201,38 @@ inicial ← la factible; entre dos factibles, la de menor costo
 
 La reoptimización incremental ya no puede dejar un plan infactible cuando replanificar desde cero
 lo resolvería (causa de la mitad de los colapsos en la campaña con el modelo anterior).
+
+### 4.7 Hora de alimentación (LE018)
+
+Cada chofer toma **una hora de alimentación obligatoria por turno**, que debe empezar dentro de la
+ventana `[inicio del turno + 1 h, fin del turno − 2 h]`: nunca en los extremos del turno, pero sí
+en cualquier punto intermedio. El momento lo decide el planificador para cada unidad al evaluar su
+ruta (`Ruta.recalcular`), así que las unidades no comen todas a la vez:
+
+```
+recorrido ← SIMULAR(ruta sin comidas)
+PARA CADA turno cuya ventana abarca la ruta, en orden
+    SI la unidad ya comió en ese turno, o regresa antes de que cierre la ventana → siguiente
+    candidatos ← antes de salir (tiempo ocioso de la unidad), en el almacén de origen,
+                 tras cada entrega; solo los que pueden empezar dentro de la ventana
+    recorrido ← el mejor SIMULAR(ruta + comida en el candidato):
+                menor atraso, luego menor distancia, regreso más temprano, mayor holgura
+    SI no hay candidato → ruta no factible
+```
+
+- **Antes de salir**: la unidad está libre desde que quedó disponible (puede ser antes de T);
+  si comió en ese tiempo ocioso, la salida no se retrasa. Si no, sale al terminar de comer.
+- **Regreso a tiempo**: si la ruta termina antes de que cierre la ventana, la unidad come después
+  en el almacén; la ruta siguiente de esa unidad tendrá que dejarle ese espacio.
+- Rutas largas (recargas) pueden abarcar dos turnos y llevar dos comidas.
+- De los puntos en que la unidad queda libre antes de que abra la ventana solo se prueba el último
+  (todos esperarían a la apertura). Con 1 h por entrega, la ventana de 5 h deja pocos candidatos.
+- Se prueba primero la comida antes de salir y luego del punto más tardío al más temprano; la
+  búsqueda se corta en el primer candidato sin atrasos, sin más distancia y que retrasa el regreso
+  a lo sumo 1 h (solo una espera absorbida podría mejorarlo). Sin este corte, Ta se multiplicaba
+  por ~5.
+- Al despachar, el simulador registra el turno de la última comida incluida en los viajes que
+  salen (`Vehiculo.turnoDeUltimaAlimentacion`).
 
 ---
 
@@ -271,8 +303,9 @@ aceptados, rechazados, nuevasMejores, iteraciónMejor, Ta (ms), factible, errore
 
 ## 7. Puntos a reflejar en el ISA
 
-1. EVALUAR debe listar el inventario de almacenes intermedios, la hora de alimentación y el turno
-   como restricciones duras, y las estructuras deben incluir `Almacen`.
+1. EVALUAR debe listar el inventario de almacenes intermedios, la hora de alimentación
+   obligatoria por turno (con su ubicación elegida en la evaluación, §4.7) y el turno como
+   restricciones duras, y las estructuras deben incluir `Almacen`.
 2. La ruta parte del almacén de origen elegido (multi-almacén) y regresa al almacén más cercano.
 3. La ventana de pedidos incluye los pendientes registrados antes de T además de `(T, T+Sc]`.
 4. Forma concreta de la reducción por ocupación: `proporción × (1 − 0,7·ocupación)`.

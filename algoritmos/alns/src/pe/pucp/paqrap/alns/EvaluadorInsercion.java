@@ -96,12 +96,13 @@ public final class EvaluadorInsercion {
         }
         r.asegurarCalculada(ctx);
         double base = r.costoOperacion();
-        int[] llegadasBase = r.getMinutosLlegada().clone();
-        boolean baseFactible = r.esFactible();
+        // Llegadas sin comidas: la inserción puede mover las comidas, pero nunca adelantar una
+        // llegada por debajo de esta cota.
+        int[] llegadasBase = r.getLlegadasSinComida();
         for (int pos = 0; pos <= r.tamanio(); pos++) {
             // Si la parada previa ya llega después de la hora límite del pedido, insertarlo en
             // esta posición o en cualquiera posterior lo haría llegar tarde.
-            if (baseFactible && pos > 0 && pos - 1 < llegadasBase.length
+            if (pos > 0 && pos - 1 < llegadasBase.length
                     && llegadasBase[pos - 1] > p.getMinutoLimite()) {
                 break;
             }

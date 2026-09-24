@@ -267,9 +267,8 @@ final class DiagnosticoColapso {
                     primera.getAlmacenRetorno().getUbicacion());
             v.setMinutoDisponibleDesde(primera.getMinutoRetorno());
             v.setEstado(Vehiculo.Estado.EN_RUTA);
-            v.setTurnoDeUltimaAlimentacion(primera.getMinutoInicioAlimentacion() >= 0
-                    ? Turnos.inicioTurno(primera.getMinutoInicioAlimentacion())
-                    : original.getTurnoDeUltimaAlimentacion());
+            v.setTurnoDeUltimaAlimentacion(Math.max(original.getTurnoDeUltimaAlimentacion(),
+                    primera.turnoDeAlimentacionEnViajes(primera.getViajes().size())));
             Ruta mejor = null;
             for (Almacen a : ctx.getAlmacenes()) {
                 Ruta r = new Ruta(v, a);

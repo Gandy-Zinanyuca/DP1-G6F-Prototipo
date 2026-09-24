@@ -46,12 +46,24 @@ import java.util.Set;
  *       de cruce (LE075).</li>
  *   <li>Llegada a cada destino no posterior a su hora límite (LE015, LE021).</li>
  *   <li>Tiempo de entrega de 1 hora por destinatario (LE016, LE023).</li>
- *   <li>Hora de alimentación de 1 hora, separada al menos 1 hora de los cambios de turno (LE018).</li>
+ *   <li>Hora de alimentación obligatoria de 1 hora en cada turno, separada al menos 1 hora de
+ *       los cambios de turno (LE018); ver abajo.</li>
  *   <li>Confinamiento al turno, si el parámetro lo exige (LE017).</li>
  *   <li>Sin mantenimiento preventivo en ningún día que abarque la ruta hasta el regreso.</li>
  *   <li>Regreso al almacén más cercano al finalizar (LE020).</li>
  * </ul>
  * <p>El inventario de los almacenes intermedios acopla varias rutas: lo valida la solución.</p>
+ *
+ * <h2>Hora de alimentación</h2>
+ * <p>Cada chofer debe tomar una hora de alimentación por turno, que empiece dentro de la ventana
+ * [inicio del turno + 1 h, fin del turno − 2 h] ({@link Turnos}). La ruta no puede impedirlo: por
+ * cada turno cuya ventana abarca y en que la unidad aún no comió, la ruta incluye la comida, salvo
+ * que regrese a tiempo para tomarla después en el almacén. El momento lo decide el planificador al
+ * evaluar la ruta: prueba cada punto admisible —antes de salir (en tiempo ocioso de la unidad), en
+ * el almacén de origen o tras cada entrega— y elige el que cumple los plazos con menor distancia,
+ * regreso más temprano y mayor holgura; deja de probar en cuanto uno no perjudica la ruta más que
+ * la propia hora de comida. Como depende de la ruta de cada unidad, las unidades no
+ * comen todas a la vez. Si ningún punto es admisible, la ruta no es factible.</p>
  */
 public class Ruta {
 
@@ -121,6 +133,57 @@ public class Ruta {
         }
     }
 
+    /** Posición de una comida tomada antes de que la unidad salga, en su tiempo ocioso. */
+    public static final int ANTES_DE_SALIR = -2;
+    /** Posición de una comida tomada en el almacén de origen, antes de la primera entrega. */
+    public static final int EN_ORIGEN = -1;
+
+    /** Hora de alimentación elegida para un turno. */
+    public static final class Comida {
+        private final int posicion;
+        private final int inicio;
+        private final int turno;
+
+        Comida(int posicion, int inicio, int turno) {
+            this.posicion = posicion;
+            this.inicio = inicio;
+            this.turno = turno;
+        }
+
+        /**
+         * Entrega tras la cual se toma ({@code i}), o {@link #ANTES_DE_SALIR} /
+         * {@link #EN_ORIGEN}.
+         */
+        public int getPosicion() {
+            return posicion;
+        }
+
+        public int getInicio() {
+            return inicio;
+        }
+
+        /** Inicio del turno al que corresponde. */
+        public int getTurno() {
+            return turno;
+        }
+    }
+
+    /** Comida por planificar: punto de la ruta y ventana admisible de inicio. */
+    private static final class Pausa {
+        final int posicion;
+        final int turno;
+        final int ventanaIni;
+        final int ventanaFin;
+
+        Pausa(int posicion, int turno) {
+            this.posicion = posicion;
+            this.turno = turno;
+            this.ventanaIni = turno + Turnos.SEPARACION_CAMBIO_TURNO_MIN;
+            this.ventanaFin = turno + Turnos.DURACION_TURNO_MIN - Turnos.SEPARACION_CAMBIO_TURNO_MIN
+                    - Turnos.DURACION_ALMUERZO_MIN;
+        }
+    }
+
     private final Vehiculo vehiculo;
     private Almacen almacenOrigen;
     private final List<Pedido> secuencia = new ArrayList<>();
@@ -138,9 +201,13 @@ public class Ruta {
     private int cargaTotal;
     private boolean factible = true;
     private Almacen almacenRetorno;
-    private int minutoInicioAlimentacion = -1;
-    /** Entrega tras la cual se toma la alimentación (−1: en el almacén de origen). */
-    private int indiceAlimentacion = Integer.MIN_VALUE;
+    /** Horas de alimentación de la ruta, una por turno que la requiere, en orden. */
+    private List<Comida> comidas = Collections.emptyList();
+    /**
+     * Llegadas sin ninguna hora de alimentación: cota inferior de las llegadas de la ruta con
+     * cualquier ubicación de las comidas (las comidas solo retrasan).
+     */
+    private int[] llegadasSinComida = new int[0];
     private String motivoInfactibilidad;
     private List<Viaje> viajes = Collections.emptyList();
     private Map<Almacen, Integer> consumo = Collections.emptyMap();
@@ -164,8 +231,8 @@ public class Ruta {
         r.cargaTotal = cargaTotal;
         r.factible = factible;
         r.almacenRetorno = almacenRetorno;
-        r.minutoInicioAlimentacion = minutoInicioAlimentacion;
-        r.indiceAlimentacion = indiceAlimentacion;
+        r.comidas = comidas;                    // inmutable tras recalcular
+        r.llegadasSinComida = llegadasSinComida; // no se modifica tras recalcular
         r.motivoInfactibilidad = motivoInfactibilidad;
         r.viajes = viajes;                      // inmutable tras recalcular
         r.consumo = consumo;                    // inmutable tras recalcular
@@ -243,8 +310,8 @@ public class Ruta {
         cargaTotal = 0;
         factible = true;
         motivoInfactibilidad = null;
-        minutoInicioAlimentacion = -1;
-        indiceAlimentacion = Integer.MIN_VALUE;
+        comidas = Collections.emptyList();
+        llegadasSinComida = new int[0];
         minutosLlegada = new int[secuencia.size()];
         salidasTramo = new double[secuencia.size()];
         origenesTramo = new Coordenada[secuencia.size()];
@@ -275,12 +342,7 @@ public class Ruta {
             return;
         }
 
-        // Ventana admisible de la hora de alimentación dentro del turno en que arranca la ruta.
-        int inicioTurno = Turnos.inicioTurno(minutoInicio);
-        int finTurno = inicioTurno + Turnos.DURACION_TURNO_MIN;
-        int ventanaIni = inicioTurno + Turnos.SEPARACION_CAMBIO_TURNO_MIN;
-        int ventanaFin = finTurno - Turnos.SEPARACION_CAMBIO_TURNO_MIN - Turnos.DURACION_ALMUERZO_MIN;
-        boolean alimentacionPendiente = vehiculo.getTurnoDeUltimaAlimentacion() != inicioTurno;
+        int finTurno = Turnos.finTurno(minutoInicio);
 
         boolean[] recargaAntes = cortesDeViaje(par.permitirRecargas);
         int nViajes = 1;
@@ -293,33 +355,55 @@ public class Ruta {
             infactible("demasiados viajes (" + nViajes + ">" + par.maxViajesPorRuta + ")");
         }
 
-        // Primera pasada sin alimentación: sirve para ubicar el mejor momento de tomarla.
-        Recorrido sinAlimentacion = simular(ctx, recargaAntes, Integer.MIN_VALUE, 0);
-        if (!sinAlimentacion.alcanzable) {
-            infactible(sinAlimentacion.motivo);
+        // Primera pasada sin alimentación: cota inferior de las llegadas y punto de partida para
+        // ubicar las comidas.
+        List<Pausa> pausas = new ArrayList<>();
+        Recorrido definitivo = simular(ctx, recargaAntes, pausas);
+        if (!definitivo.alcanzable) {
+            infactible(definitivo.motivo);
             minutoRetorno = Integer.MAX_VALUE;
             return;
         }
+        llegadasSinComida = definitivo.llegada;
 
-        Recorrido definitivo = sinAlimentacion;
-        if (alimentacionPendiente) {
-            int posicion = ubicarAlimentacion(sinAlimentacion, ventanaIni, ventanaFin);
-            if (posicion != Integer.MIN_VALUE) {
-                double disponible = (posicion < 0)
-                        ? sinAlimentacion.minutoEnOrigen
-                        : sinAlimentacion.completado[posicion];
-                int inicioComida = (int) Math.ceil(Math.max(disponible, ventanaIni));
-                definitivo = simular(ctx, recargaAntes, posicion, inicioComida);
-                if (!definitivo.alcanzable) {
-                    infactible(definitivo.motivo);
-                    minutoRetorno = Integer.MAX_VALUE;
-                    return;
-                }
-                minutoInicioAlimentacion = inicioComida;
-                indiceAlimentacion = posicion;
+        // Una comida por cada turno cuya ventana la ruta ocupa, en orden cronológico. Agregar la
+        // comida de un turno retrasa el regreso, así que la condición del ciclo se reevalúa. Si la
+        // ruta ya llega tarde sin comer, ninguna comida la arregla: no se buscan (la verificación
+        // de plazos la declara no factible).
+        boolean llegaTardeSinComer = atraso(definitivo) > 0;
+        for (int turno = Turnos.inicioTurno(minutoInicio);
+             !llegaTardeSinComer && turno <= definitivo.minutoRetorno;
+             turno += Turnos.DURACION_TURNO_MIN) {
+            Pausa ventana = new Pausa(Integer.MIN_VALUE, turno);
+            if (vehiculo.getTurnoDeUltimaAlimentacion() >= turno
+                    || definitivo.minutoRetorno <= ventana.ventanaFin) {
+                continue;   // ya comió en este turno, o regresa a tiempo de comer en el almacén
             }
+            Recorrido mejor = null;
+            Pausa elegida = null;
+            for (Pausa candidata : candidatas(definitivo, pausas, turno)) {
+                pausas.add(candidata);
+                Recorrido prueba = simular(ctx, recargaAntes, pausas);
+                pausas.remove(pausas.size() - 1);
+                if (prueba.alcanzable && (mejor == null || esMejor(prueba, mejor))) {
+                    mejor = prueba;
+                    elegida = candidata;
+                    if (sinPerjuicio(prueba, definitivo)) {
+                        break;   // ningún otro punto puede mejorarla de forma relevante
+                    }
+                }
+            }
+            if (mejor == null) {
+                infactible("sin hora de alimentación posible en el turno de las "
+                        + Turnos.formatear(turno));
+                continue;
+            }
+            pausas.add(elegida);
+            definitivo = mejor;
         }
 
+        minutoInicio = definitivo.salidaReal;
+        comidas = Collections.unmodifiableList(definitivo.comidas);
         distanciaKm = definitivo.distancia;
         minutosLlegada = definitivo.llegada;
         salidasTramo = definitivo.salida;
@@ -386,32 +470,111 @@ public class Ruta {
     }
 
     /**
-     * Decide en qué punto de la ruta se ubica la hora de alimentación: lo más tarde posible
-     * dentro de la ventana admisible.
+     * Puntos de la ruta donde puede tomarse la comida del turno, dado el recorrido con las
+     * comidas ya ubicadas: antes de salir (solo si es la primera comida), en el almacén de origen
+     * y tras cada entrega, siempre después de la última comida ubicada. Un punto es admisible si
+     * la comida puede empezar dentro de la ventana del turno.
      *
-     * @return índice de la entrega tras la cual se toma la comida, −1 para tomarla en el
-     *         almacén antes de salir, o {@link Integer#MIN_VALUE} si no corresponde en ruta
+     * <p>De los puntos en que la unidad queda libre antes de que abra la ventana solo se conserva
+     * el último: todos esperarían a la apertura, y seguir entregando mientras tanto no retrasa a
+     * nadie.</p>
+     *
+     * <p>Orden de prueba: primero la comida antes de salir (en tiempo ocioso puede no retrasar
+     * nada) y luego del punto más tardío al más temprano, porque comer tarde no retrasa las
+     * entregas previas. Así la primera candidata {@link #sinPerjuicio} suele aparecer enseguida
+     * y corta la búsqueda.</p>
      */
-    private int ubicarAlimentacion(Recorrido base, int ventanaIni, int ventanaFin) {
-        if (base.minutoEnOrigen > ventanaFin) {
-            return Integer.MIN_VALUE;
-        }
-        if (base.minutoRetorno < ventanaIni) {
-            return Integer.MIN_VALUE;
-        }
-        int elegida = -1;
-        for (int i = 0; i < secuencia.size(); i++) {
-            if (base.completado[i] <= ventanaFin) {
-                elegida = i;
+    private List<Pausa> candidatas(Recorrido base, List<Pausa> ubicadas, int turno) {
+        int desde = ubicadas.isEmpty() ? ANTES_DE_SALIR : ubicadas.get(ubicadas.size() - 1).posicion;
+        Pausa ventana = new Pausa(Integer.MIN_VALUE, turno);
+        List<Pausa> lista = new ArrayList<>();
+        Pausa enEspera = null;
+        for (int pos = Math.max(desde, ANTES_DE_SALIR); pos < secuencia.size(); pos++) {
+            double libre;
+            if (pos == ANTES_DE_SALIR) {
+                if (!ubicadas.isEmpty()) {
+                    continue;
+                }
+                libre = vehiculo.getMinutoDisponibleDesde();
+            } else if (pos == EN_ORIGEN) {
+                libre = base.minutoEnOrigen;
             } else {
-                break;
+                libre = base.completado[pos];
+            }
+            if (Math.max(libre, ventana.ventanaIni) > ventana.ventanaFin) {
+                break;   // los puntos siguientes quedan libres aún más tarde
+            }
+            if (libre <= ventana.ventanaIni) {
+                enEspera = new Pausa(pos, turno);
+            } else {
+                lista.add(new Pausa(pos, turno));
             }
         }
-        return elegida;
+        if (enEspera != null) {
+            lista.add(0, enEspera);
+        }
+        List<Pausa> orden = new ArrayList<>(lista.size());
+        if (!lista.isEmpty() && lista.get(0).posicion == ANTES_DE_SALIR) {
+            orden.add(lista.remove(0));
+        }
+        for (int i = lista.size() - 1; i >= 0; i--) {
+            orden.add(lista.get(i));
+        }
+        return orden;
+    }
+
+    /**
+     * Indica si la comida no perjudica la ruta más de lo inevitable: sin atrasos, sin más
+     * distancia y con el regreso retrasado a lo sumo la hora de la comida. Otro punto solo podría
+     * mejorarla absorbiendo parte de esa hora en una espera, y la diferencia no justifica
+     * seguir simulando.
+     */
+    private boolean sinPerjuicio(Recorrido conComida, Recorrido sinComida) {
+        return atraso(conComida) == 0
+                && conComida.distancia <= sinComida.distancia + 1e-6
+                && conComida.minutoRetorno <= sinComida.minutoRetorno + Turnos.DURACION_ALMUERZO_MIN;
+    }
+
+    /**
+     * Orden entre recorridos con distinta ubicación de las comidas: menos atraso total, luego
+     * menor distancia, regreso más temprano y mayor holgura mínima.
+     */
+    private boolean esMejor(Recorrido a, Recorrido b) {
+        long atrasoA = atraso(a);
+        long atrasoB = atraso(b);
+        if (atrasoA != atrasoB) {
+            return atrasoA < atrasoB;
+        }
+        if (Math.abs(a.distancia - b.distancia) > 1e-6) {
+            return a.distancia < b.distancia;
+        }
+        if (a.minutoRetorno != b.minutoRetorno) {
+            return a.minutoRetorno < b.minutoRetorno;
+        }
+        return holguraMinima(a) > holguraMinima(b);
+    }
+
+    private long atraso(Recorrido r) {
+        long total = 0;
+        for (int i = 0; i < secuencia.size(); i++) {
+            total += Math.max(0, r.llegada[i] - secuencia.get(i).getMinutoLimite());
+        }
+        return total;
+    }
+
+    private int holguraMinima(Recorrido r) {
+        int minima = Integer.MAX_VALUE;
+        for (int i = 0; i < secuencia.size(); i++) {
+            minima = Math.min(minima, secuencia.get(i).getMinutoLimite() - r.llegada[i]);
+        }
+        return minima;
     }
 
     /** Resultado de una pasada de evaluación hacia adelante sobre la secuencia. */
     private static final class Recorrido {
+        /** Momento en que la unidad deja su posición, tras una comida previa a la salida. */
+        int salidaReal;
+        List<Comida> comidas = new ArrayList<>();
         double distancia;
         int[] llegada;
         double[] salida;
@@ -424,19 +587,38 @@ public class Ruta {
         Map<Almacen, Integer> consumo = new LinkedHashMap<>();
         boolean alcanzable = true;
         String motivo;
+
+        double finUltimaComida() {
+            return comidas.get(comidas.size() - 1).inicio + Turnos.DURACION_ALMUERZO_MIN;
+        }
+    }
+
+    /**
+     * Toma la comida en cuanto la unidad queda libre, sin adelantarse a la ventana.
+     *
+     * @return falso (y el recorrido queda no alcanzable) si ya no puede empezar dentro de ella
+     */
+    private static boolean tomarComida(Recorrido r, Pausa pausa, double libre) {
+        int inicio = (int) Math.ceil(Math.max(libre, pausa.ventanaIni) - 1e-9);
+        if (inicio > pausa.ventanaFin) {
+            r.alcanzable = false;
+            r.motivo = "alimentación fuera de la ventana del turno de las " + Turnos.formatear(pausa.turno);
+            return false;
+        }
+        r.comidas.add(new Comida(pausa.posicion, inicio, pausa.turno));
+        return true;
     }
 
     /**
      * Pasada de evaluación hacia adelante con CAMINO_MÁS_RÁPIDO en cada tramo.
      *
-     * @param recargaAntes         cortes de viaje (ver {@link #cortesDeViaje})
-     * @param posicionAlimentacion índice de la entrega tras la cual se inserta la hora de
-     *                             alimentación, −1 para insertarla en el almacén de origen, o
-     *                             {@link Integer#MIN_VALUE} para no insertarla
-     * @param inicioAlimentacion   instante en que comienza la hora de alimentación
+     * @param recargaAntes cortes de viaje (ver {@link #cortesDeViaje})
+     * @param pausas       comidas a tomar, en orden de posición; cada una empieza en cuanto la
+     *                     unidad queda libre en ese punto, pero no antes de que abra su ventana.
+     *                     Si alguna no puede empezar antes de que cierre, el recorrido no es
+     *                     alcanzable.
      */
-    private Recorrido simular(ContextoPlanificacion ctx, boolean[] recargaAntes, int posicionAlimentacion,
-                              int inicioAlimentacion) {
+    private Recorrido simular(ContextoPlanificacion ctx, boolean[] recargaAntes, List<Pausa> pausas) {
         ParametrosPlanificador par = ctx.getParametros();
         MapaUrbano mapa = ctx.getMapa();
         TipoVehiculo tipo = vehiculo.getTipo();
@@ -456,6 +638,17 @@ public class Ruta {
         }
 
         double t = minutoInicio;
+        int k = 0;
+
+        // Comida antes de salir: en el tiempo ocioso de la unidad, que está libre desde que quedó
+        // disponible (puede ser anterior a T) y aún no parte.
+        while (k < pausas.size() && pausas.get(k).posicion == ANTES_DE_SALIR) {
+            if (!tomarComida(r, pausas.get(k++), vehiculo.getMinutoDisponibleDesde())) {
+                return r;
+            }
+            t = Math.max(t, r.finUltimaComida());
+        }
+        r.salidaReal = (int) Math.ceil(t - 1e-9);
 
         // Tramo inicial: de la posición actual de la unidad al almacén de origen.
         Coordenada pos = vehiculo.getPosicion();
@@ -472,13 +665,16 @@ public class Ruta {
         r.minutoEnOrigen = t;
 
         int inicioViaje = 0;
-        int salidaViaje = minutoInicio;
+        int salidaViaje = r.salidaReal;
         Almacen cargaEn = almacenOrigen;
         int cargaViaje = cargaDesde(0, recargaAntes);
         tomarStock(r, stockRestante, cargaEn, cargaViaje);
 
-        if (posicionAlimentacion == -1) {
-            t = Math.max(t, inicioAlimentacion) + Turnos.DURACION_ALMUERZO_MIN;
+        while (k < pausas.size() && pausas.get(k).posicion == EN_ORIGEN) {
+            if (!tomarComida(r, pausas.get(k++), t)) {
+                return r;
+            }
+            t = r.finUltimaComida();
         }
 
         for (int i = 0; i < n; i++) {
@@ -526,8 +722,11 @@ public class Ruta {
             r.completado[i] = t;
             pos = p.getDestino();
 
-            if (posicionAlimentacion == i) {
-                t = Math.max(t, inicioAlimentacion) + Turnos.DURACION_ALMUERZO_MIN;
+            while (k < pausas.size() && pausas.get(k).posicion == i) {
+                if (!tomarComida(r, pausas.get(k++), t)) {
+                    return r;
+                }
+                t = r.finUltimaComida();
             }
         }
 
@@ -666,21 +865,31 @@ public class Ruta {
     }
 
     /**
-     * Índice del viaje en que se toma la hora de alimentación, o −1 si la ruta no la incluye.
+     * Turno de la última comida que se toma dentro de los primeros {@code nViajes} viajes de la
+     * ruta (las previas a la salida cuentan en el primero), o {@link Integer#MIN_VALUE} si no hay
+     * ninguna. El simulador lo usa para registrar en qué turno ya comió la unidad.
      */
-    public int viajeDeAlimentacion() {
-        if (minutoInicioAlimentacion < 0 || viajes.isEmpty()) {
-            return -1;
+    public int turnoDeAlimentacionEnViajes(int nViajes) {
+        int turno = Integer.MIN_VALUE;
+        for (Comida c : comidasEnViajes(nViajes)) {
+            turno = Math.max(turno, c.turno);
         }
-        if (indiceAlimentacion < 0) {
-            return 0;
+        return turno;
+    }
+
+    /** Comidas que se toman dentro de los primeros {@code nViajes} viajes (o antes de salir). */
+    public List<Comida> comidasEnViajes(int nViajes) {
+        if (nViajes <= 0 || viajes.isEmpty()) {
+            return Collections.emptyList();
         }
-        for (int k = 0; k < viajes.size(); k++) {
-            if (indiceAlimentacion < viajes.get(k).getHasta()) {
-                return k;
+        int hasta = viajes.get(Math.min(nViajes, viajes.size()) - 1).getHasta();
+        List<Comida> lista = new ArrayList<>();
+        for (Comida c : comidas) {
+            if (c.posicion < hasta) {
+                lista.add(c);
             }
         }
-        return viajes.size() - 1;
+        return lista;
     }
 
     public boolean esFactible() {
@@ -691,8 +900,14 @@ public class Ruta {
         return almacenRetorno;
     }
 
-    public int getMinutoInicioAlimentacion() {
-        return minutoInicioAlimentacion;
+    /** Horas de alimentación que incluye la ruta, en orden. */
+    public List<Comida> getComidas() {
+        return comidas;
+    }
+
+    /** Llegadas a cada destino si la ruta no incluyera comidas: cota inferior de las reales. */
+    public int[] getLlegadasSinComida() {
+        return llegadasSinComida;
     }
 
     public String getMotivoInfactibilidad() {
@@ -730,8 +945,12 @@ public class Ruta {
                         : "  TARDE " + (-holgura) + " min");
             }
         }
-        if (minutoInicioAlimentacion >= 0) {
-            sb.append("\n    (alimentación ").append(Turnos.formatear(minutoInicioAlimentacion)).append(')');
+        for (Comida c : comidas) {
+            String donde = c.posicion == ANTES_DE_SALIR ? "antes de salir"
+                    : c.posicion == EN_ORIGEN ? "en el almacén de origen"
+                    : "tras entregar " + secuencia.get(c.posicion);
+            sb.append("\n    (alimentación ").append(Turnos.formatear(c.inicio)).append(", ")
+                    .append(donde).append(')');
         }
         sb.append("\n    retorno ").append(almacenRetorno == null ? "?" : almacenRetorno.getId())
                 .append(' ').append(Turnos.formatear(minutoRetorno));

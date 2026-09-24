@@ -69,6 +69,8 @@ public class ResultadoSimulacion {
     public int ciclosConPostergacion;
     public int maxPaquetesPostergados;
     public double kmRecorridos;
+    /** Verificación de la hora de alimentación sobre lo despachado; null si no se evaluó. */
+    public AuditoriaAlimentacion auditoriaAlimentacion;
     public double costoSoles;
 
     public double diasSimulados() {
@@ -113,6 +115,10 @@ public class ResultadoSimulacion {
         m.put("max_paquetes_reprogramados", String.valueOf(maxPaquetesPostergados));
         m.put("km", fmt("%.0f", kmRecorridos));
         m.put("costo_soles", fmt("%.2f", costoSoles));
+        if (auditoriaAlimentacion != null) {
+            m.put("turnos_unidad_evaluados", String.valueOf(auditoriaAlimentacion.turnosEvaluados));
+            m.put("turnos_sin_alimentacion", String.valueOf(auditoriaAlimentacion.incumplidos));
+        }
         m.put("causa_colapso", causaColapso);
         m.put("diagnostico_colapso", diagnosticoColapso);
         return m;
@@ -188,6 +194,9 @@ public class ResultadoSimulacion {
         sb.append(String.format(" Viajes/unidad/día    : %s%n", porTipo));
         sb.append(String.format(" Reprogramación       : %d ciclos reprogramaron pedidos (máx. %d paquetes en un ciclo)%n",
                 ciclosConPostergacion, maxPaquetesPostergados));
+        if (auditoriaAlimentacion != null) {
+            sb.append(auditoriaAlimentacion);
+        }
         return sb.toString();
     }
 }
