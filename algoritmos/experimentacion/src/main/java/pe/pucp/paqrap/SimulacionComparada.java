@@ -209,6 +209,7 @@ public final class SimulacionComparada {
                 ciclos++;
                 if (colapso) {
                     fin = "COLAPSO_PLANIFICACION";
+                    escribirDiagnosticoColapso(archivo, semilla, t, resultado, pendientes, originales, flota);
                     break;
                 }
                 if (!siguiente.toLocalDate().equals(t.toLocalDate()))
@@ -219,6 +220,42 @@ public final class SimulacionComparada {
         return new Resumen(fin, t, ciclos, completos, paquetes, completos == 0 ? Double.NaN : sumaHolgura / completos,
                 completos == 0 ? Double.NaN : minima, ejecuciones, taTotal, taMax, distancia, minutos,
                 utilizados.size(), capacidadDespachada == 0 ? 0 : (double) cargaDespachada / capacidadDespachada);
+    }
+
+    /**
+     * Diagnostico del primer colapso: que pedido(s) quedaron sin plan factible en
+     * el ciclo, si ya habian vencido o si aun estaban en plazo pero eran
+     * infactibles con la flota disponible, y el estado de cada vehiculo en ese
+     * instante. Se escribe junto al CSV por ciclo de esa corrida.
+     */
+    private static void escribirDiagnosticoColapso(Path archivoCiclos, long semilla, LocalDateTime t,
+            ResultadoPlanificacion resultado, Map<String, Pedido> pendientes, Map<String, Pedido> originales,
+            List<Vehiculo> flota) throws IOException {
+        var sinPlan = resultado.solucion().pendientes();
+        var idsAfectados = sinPlan.stream().map(p -> p.pedido().id()).distinct().sorted().toList();
+        var texto = new StringBuilder();
+        texto.append("Colapso en instante ").append(t).append(" (semilla ").append(semilla).append(")\n");
+        texto.append("Pedidos sin plan factible en este ciclo: ").append(idsAfectados.size()).append("\n\n");
+        for (var id : idsAfectados) {
+            var original = originales.get(id);
+            long cantidadSinPlan = sinPlan.stream().filter(p -> p.pedido().id().equals(id))
+                    .mapToLong(PartePedido::cantidad).sum();
+            boolean yaVencido = !original.deadline().isAfter(t);
+            texto.append("Pedido ").append(id).append(" | deadline=").append(original.deadline()).append(" | ")
+                    .append(yaVencido ? "YA VENCIDO al momento del colapso"
+                            : "aun dentro de plazo, pero infactible con la flota/rutas disponibles")
+                    .append(" | cantidad total=").append(original.cantidad()).append(" | cantidad sin planificar=")
+                    .append(cantidadSinPlan).append(" | ubicacion=").append(original.ubicacion()).append("\n");
+        }
+        texto.append("\nPedidos pendientes totales en el sistema al momento del colapso: ").append(pendientes.size())
+                .append("\n\nEstado de la flota:\n");
+        for (var v : flota)
+            texto.append("  ").append(v.codigo()).append(" tipo=").append(v.tipo()).append(" ubicacion=")
+                    .append(v.ubicacionInicial()).append(" disponible=").append(v.disponible())
+                    .append(" disponibleDesde=").append(v.disponibleDesde()).append("\n");
+        var destino = archivoCiclos
+                .resolveSibling(archivoCiclos.getFileName().toString().replace(".csv", "") + "-colapso.txt");
+        Files.writeString(destino, texto.toString(), StandardCharsets.UTF_8);
     }
 
     private static String celda(Double valor) {
@@ -310,7 +347,8 @@ public final class SimulacionComparada {
                     throw new IllegalArgumentException("Semilla repetida");
                 for (String algoritmo : seleccion.equals("AMBOS") ? List.of("TS", "ALNS") : List.of(seleccion)) {
                     PlanificadorEstricto motor = algoritmo.equals("TS")
-                            ? new TabuSearchPlanner(new ConfiguracionTabu(iter, 7, Math.max(1, iter), 400, 0, semilla))
+                            // sinMejoraMax es el umbral de diversificacion de TS, no un corte.
+                            ? new TabuSearchPlanner(new ConfiguracionTabu(iter, 7, Math.max(5, iter / 10), 400, 0, semilla))
                             : new ALNSPlanner(
                                     new ConfiguracionALNS(iter, Math.max(1, iter), 4, 5, .7, .05, 0, semilla));
                     System.out.println("Ejecutando " + algoritmo + " semilla=" + semilla);

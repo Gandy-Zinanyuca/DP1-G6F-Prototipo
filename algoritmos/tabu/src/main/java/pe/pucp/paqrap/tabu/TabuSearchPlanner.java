@@ -68,8 +68,19 @@ public final class TabuSearchPlanner implements PlanificadorEstricto {
                 candidatos += usados[0];
             }
             if (selector.elegido() == null) {
-                parada = tiempoAgotado(inicio) ? "TIEMPO" : "SIN_VECINO_ADMISIBLE";
-                break;
+                if (tiempoAgotado(inicio)) {
+                    parada = "TIEMPO";
+                    break;
+                }
+                var sacudida = diversificar(actual, ev, random);
+                if (sacudida == null) {
+                    parada = "SIN_VECINO_ADMISIBLE";
+                    break;
+                }
+                actual = sacudida;
+                tabu.limpiar();
+                sinMejora = 0;
+                continue;
             }
             var elegido = selector.elegido();
             if (primeraMs == null && selector.evaluacion().completa()) {
@@ -86,12 +97,46 @@ public final class TabuSearchPlanner implements PlanificadorEstricto {
             } else
                 sinMejora++;
             if (sinMejora >= config.sinMejoraMax()) {
-                parada = "ESTANCAMIENTO";
-                break;
+                var sacudida = diversificar(actual, ev, random);
+                if (sacudida == null) {
+                    parada = "ESTANCAMIENTO";
+                    break;
+                }
+                actual = sacudida;
+                tabu.limpiar();
+                sinMejora = 0;
             }
         }
         return Resultados.crear("TS-estricto", mejor, ev, inicio, iter, iteracionMejor, candidatos, iniciales, parada,
                 primeraMs, primeraIter);
+    }
+
+    /**
+     * Sacude la solucion actual reinsertando al azar una fraccion de sus partes.
+     * Permite abandonar un optimo local en vez de terminar la busqueda; el mejor
+     * global se conserva aparte. Devuelve null si no hay nada movible.
+     */
+    private Solucion diversificar(Solucion s, EvaluadorFactibilidad ev, Random random) {
+        var movibles = new ArrayList<PartePedido>();
+        for (var ruta : s.rutas())
+            if (!ruta.enCurso())
+                movibles.addAll(ruta.partes());
+        if (movibles.isEmpty())
+            return null;
+        Collections.shuffle(movibles, random);
+        var quitar = new HashSet<>(movibles.subList(0, Math.min(movibles.size(), Math.max(2, movibles.size() / 8))));
+        var rutas = new ArrayList<Ruta>();
+        var pendientes = new ArrayList<>(s.pendientes());
+        for (var ruta : s.rutas()) {
+            var lista = new ArrayList<PartePedido>();
+            for (var parte : ruta.partes())
+                if (quitar.contains(parte))
+                    pendientes.add(parte);
+                else
+                    lista.add(parte);
+            rutas.add(ruta.conPartes(lista));
+        }
+        return GeneradorSolucionInicial.reparar(new Solucion(rutas, pendientes), ev, true, random);
     }
 
     private boolean tiempoAgotado(long inicio) {

@@ -48,7 +48,9 @@ public final class CompararAlgoritmos {
             repeticion++;
             String estadoAntes = e.estado.toString();
             var motores = List.<PlanificadorEstricto>of(
-                    new TabuSearchPlanner(new ConfiguracionTabu(iter, 7, Math.max(1, iter), 400, presupuesto, seed)),
+                    // sinMejoraMax es el umbral de diversificacion de TS, no un corte: debe
+                    // dispararse varias veces dentro del presupuesto de iteraciones.
+                    new TabuSearchPlanner(new ConfiguracionTabu(iter, 7, Math.max(5, iter / 10), 400, presupuesto, seed)),
                     new ALNSPlanner(new ConfiguracionALNS(iter, Math.max(1, iter), 4, 5, .7, .05, presupuesto, seed)));
             for (var motor : motores) {
                 var r = motor.planificar(e.estado, par);

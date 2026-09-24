@@ -165,8 +165,8 @@ public final class CalculadorRuta {
         trazas.add(retorno);
         distancia += retorno.distanciaKm();
         hora = retorno.llegada();
-        if (hora.isAfter(turno.plusMinutes(par.turnoMinutos())))
-            return error(r, salida, "retorno fuera de turno");
+        // El relevo ocurre donde este la unidad al cambiar el turno, asi que el viaje de
+        // retorno puede terminar despues del fin del turno: solo las entregas deben caber.
         if (!GestorDisponibilidad.disponible(estado, v, salida, hora))
             return error(r, salida, "averia o mantenimiento solapado");
         return new ResultadoRuta(r, salida, hora, almacen.id(), paradas, trazas, di, df, distancia,

@@ -1,0 +1,45 @@
+Colapso en instante 2026-05-11T20:40 (semilla 20264)
+Pedidos sin plan factible en este ciclo: 1
+
+Pedido V202605-L00865 | deadline=2026-05-12T00:31 | aun dentro de plazo, pero infactible con la flota/rutas disponibles | cantidad total=4 | cantidad sin planificar=4 | ubicacion=(41,2)
+
+Pedidos pendientes totales en el sistema al momento del colapso: 1
+
+Estado de la flota:
+  TA01 tipo=TA ubicacion=(12,38) disponible=true disponibleDesde=2026-05-11T20:48:30
+  TA02 tipo=TA ubicacion=(27,14) disponible=true disponibleDesde=2026-05-11T23:05:30
+  TA03 tipo=TA ubicacion=(12,38) disponible=true disponibleDesde=2026-05-11T21:23
+  TA04 tipo=TA ubicacion=(27,14) disponible=true disponibleDesde=2026-05-11T23:05:30
+  TA05 tipo=TA ubicacion=(12,38) disponible=true disponibleDesde=2026-05-11T20:28:30
+  TA06 tipo=TA ubicacion=(12,38) disponible=true disponibleDesde=2026-05-11T21:23
+  TA07 tipo=TA ubicacion=(12,38) disponible=true disponibleDesde=2026-05-11T20:48:30
+  TA08 tipo=TA ubicacion=(12,38) disponible=true disponibleDesde=2026-05-11T20:17
+  TA09 tipo=TA ubicacion=(12,38) disponible=true disponibleDesde=2026-05-11T21:16:30
+  TA10 tipo=TA ubicacion=(12,38) disponible=true disponibleDesde=2026-05-11T20:17
+  TM01 tipo=TM ubicacion=(27,14) disponible=true disponibleDesde=2026-05-11T21:37:36
+  TM02 tipo=TM ubicacion=(57,27) disponible=true disponibleDesde=2026-05-11T19:50:48
+  TM03 tipo=TM ubicacion=(27,14) disponible=true disponibleDesde=2026-05-11T21:37:36
+  TM04 tipo=TM ubicacion=(57,27) disponible=true disponibleDesde=2026-05-11T21:55:36
+  TM05 tipo=TM ubicacion=(12,38) disponible=true disponibleDesde=2026-05-11T20:00
+  TM06 tipo=TM ubicacion=(57,27) disponible=true disponibleDesde=2026-05-11T21:36:48
+  TM07 tipo=TM ubicacion=(57,27) disponible=true disponibleDesde=2026-05-11T14:18:48
+  TM08 tipo=TM ubicacion=(57,27) disponible=true disponibleDesde=2026-05-11T15:54:48
+  TM09 tipo=TM ubicacion=(57,27) disponible=true disponibleDesde=2026-05-11T15:54:48
+  TM10 tipo=TM ubicacion=(57,27) disponible=true disponibleDesde=2026-05-11T12:59:36
+  TM11 tipo=TM ubicacion=(12,38) disponible=true disponibleDesde=2026-05-11T21:23:36
+  TM12 tipo=TM ubicacion=(57,27) disponible=true disponibleDesde=2026-05-11T14:18:48
+  TM13 tipo=TM ubicacion=(27,14) disponible=true disponibleDesde=2026-05-11T22:09:36
+  TM14 tipo=TM ubicacion=(27,14) disponible=true disponibleDesde=2026-05-11T22:09:36
+  TM15 tipo=TM ubicacion=(57,27) disponible=true disponibleDesde=2026-05-11T12:59:36
+  TB01 tipo=TB ubicacion=(27,14) disponible=true disponibleDesde=2026-05-09T12:20
+  TB02 tipo=TB ubicacion=(27,14) disponible=true disponibleDesde=2026-05-10T14:30
+  TB03 tipo=TB ubicacion=(27,14) disponible=true disponibleDesde=2026-04-29T17:50
+  TB04 tipo=TB ubicacion=(27,14) disponible=true disponibleDesde=2026-04-14T04:40
+  TB05 tipo=TB ubicacion=(27,14) disponible=true disponibleDesde=2026-05-10T14:30
+  TB06 tipo=TB ubicacion=(27,14) disponible=true disponibleDesde=2026-05-09T12:30
+  TB07 tipo=TB ubicacion=(27,14) disponible=true disponibleDesde=2026-05-09T12:30
+  TB08 tipo=TB ubicacion=(27,14) disponible=true disponibleDesde=2026-04-13T12:20
+  TB09 tipo=TB ubicacion=(27,14) disponible=true disponibleDesde=-999999999-01-01T00:00
+  TB10 tipo=TB ubicacion=(27,14) disponible=true disponibleDesde=2026-04-13T12:00
+  TB11 tipo=TB ubicacion=(27,14) disponible=true disponibleDesde=2026-04-29T17:50
+  TB12 tipo=TB ubicacion=(27,14) disponible=true disponibleDesde=-999999999-01-01T00:00

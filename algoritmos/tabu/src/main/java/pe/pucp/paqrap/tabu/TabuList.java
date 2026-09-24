@@ -20,4 +20,9 @@ public final class TabuList {
     public void depurar(int iteracion) {
         expiraciones.values().removeIf(fin -> fin < iteracion);
     }
+
+    /** Tras diversificar se abandona la trayectoria: su memoria ya no aplica. */
+    public void limpiar() {
+        expiraciones.clear();
+    }
 }
