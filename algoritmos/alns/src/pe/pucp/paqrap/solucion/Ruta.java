@@ -30,7 +30,8 @@ import java.util.Set;
  * <p>La unidad puede recargar en cualquier almacén con stock y seguir repartiendo (enunciado del
  * curso). La secuencia se reparte en <i>viajes</i> de forma determinista: la unidad carga en el
  * almacén de origen y entrega en orden; cuando el siguiente pedido ya no cabe en la carga del
- * viaje, va al almacén más cercano con stock suficiente, recarga y continúa. Así el orden de la
+ * viaje, va al almacén con stock suficiente —descontando lo que toman las otras rutas— que menos
+ * desvía la ruta, recarga y continúa. Así el orden de la
  * secuencia —que deciden la inserción y los operadores de ALNS— determina también dónde recargar:
  * seguir la ruta o volver al almacén es parte de la misma decisión. Con
  * {@link ParametrosPlanificador#permitirRecargas} desactivado la ruta es un único viaje.</p>
@@ -75,17 +76,19 @@ public class Ruta {
         private final int desde;
         private final int hasta;
         private final int salida;
+        private final int minutoCarga;
         private final int fin;
         private final Almacen almacenCarga;
         private final Almacen almacenFin;
         private final int carga;
         private final double distanciaKm;
 
-        Viaje(int desde, int hasta, int salida, int fin, Almacen almacenCarga, Almacen almacenFin,
-              int carga, double distanciaKm) {
+        Viaje(int desde, int hasta, int salida, int minutoCarga, int fin, Almacen almacenCarga,
+              Almacen almacenFin, int carga, double distanciaKm) {
             this.desde = desde;
             this.hasta = hasta;
             this.salida = salida;
+            this.minutoCarga = minutoCarga;
             this.fin = fin;
             this.almacenCarga = almacenCarga;
             this.almacenFin = almacenFin;
@@ -109,6 +112,14 @@ public class Ruta {
          */
         public int getSalida() {
             return salida;
+        }
+
+        /**
+         * Minuto en que la unidad carga en el almacén del viaje: el inventario se descuenta del
+         * día de ese minuto (a medianoche los intermedios se renuevan).
+         */
+        public int getMinutoCarga() {
+            return minutoCarga;
         }
 
         /** Llegada al almacén en que termina el viaje; desde allí la unidad queda libre. */
@@ -210,7 +221,13 @@ public class Ruta {
     private int[] llegadasSinComida = new int[0];
     private String motivoInfactibilidad;
     private List<Viaje> viajes = Collections.emptyList();
-    private Map<Almacen, Integer> consumo = Collections.emptyMap();
+    /** Unidades que la ruta toma de cada almacén, por el día en que carga. */
+    private Map<ClaveStock, Integer> consumo = Collections.emptyMap();
+    /**
+     * Solución a la que pertenece la ruta: al elegir dónde recargar, descuenta lo que ya toman
+     * sus otras rutas. {@code null} si se evalúa aislada.
+     */
+    private Solucion solucion;
 
     public Ruta(Vehiculo vehiculo, Almacen almacenOrigen) {
         this.vehiculo = vehiculo;
@@ -220,6 +237,7 @@ public class Ruta {
     /** Copia profunda de la ruta; los pedidos se comparten por referencia. */
     public Ruta copia() {
         Ruta r = new Ruta(vehiculo, almacenOrigen);
+        r.solucion = solucion;
         r.secuencia.addAll(secuencia);
         r.calculada = calculada;
         r.distanciaKm = distanciaKm;
@@ -584,7 +602,7 @@ public class Ruta {
         int minutoRetorno;
         Almacen almacenRetorno;
         List<Viaje> viajes = new ArrayList<>();
-        Map<Almacen, Integer> consumo = new LinkedHashMap<>();
+        Map<ClaveStock, Integer> consumo = new LinkedHashMap<>();
         boolean alcanzable = true;
         String motivo;
 
@@ -631,12 +649,6 @@ public class Ruta {
         r.origen = new Coordenada[n];
         r.completado = new double[n];
 
-        // Stock que la ruta aún puede tomar de cada almacén intermedio al elegir dónde recargar.
-        Map<Almacen, Integer> stockRestante = new LinkedHashMap<>();
-        for (Almacen a : ctx.getAlmacenes()) {
-            stockRestante.put(a, ctx.stockInicial(a));
-        }
-
         double t = minutoInicio;
         int k = 0;
 
@@ -666,9 +678,10 @@ public class Ruta {
 
         int inicioViaje = 0;
         int salidaViaje = r.salidaReal;
+        int minutoCarga = (int) Math.ceil(t - 1e-9);
         Almacen cargaEn = almacenOrigen;
         int cargaViaje = cargaDesde(0, recargaAntes);
-        tomarStock(r, stockRestante, cargaEn, cargaViaje);
+        tomarStock(r, cargaEn, Turnos.dia(minutoCarga), cargaViaje);
 
         while (k < pausas.size() && pausas.get(k).posicion == EN_ORIGEN) {
             if (!tomarComida(r, pausas.get(k++), t)) {
@@ -681,9 +694,10 @@ public class Ruta {
             Pedido p = secuencia.get(i);
 
             if (recargaAntes[i]) {
-                // Vuelve a recargar al almacén más cercano con stock para el siguiente viaje.
+                // Vuelve a recargar al almacén con stock que menos desvía la ruta.
                 int cargaSiguiente = cargaDesde(i, recargaAntes);
-                Almacen recarga = almacenDeRecarga(ctx, pos, cargaSiguiente, stockRestante);
+                Almacen recarga = almacenDeRecarga(ctx, r, pos, p.getDestino(), cargaSiguiente,
+                        Turnos.dia((int) Math.ceil(t - 1e-9)));
                 tramo = mapa.caminoMasRapido(pos, recarga.getUbicacion(), t, velocidad, false);
                 if (tramo == null) {
                     r.alcanzable = false;
@@ -694,15 +708,16 @@ public class Ruta {
                 r.distancia += tramo.km;
                 t = tramo.llegada;
                 int llegadaRecarga = (int) Math.ceil(t - 1e-9);
-                r.viajes.add(new Viaje(inicioViaje, i, salidaViaje, llegadaRecarga, cargaEn, recarga,
-                        cargaViaje, distanciaViaje));
+                r.viajes.add(new Viaje(inicioViaje, i, salidaViaje, minutoCarga, llegadaRecarga, cargaEn,
+                        recarga, cargaViaje, distanciaViaje));
                 pos = recarga.getUbicacion();
                 inicioViaje = i;
                 salidaViaje = llegadaRecarga;
+                minutoCarga = llegadaRecarga;
                 cargaEn = recarga;
                 cargaViaje = cargaSiguiente;
                 distanciaViaje = 0;
-                tomarStock(r, stockRestante, cargaEn, cargaViaje);
+                tomarStock(r, cargaEn, Turnos.dia(minutoCarga), cargaViaje);
             }
 
             r.salida[i] = t;
@@ -744,8 +759,8 @@ public class Ruta {
         distanciaViaje += tramo.km;
         r.distancia += tramo.km;
         r.minutoRetorno = (int) Math.ceil(tramo.llegada - 1e-9);
-        r.viajes.add(new Viaje(inicioViaje, n, salidaViaje, r.minutoRetorno, cargaEn, r.almacenRetorno,
-                cargaViaje, distanciaViaje));
+        r.viajes.add(new Viaje(inicioViaje, n, salidaViaje, minutoCarga, r.minutoRetorno, cargaEn,
+                r.almacenRetorno, cargaViaje, distanciaViaje));
         return r;
     }
 
@@ -761,28 +776,41 @@ public class Ruta {
         return carga;
     }
 
-    private static void tomarStock(Recorrido r, Map<Almacen, Integer> stockRestante, Almacen a, int carga) {
-        r.consumo.merge(a, carga, Integer::sum);
-        if (!a.esCentral()) {
-            stockRestante.merge(a, -carga, Integer::sum);
-        }
+    private static void tomarStock(Recorrido r, Almacen a, int dia, int carga) {
+        r.consumo.merge(new ClaveStock(a, dia), carga, Integer::sum);
     }
 
     /**
-     * Almacén de recarga: el más cercano (distancia de retícula) con stock suficiente para el
-     * viaje. El central tiene inventario ilimitado, así que siempre hay uno.
+     * Stock que esta ruta aún puede tomar del almacén en el día indicado: el disponible ese día,
+     * menos lo que toman las demás rutas de la solución y lo que esta ruta ya tomó en viajes
+     * anteriores.
      */
-    private static Almacen almacenDeRecarga(ContextoPlanificacion ctx, Coordenada desde, int carga,
-                                            Map<Almacen, Integer> stockRestante) {
+    private int disponible(ContextoPlanificacion ctx, Recorrido r, Almacen a, int dia) {
+        if (a.esCentral()) {
+            return Integer.MAX_VALUE;
+        }
+        int otras = (solucion == null) ? 0 : solucion.consumoDeOtras(vehiculo, a, dia);
+        return ctx.stockDisponible(a, dia) - otras - r.consumo.getOrDefault(new ClaveStock(a, dia), 0);
+    }
+
+    /**
+     * Almacén de recarga: entre los que tienen stock para el viaje —considerando lo que ya toman
+     * las otras rutas de la solución—, el que menos alarga el camino desde la última entrega
+     * hasta la siguiente (distancia de retícula). El central tiene inventario ilimitado, así que
+     * siempre hay uno.
+     */
+    private Almacen almacenDeRecarga(ContextoPlanificacion ctx, Recorrido r, Coordenada desde,
+                                     Coordenada siguiente, int carga, int dia) {
         Almacen mejor = null;
-        int mejorDistancia = Integer.MAX_VALUE;
+        int mejorDesvio = Integer.MAX_VALUE;
         for (Almacen a : ctx.getAlmacenes()) {
-            if (!a.esCentral() && stockRestante.getOrDefault(a, 0) < carga) {
+            if (disponible(ctx, r, a, dia) < carga) {
                 continue;
             }
-            int d = desde.distanciaManhattan(a.getUbicacion());
-            if (d < mejorDistancia) {
-                mejorDistancia = d;
+            int desvio = desde.distanciaManhattan(a.getUbicacion())
+                    + a.getUbicacion().distanciaManhattan(siguiente);
+            if (desvio < mejorDesvio) {
+                mejorDesvio = desvio;
                 mejor = a;
             }
         }
@@ -859,9 +887,22 @@ public class Ruta {
         return viajes;
     }
 
-    /** Unidades que la ruta toma del almacén indicado, sumando sus viajes. */
-    public int consumoEn(Almacen almacen) {
-        return consumo.getOrDefault(almacen, 0);
+    /** Unidades que la ruta toma del almacén en el día indicado, sumando sus viajes. */
+    public int consumoEn(Almacen almacen, int dia) {
+        return consumo.getOrDefault(new ClaveStock(almacen, dia), 0);
+    }
+
+    /** Unidades que la ruta toma por almacén y día, según el último cálculo. */
+    public Map<ClaveStock, Integer> getConsumo() {
+        return consumo;
+    }
+
+    /**
+     * Vincula la ruta a una solución para que, al elegir dónde recargar, descuente el stock que
+     * toman las demás rutas de esa solución.
+     */
+    public void usarInventarioDe(Solucion s) {
+        solucion = s;
     }
 
     /**

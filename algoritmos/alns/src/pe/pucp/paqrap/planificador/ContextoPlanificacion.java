@@ -40,6 +40,9 @@ public class ContextoPlanificacion {
     /** Cantidad por planificar de cada pedido considerado, por pedido original. */
     private final Map<Pedido, Integer> cantidadRequerida = new IdentityHashMap<>();
 
+    /** Ver {@link #setCargasComprometidas}. */
+    private Map<Almacen, Map<Integer, Integer>> cargasComprometidas = java.util.Collections.emptyMap();
+
     public ContextoPlanificacion(Instancia instancia, int minutoActual,
                                  List<Pedido> pedidosPorAtender,
                                  List<Vehiculo> unidadesAsignables,
@@ -156,9 +159,30 @@ public class ContextoPlanificacion {
         return mantenimientos.contains(codigoUnidad + "#" + dia);
     }
 
-    /** Stock inicial del almacén al comenzar la ejecución, antes de las reservas de la solución. */
-    public int stockInicial(Almacen almacen) {
-        return almacen.esCentral() ? Integer.MAX_VALUE : almacen.getStock();
+    /**
+     * Stock del almacén que las rutas del plan pueden tomar en el día simulado indicado, antes de
+     * las reservas de la solución. Hoy es el stock actual; los intermedios se renuevan a
+     * medianoche (LE033), así que en un día posterior es su capacidad menos lo que ya cargan ese
+     * día las unidades despachadas.
+     */
+    public int stockDisponible(Almacen almacen, int dia) {
+        if (almacen.esCentral()) {
+            return Integer.MAX_VALUE;
+        }
+        if (dia <= Turnos.dia(minutoActual)) {
+            return almacen.getStock();
+        }
+        Map<Integer, Integer> porDia = cargasComprometidas.get(almacen);
+        int comprometido = (porDia == null) ? 0 : porDia.getOrDefault(dia, 0);
+        return almacen.getCapacidad() - comprometido;
+    }
+
+    /**
+     * Cargas de unidades ya despachadas que ocurrirán en días posteriores a T, por almacén y
+     * día; el simulador las informa para que el plan no cuente dos veces ese stock.
+     */
+    public void setCargasComprometidas(Map<Almacen, Map<Integer, Integer>> cargas) {
+        cargasComprometidas = cargas;
     }
 
     /** Almacén más cercano (distancia de retícula) al nodo indicado, para el regreso (LE020). */

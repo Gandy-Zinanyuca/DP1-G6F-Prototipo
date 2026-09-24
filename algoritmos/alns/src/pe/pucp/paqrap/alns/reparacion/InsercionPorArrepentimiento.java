@@ -6,6 +6,8 @@ import pe.pucp.paqrap.alns.OperadorReparacion;
 import pe.pucp.paqrap.modelo.Pedido;
 import pe.pucp.paqrap.modelo.Vehiculo;
 import pe.pucp.paqrap.planificador.ContextoPlanificacion;
+import pe.pucp.paqrap.solucion.ClaveStock;
+import pe.pucp.paqrap.solucion.Ruta;
 import pe.pucp.paqrap.solucion.Solucion;
 
 import java.util.ArrayList;
@@ -28,7 +30,8 @@ import java.util.Random;
  *     pedidoElegido ← mayor arrepentimiento entre los que tienen inserción factible
  *     SI no existe → repartir entre varias unidades el de menor deadline (o marcarlo no
  *                    asignado si tampoco es posible), retirarlo de removidos y continuar
- *     aplicar mejor inserción de pedidoElegido ; retirarlo de removidos
+ *     aplicar mejor inserción de pedidoElegido, o repartirlo si obliga a otra recarga y repartir
+ *     cuesta menos ; retirarlo de removidos
  * </pre>
  *
  * <p>Las inserciones de un pedido en la ruta de una unidad solo cambian cuando esa ruta cambia,
@@ -99,14 +102,17 @@ public class InsercionPorArrepentimiento implements OperadorReparacion {
                 continue;
             }
 
-            EvaluadorInsercion.aplicar(solucion, mejorDelElegido, elegido, ctx);
+            EvaluadorInsercion.Resultado resultado =
+                    EvaluadorInsercion.insertar(solucion, elegido, mejorDelElegido, ctx);
             pendientes.remove(elegido);
             memoria.remove(elegido);
 
-            // Invalida lo que la inserción pudo cambiar: la ruta modificada y, si el almacén de
-            // origen tiene stock limitado, las rutas vacías que podrían abrir desde él.
+            // Invalida lo que la inserción pudo cambiar: la ruta modificada y, si la ruta toma
+            // stock de un almacén intermedio, todas (el stock que queda las acopla). Si el pedido
+            // se repartió, cambiaron varias rutas.
             String modificada = mejorDelElegido.vehiculo.getCodigo();
-            boolean stockLimitado = !mejorDelElegido.almacenOrigen.esCentral();
+            boolean stockLimitado = resultado == EvaluadorInsercion.Resultado.FRACCIONADO
+                    || usaIntermedio(solucion.getRuta(modificada), ctx);
             for (Map<String, List<Insercion>> porUnidad : memoria.values()) {
                 if (stockLimitado) {
                     porUnidad.clear();
@@ -115,6 +121,19 @@ public class InsercionPorArrepentimiento implements OperadorReparacion {
                 }
             }
         }
+    }
+
+    private static boolean usaIntermedio(Ruta r, ContextoPlanificacion ctx) {
+        if (r == null) {
+            return false;
+        }
+        r.asegurarCalculada(ctx);
+        for (ClaveStock k : r.getConsumo().keySet()) {
+            if (!k.almacen().esCentral()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

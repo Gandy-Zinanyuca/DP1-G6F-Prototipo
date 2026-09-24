@@ -24,8 +24,10 @@ import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 /**
  * Simulación con reloj discreto sobre el componente planificador.
@@ -36,7 +38,9 @@ import java.util.Locale;
  *   <li>Se registran las entregas cuya llegada ya ocurrió (≤ T) y se liberan las unidades que
  *       regresaron a un almacén. Un pedido se marca como entregado solo cuando llegó su última
  *       parte.</li>
- *   <li>A medianoche se recargan los almacenes intermedios (LE033).</li>
+ *   <li>A medianoche se recargan los almacenes intermedios (LE033). Cada viaje descuenta su
+ *       carga del día en que efectivamente carga: lo que carga después de medianoche sale del
+ *       stock renovado.</li>
  *   <li>Se planifica la cantidad no despachada de los pedidos de la ventana (pendientes más los
  *       registrados en (T, T + Sc]), partiendo del plan vigente.</li>
  *   <li>Se <b>despachan</b> solo las rutas que salen antes del siguiente ciclo (inicio &lt;
@@ -83,6 +87,11 @@ public class Simulador {
     private final List<Parada> paradasEnCurso = new ArrayList<>();
     private final ResultadoSimulacion resultado = new ResultadoSimulacion();
     private final AuditoriaAlimentacion auditoria = new AuditoriaAlimentacion();
+    /**
+     * Cargas de viajes despachados que ocurren en un día posterior al actual, por almacén y día:
+     * se descuentan del stock renovado de ese día cuando llega su medianoche.
+     */
+    private final Map<Almacen, Map<Integer, Integer>> cargasFuturas = new LinkedHashMap<>();
 
     private final YearMonth mesInicial;
     private YearMonth ultimoMesCargado;
@@ -156,9 +165,15 @@ public class Simulador {
 
                 int dia = Turnos.dia(t);
                 if (dia != diaAnterior) {
-                    // Recarga de los intermedios a las 23:59:59 (LE033).
+                    // Recarga instantánea de los intermedios a medianoche (LE033); las cargas ya
+                    // despachadas para este día salen del stock renovado.
                     for (Almacen a : instancia.getAlmacenes()) {
                         a.recargar();
+                        Map<Integer, Integer> porDia = cargasFuturas.get(a);
+                        Integer cargadoHoy = (porDia == null) ? null : porDia.remove(dia);
+                        if (cargadoHoy != null) {
+                            a.descontar(cargadoHoy);
+                        }
                     }
                     imprimirDia(diaAnterior, nsDia, ejecucionesDia);
                     diaAnterior = dia;
@@ -174,6 +189,7 @@ public class Simulador {
 
                 ContextoPlanificacion ctx = ContextoPlanificacion.construir(instancia, t, par.scMinutos,
                         pedidosVivos, Collections.emptyList(), parPlan);
+                ctx.setCargasComprometidas(cargasFuturas);
 
                 if (ctx.getPedidosPorAtender().isEmpty()) {
                     escribirCiclo(csv, t, ctx, 0, true, 0, 0);
@@ -373,7 +389,7 @@ public class Simulador {
                     parte.registrarDespacho(parte.getCantidad());
                     paradasEnCurso.add(new Parada(parte, llegadas[i]));
                 }
-                viaje.getAlmacenCarga().descontar(viaje.getCarga());
+                registrarCarga(viaje, Turnos.dia(siguienteCiclo - par.saMinutos));
                 auditoria.registrarViaje(v.getCodigo(), viaje.getSalida(), viaje.getFin());
                 resultado.viajesDespachados++;
                 resultado.viajesPorTipo.merge(v.getTipo().name(), 1, Integer::sum);
@@ -396,6 +412,24 @@ public class Simulador {
             despachadas++;
         }
         return despachadas;
+    }
+
+    /**
+     * Descuenta la carga del viaje del almacén donde carga, en el día en que ocurre: si carga hoy,
+     * del stock actual; si carga después de medianoche, del stock renovado de ese día.
+     */
+    private void registrarCarga(Ruta.Viaje viaje, int hoy) {
+        Almacen a = viaje.getAlmacenCarga();
+        int dia = Turnos.dia(viaje.getMinutoCarga());
+        if (a.esCentral()) {
+            return;
+        }
+        if (dia <= hoy) {
+            a.descontar(viaje.getCarga());
+        } else {
+            cargasFuturas.computeIfAbsent(a, k -> new LinkedHashMap<>())
+                    .merge(dia, viaje.getCarga(), Integer::sum);
+        }
     }
 
     /**

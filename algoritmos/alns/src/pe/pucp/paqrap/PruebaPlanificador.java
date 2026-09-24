@@ -206,12 +206,7 @@ public final class PruebaPlanificador {
         verificar("Ningún viaje excede la capacidad de su unidad y los viajes cubren la ruta (LE014, LE027)",
                 capacidadOk);
         verificar("Ninguna entrega fuera de plazo (LE021)", plazosOk);
-        boolean inventarioOk = true;
-        for (Almacen a : ctx.getAlmacenes()) {
-            if (!a.esCentral()) {
-                inventarioOk &= resultado.consumo(ctx, a) <= ctx.stockInicial(a);
-            }
-        }
+        boolean inventarioOk = resultado.stockAlcanza(ctx);
         verificar("Ningún almacén intermedio queda con stock negativo (LE019)", inventarioOk);
         terminar();
     }

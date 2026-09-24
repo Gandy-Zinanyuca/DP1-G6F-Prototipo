@@ -33,9 +33,9 @@ import java.util.List;
  * tomar stock de varios almacenes.</p>
  *
  * <p>Una unidad que ya transporta una parte del mismo pedido no recibe otra: repartir el pedido
- * solo tiene sentido entre unidades distintas. Cuando ninguna unidad admite el pedido completo,
- * {@link #insertarFraccionado} lo reparte entre varias (los pedidos pueden dividirse entre
- * vehículos).</p>
+ * solo tiene sentido entre unidades distintas. Los pedidos pueden dividirse entre vehículos:
+ * {@link #insertar} elige entre insertarlo completo y repartirlo ({@link #insertarFraccionado})
+ * según cuál cuesta menos.</p>
  */
 public final class EvaluadorInsercion {
 
@@ -45,13 +45,30 @@ public final class EvaluadorInsercion {
         public final int posicion;
         public final Almacen almacenOrigen;
         public final double delta;
+        /**
+         * La inserción obliga a la unidad a una recarga más (un viaje más en una ruta que ya
+         * tenía). Estrenar una unidad ociosa no cuenta: usar la flota libre no es un sobrecosto.
+         */
+        public final boolean abreViaje;
 
-        public Insercion(Vehiculo vehiculo, int posicion, Almacen almacenOrigen, double delta) {
+        public Insercion(Vehiculo vehiculo, int posicion, Almacen almacenOrigen, double delta,
+                         boolean abreViaje) {
             this.vehiculo = vehiculo;
             this.posicion = posicion;
             this.almacenOrigen = almacenOrigen;
             this.delta = delta;
+            this.abreViaje = abreViaje;
         }
+    }
+
+    /** Cómo quedó insertado un pedido. */
+    public enum Resultado {
+        /** No admite inserción factible, ni completo ni repartido. */
+        NINGUNA,
+        /** Completo en una unidad. */
+        COMPLETO,
+        /** Repartido entre varias unidades. */
+        FRACCIONADO
     }
 
     private EvaluadorInsercion() {
@@ -76,26 +93,22 @@ public final class EvaluadorInsercion {
 
         if (r == null || r.estaVacia()) {
             Ruta prueba = new Ruta(v, ctx.getAlmacenes().get(0));
+            prueba.usarInventarioDe(s);
             for (Almacen a : ctx.getAlmacenes()) {
-                if (!s.hayStock(ctx, a, p.getCantidad())) {
-                    continue;
-                }
                 prueba.setAlmacenOrigen(a);
                 prueba.insertar(0, p);
                 prueba.recalcular(ctx);
-                if (prueba.esFactible()) {
-                    lista.add(new Insercion(v, 0, a, prueba.costoOperacion()));
+                if (prueba.esFactible() && s.stockAlcanza(ctx, prueba)) {
+                    lista.add(new Insercion(v, 0, a, prueba.costoOperacion(), false));
                 }
                 prueba.remover(0);
             }
             return lista;
         }
 
-        if (!ctx.getParametros().permitirRecargas && !s.hayStock(ctx, r.getAlmacenOrigen(), p.getCantidad())) {
-            return lista;
-        }
         r.asegurarCalculada(ctx);
         double base = r.costoOperacion();
+        int viajesBase = r.getViajes().size();
         // Llegadas sin comidas: la inserción puede mover las comidas, pero nunca adelantar una
         // llegada por debajo de esta cota.
         int[] llegadasBase = r.getLlegadasSinComida();
@@ -109,7 +122,8 @@ public final class EvaluadorInsercion {
             r.insertar(pos, p);
             r.recalcular(ctx);
             if (r.esFactible() && s.stockAlcanza(ctx, r)) {
-                lista.add(new Insercion(v, pos, r.getAlmacenOrigen(), r.costoOperacion() - base));
+                lista.add(new Insercion(v, pos, r.getAlmacenOrigen(), r.costoOperacion() - base,
+                        r.getViajes().size() > viajesBase));
             }
             r.remover(pos);
         }
@@ -126,6 +140,35 @@ public final class EvaluadorInsercion {
             return v.getCapacidad();
         }
         return v.getCapacidad() - ((r == null) ? 0 : r.getCargaTotal());
+    }
+
+    /**
+     * Tamaños de fracción que vale la pena probar en la unidad: lo que cabe en el espacio libre de
+     * cada uno de sus viajes (aprovecharlo no obliga a recargar) y un viaje completo, sin superar
+     * lo que falta repartir ni lo que la unidad puede llevar con todos sus viajes permitidos.
+     */
+    static List<Integer> tamaniosDeFraccion(Ruta r, Vehiculo v, int restante, ContextoPlanificacion ctx) {
+        int capacidad = v.getCapacidad();
+        int carga = (r == null) ? 0 : r.getCargaTotal();
+        boolean recargas = ctx.getParametros().permitirRecargas;
+        int presupuesto = recargas
+                ? capacidad * ctx.getParametros().maxViajesPorRuta - carga
+                : capacidad - carga;
+        int tope = Math.min(restante, presupuesto);
+        List<Integer> tamanios = new ArrayList<>();
+        if (tope <= 0) {
+            return tamanios;
+        }
+        tamanios.add(Math.min(tope, capacidad));
+        if (recargas && r != null && !r.estaVacia()) {
+            for (Ruta.Viaje viaje : r.getViajes()) {
+                int q = Math.min(tope, capacidad - viaje.getCarga());
+                if (q > 0 && !tamanios.contains(q)) {
+                    tamanios.add(q);
+                }
+            }
+        }
+        return tamanios;
     }
 
     /** Todas las inserciones factibles del pedido en la solución, en orden estable. */
@@ -149,51 +192,79 @@ public final class EvaluadorInsercion {
     }
 
     /**
-     * Reparte el pedido entre varias unidades cuando ninguna lo admite completo.
+     * Inserta el pedido: completo en la mejor posición o, si ninguna unidad lo admite completo,
+     * repartido entre varias. Con {@code fraccionarSiConviene} también se reparte cuando cuesta
+     * menos que insertarlo completo; en ese caso solo se prueba cuando la inserción completa
+     * obliga a la unidad a recargar una vez más: si cabe en un viaje existente, partirlo solo
+     * agregaría paradas, y si va a una unidad ociosa, la flota libre se usa antes que repartir.
+     * (Comparar contra estrenar una unidad —cuyo costo incluye todo su recorrido— hacía que
+     * repartir pareciera barato en lo local y empeoraba el plan: más km y más fracciones.)
+     *
+     * @param mejorCompleta la mejor inserción completa ({@link #mejorInsercion}), o {@code null}
+     */
+    public static Resultado insertar(Solucion s, Pedido p, Insercion mejorCompleta, ContextoPlanificacion ctx) {
+        if (mejorCompleta != null && (!mejorCompleta.abreViaje || !ctx.getParametros().fraccionarSiConviene)) {
+            aplicar(s, mejorCompleta, p, ctx);
+            return Resultado.COMPLETO;
+        }
+        double tope = (mejorCompleta == null) ? Double.POSITIVE_INFINITY : mejorCompleta.delta;
+        if (insertarFraccionado(s, p, ctx, tope)) {
+            return Resultado.FRACCIONADO;
+        }
+        if (mejorCompleta != null) {
+            aplicar(s, mejorCompleta, p, ctx);
+            return Resultado.COMPLETO;
+        }
+        return Resultado.NINGUNA;
+    }
+
+    /** Como {@link #insertar(Solucion, Pedido, Insercion, ContextoPlanificacion)}, buscando la mejor. */
+    public static Resultado insertar(Solucion s, Pedido p, ContextoPlanificacion ctx) {
+        return insertar(s, p, mejorInsercion(s, p, ctx), ctx);
+    }
+
+    /**
+     * Reparte el pedido entre varias unidades.
      *
      * <pre>
-     * restante ← cantidad del pedido
+     * restante ← cantidad del pedido ; costo ← 0
      * MIENTRAS restante &gt; 0
      *     PARA CADA vehículo disponible que no lleve ya parte del pedido
-     *         q ← mín(restante, capacidad libre del vehículo)
-     *         evaluar la mejor inserción factible de una fracción de q unidades
-     *     elegir la fracción de mayor q (desempate: menor costo) y aplicarla
-     *     SI no existe ninguna → deshacer las fracciones aplicadas y fallar
-     *     restante ← restante − q
+     *         PARA CADA tamaño q (espacio libre de sus viajes, un viaje completo)
+     *             evaluar la mejor inserción factible de una fracción de q unidades
+     *     elegir la de menor costo por unidad (desempate: mayor q) y aplicarla
+     *     costo ← costo + Δ ; restante ← restante − q
+     *     SI no existe ninguna o costo ≥ tope → deshacer las fracciones aplicadas y fallar
      * </pre>
      *
-     * <p>Preferir la fracción más grande minimiza el número de partes. La capacidad es la única
-     * restricción que depende de la cantidad (además del stock), así que q no necesita
-     * explorarse por debajo de la capacidad libre.</p>
+     * <p>El costo por unidad compara fracciones de distinto tamaño: una fracción chica que
+     * aprovecha el espacio libre de un viaje que ya pasa cerca cuesta poco por unidad; una que
+     * abre un viaje nuevo, mucho.</p>
      *
+     * @param tope costo de la alternativa (insertarlo completo); repartir debe costar menos
      * @return verdadero si el pedido quedó completamente asignado en fracciones; si es falso,
      *         la solución queda como estaba
      */
-    public static boolean insertarFraccionado(Solucion s, Pedido p, ContextoPlanificacion ctx) {
+    public static boolean insertarFraccionado(Solucion s, Pedido p, ContextoPlanificacion ctx, double tope) {
         int restante = p.getCantidad();
+        double costo = 0;
         List<Pedido> aplicadas = new ArrayList<>();
         while (restante > 0) {
             Insercion mejor = null;
             Pedido mejorFraccion = null;
             for (Vehiculo v : ctx.getUnidadesAsignables()) {
                 Ruta r = s.getRuta(v.getCodigo());
-                int q = Math.min(restante, capacidadLibre(r, v, ctx));
-                if (q <= 0) {
-                    continue;
-                }
-                if (mejorFraccion != null && q < mejorFraccion.getCantidad()) {
-                    continue;
-                }
-                Pedido fraccion = (q == p.getCantidad()) ? p : p.fraccion(q);
-                for (Insercion ins : factiblesEnUnidad(s, fraccion, v, ctx)) {
-                    boolean mayor = mejorFraccion == null || q > mejorFraccion.getCantidad();
-                    if (mayor || ins.delta < mejor.delta) {
-                        mejor = ins;
-                        mejorFraccion = fraccion;
+                for (int q : tamaniosDeFraccion(r, v, restante, ctx)) {
+                    Pedido fraccion = (q == p.getCantidad()) ? p : p.fraccion(q);
+                    for (Insercion ins : factiblesEnUnidad(s, fraccion, v, ctx)) {
+                        if (mejor == null || esMejorFraccion(ins, q, mejor, mejorFraccion.getCantidad())) {
+                            mejor = ins;
+                            mejorFraccion = fraccion;
+                        }
                     }
                 }
             }
-            if (mejor == null) {
+            if (mejor == null || costo + mejor.delta >= tope) {
                 for (Pedido f : aplicadas) {
                     s.olvidar(f);
                 }
@@ -201,12 +272,27 @@ public final class EvaluadorInsercion {
             }
             aplicar(s, mejor, mejorFraccion, ctx);
             aplicadas.add(mejorFraccion);
+            costo += mejor.delta;
             restante -= mejorFraccion.getCantidad();
         }
         if (!aplicadas.contains(p)) {
             s.olvidar(p);   // el pedido quedó representado por sus fracciones
         }
         return true;
+    }
+
+    /** Reparte el pedido sin alternativa con qué compararlo (ninguna unidad lo admite completo). */
+    public static boolean insertarFraccionado(Solucion s, Pedido p, ContextoPlanificacion ctx) {
+        return insertarFraccionado(s, p, ctx, Double.POSITIVE_INFINITY);
+    }
+
+    private static boolean esMejorFraccion(Insercion ins, int q, Insercion mejor, int qMejor) {
+        double porUnidad = ins.delta / q;
+        double porUnidadMejor = mejor.delta / qMejor;
+        if (Math.abs(porUnidad - porUnidadMejor) > 1e-9) {
+            return porUnidad < porUnidadMejor;
+        }
+        return q > qMejor;
     }
 
     /** Aplica una inserción sobre la solución. */

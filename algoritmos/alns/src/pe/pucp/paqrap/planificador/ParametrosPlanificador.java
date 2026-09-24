@@ -37,6 +37,15 @@ public class ParametrosPlanificador {
      */
     public int maxViajesPorRuta = 3;
 
+    /**
+     * Reparto opcional: si insertar un pedido completo obliga a una unidad a recargar otra vez, se
+     * prueba repartirlo entre varias y se aplica lo más barato. Falso (por defecto): solo se
+     * reparte cuando ninguna unidad admite el pedido completo. En la prueba de 202612 (semilla 1,
+     * día 1) activarlo dio 13 % más km, menos entregas y el doble de Ta: cada inserción repartida
+     * parece más barata, pero cada parte suma una parada de 1 h y consume la holgura de otras rutas.
+     */
+    public boolean fraccionarSiConviene = false;
+
     /** Permite reprogramar pedidos con holgura a un ciclo posterior (ver la descripción). */
     public boolean permitirPostergacion = true;
 
@@ -62,6 +71,7 @@ public class ParametrosPlanificador {
         p.limitarRutaAlTurno = limitarRutaAlTurno;
         p.permitirRecargas = permitirRecargas;
         p.maxViajesPorRuta = maxViajesPorRuta;
+        p.fraccionarSiConviene = fraccionarSiConviene;
         p.permitirPostergacion = permitirPostergacion;
         p.holguraMinimaPostergacionMin = holguraMinimaPostergacionMin;
         p.penalizacionPorPaquetePostergado = penalizacionPorPaquetePostergado;

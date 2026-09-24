@@ -38,6 +38,7 @@ import java.util.List;
  *        [--semilla N] [--anio AAAA] [--mes MM] [--detalle] [--traza]
  *        [--csv-ciclos archivo.csv] [--csv-resumen archivo.csv]
  *        [--sin-recargas] [--max-viajes N] [--sin-reprogramacion] [--holgura-reprogramacion MIN]
+ *        [--fraccionar-si-conviene]
  * </pre>
  *
  * <p>El año y el mes se deducen del nombre del archivo de ventas ({@code ventas.AAAAMM.txt}); con
@@ -53,7 +54,8 @@ public final class DemoPlanificador {
                     + "[bloqueos.txt] [mantenimiento.txt] [--colapso] [--dia N] [--hora N] [--ciclos N] "
                     + "[--sa MIN] [--k N] [--iteraciones N] [--semilla N] [--anio AAAA] [--mes MM] "
                     + "[--detalle] [--traza] [--csv-ciclos archivo] [--csv-resumen archivo] "
-                    + "[--sin-recargas] [--max-viajes N] [--sin-reprogramacion] [--holgura-reprogramacion MIN]");
+                    + "[--sin-recargas] [--max-viajes N] [--sin-reprogramacion] [--holgura-reprogramacion MIN] "
+                    + "[--fraccionar-si-conviene]");
             return;
         }
 
@@ -114,6 +116,9 @@ public final class DemoPlanificador {
                     break;
                 case "--sin-reprogramacion":
                     parPlan.permitirPostergacion = false;
+                    break;
+                case "--fraccionar-si-conviene":
+                    parPlan.fraccionarSiConviene = true;
                     break;
                 case "--holgura-reprogramacion":
                     parPlan.holguraMinimaPostergacionMin = Integer.parseInt(args[++i]);

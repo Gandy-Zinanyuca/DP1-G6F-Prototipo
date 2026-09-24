@@ -60,7 +60,9 @@ public class Solucion {
     public Solucion copia() {
         Solucion s = new Solucion();
         for (Map.Entry<String, Ruta> e : rutas.entrySet()) {
-            s.rutas.put(e.getKey(), e.getValue().copia());
+            Ruta r = e.getValue().copia();
+            r.usarInventarioDe(s);
+            s.rutas.put(e.getKey(), r);
         }
         s.noAsignados.addAll(noAsignados);
         s.ubicacion.putAll(ubicacion);
@@ -92,6 +94,7 @@ public class Solucion {
         Ruta r = rutas.get(v.getCodigo());
         if (r == null) {
             r = new Ruta(v, almacenPorDefecto);
+            r.usarInventarioDe(this);
             rutas.put(v.getCodigo(), r);
         }
         return r;
@@ -208,30 +211,40 @@ public class Solucion {
 
     // ------------------------------------------------------------------ inventario (LE019)
 
-    /** Unidades que las rutas de la solución toman del almacén, sumando todos sus viajes. */
-    public int consumo(ContextoPlanificacion ctx, Almacen almacen) {
-        int total = 0;
+    /**
+     * Unidades que las rutas de la solución toman por almacén y día (los intermedios se renuevan
+     * a medianoche, así que el inventario se controla por día de carga).
+     */
+    public Map<ClaveStock, Integer> consumo(ContextoPlanificacion ctx) {
+        Map<ClaveStock, Integer> total = new LinkedHashMap<>();
         for (Ruta r : rutas.values()) {
             if (!r.estaVacia()) {
                 r.asegurarCalculada(ctx);
-                total += r.consumoEn(almacen);
+                r.getConsumo().forEach((k, q) -> total.merge(k, q, Integer::sum));
             }
         }
         return total;
     }
 
-    /** Verifica que el almacén pueda soportar una carga adicional sin dejar stock negativo. */
-    public boolean hayStock(ContextoPlanificacion ctx, Almacen almacen, int cantidad) {
-        if (almacen.esCentral()) {
-            return true;
+    /**
+     * Lo que toman del almacén, ese día, las rutas de unidades distintas de la indicada, según su
+     * último cálculo (no fuerza recálculos: lo usa una ruta mientras se evalúa).
+     */
+    public int consumoDeOtras(Vehiculo excepto, Almacen almacen, int dia) {
+        int total = 0;
+        for (Ruta r : rutas.values()) {
+            if (r.getVehiculo() != excepto && !r.estaVacia()) {
+                total += r.consumoEn(almacen, dia);
+            }
         }
-        return ctx.stockInicial(almacen) - consumo(ctx, almacen) >= cantidad;
+        return total;
     }
 
-    /** Verifica que ningún almacén intermedio quede con stock negativo con las rutas actuales. */
+    /** Verifica que ningún almacén intermedio quede con stock negativo en ningún día. */
     public boolean stockAlcanza(ContextoPlanificacion ctx) {
-        for (Almacen a : ctx.getAlmacenes()) {
-            if (!a.esCentral() && consumo(ctx, a) > ctx.stockInicial(a)) {
+        for (Map.Entry<ClaveStock, Integer> e : consumo(ctx).entrySet()) {
+            ClaveStock k = e.getKey();
+            if (!k.almacen().esCentral() && e.getValue() > ctx.stockDisponible(k.almacen(), k.dia())) {
                 return false;
             }
         }
@@ -239,14 +252,24 @@ public class Solucion {
     }
 
     /**
-     * Como {@link #stockAlcanza(ContextoPlanificacion)}, pero tras modificar una sola ruta de una
-     * solución que ya respetaba el inventario: solo pueden haberse excedido los almacenes
-     * intermedios de los que esa ruta toma carga.
+     * Como {@link #stockAlcanza(ContextoPlanificacion)}, pero para una ruta candidata de la unidad
+     * —la suya en la solución o una de prueba— junto con las demás rutas, en una solución que ya
+     * respetaba el inventario: solo pueden excederse los almacenes y días en que la ruta carga.
      */
-    public boolean stockAlcanza(ContextoPlanificacion ctx, Ruta modificada) {
-        modificada.asegurarCalculada(ctx);
-        for (Almacen a : ctx.getAlmacenes()) {
-            if (!a.esCentral() && modificada.consumoEn(a) > 0 && consumo(ctx, a) > ctx.stockInicial(a)) {
+    public boolean stockAlcanza(ContextoPlanificacion ctx, Ruta candidata) {
+        candidata.asegurarCalculada(ctx);
+        for (Ruta r : rutas.values()) {
+            if (r.getVehiculo() != candidata.getVehiculo()) {
+                r.asegurarCalculada(ctx);
+            }
+        }
+        for (Map.Entry<ClaveStock, Integer> e : candidata.getConsumo().entrySet()) {
+            ClaveStock k = e.getKey();
+            if (k.almacen().esCentral()) {
+                continue;
+            }
+            int total = e.getValue() + consumoDeOtras(candidata.getVehiculo(), k.almacen(), k.dia());
+            if (total > ctx.stockDisponible(k.almacen(), k.dia())) {
                 return false;
             }
         }
@@ -334,9 +357,10 @@ public class Solucion {
             }
         }
 
-        for (Almacen a : ctx.getAlmacenes()) {
-            if (!a.esCentral() && consumo(ctx, a) > ctx.stockInicial(a)) {
-                errores.add("stock insuficiente en " + a.getId());
+        for (Map.Entry<ClaveStock, Integer> e : consumo(ctx).entrySet()) {
+            ClaveStock k = e.getKey();
+            if (!k.almacen().esCentral() && e.getValue() > ctx.stockDisponible(k.almacen(), k.dia())) {
+                errores.add("stock insuficiente en " + k.almacen().getId() + " el día " + k.dia());
             }
         }
 

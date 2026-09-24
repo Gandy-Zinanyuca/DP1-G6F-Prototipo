@@ -137,23 +137,41 @@ Un pedido puede dividirse entre vehículos. Las rutas transportan *partes*: el p
 una fracción (`Pedido.fraccion(q)`: mismo id, destino, registro y hora límite, cantidad `q`).
 
 ```
-INSERTAR_FRACCIONADO(pedido)          // solo si ninguna unidad admite el pedido completo
-restante ← cantidad
+INSERTAR(pedido)                                   // EvaluadorInsercion.insertar
+completa ← mejor inserción del pedido completo
+SI completa existe (y, con fraccionarSiConviene, no obliga a otra recarga) → aplicarla
+SINO SI INSERTAR_FRACCIONADO(pedido, tope = costo de completa) → listo
+SINO SI completa existe → aplicarla
+SINO → no asignado
+
+INSERTAR_FRACCIONADO(pedido, tope)
+restante ← cantidad ; costo ← 0
 MIENTRAS restante > 0
     PARA CADA unidad disponible que no lleve ya una parte del pedido
-        q ← mín(restante, capacidad libre) ; mejor inserción factible de una fracción de q
-    aplicar la fracción de mayor q (desempate: menor costo)
-    SI no existe → deshacer lo aplicado ; fallar
-    restante ← restante − q
+        PARA CADA q ∈ {espacio libre de cada viaje, un viaje completo} (≤ restante)
+            mejor inserción factible de una fracción de q
+    aplicar la de menor costo por unidad (desempate: mayor q)
+    costo ← costo + Δ ; restante ← restante − q
+    SI no existe o costo ≥ tope → deshacer lo aplicado ; fallar
 ```
 
-- Lo usan `ConstructorInicial` y los dos reparadores como alternativa antes de marcar un pedido
-  como no asignado (el de arrepentimiento reparte primero el pendiente de menor deadline).
+- Por defecto se reparte solo cuando ninguna unidad admite el pedido completo. Con
+  `fraccionarSiConviene` (`--fraccionar-si-conviene`) repartir es también una alternativa: si
+  insertar el pedido completo obliga a una unidad a recargar una vez más, se prueba repartirlo
+  en el espacio libre de los viajes existentes y se aplica lo que cueste menos (no se compara
+  contra estrenar una unidad ociosa). No está activo por defecto porque en la prueba de 202612
+  (semilla 1, día 1) empeoró el plan: 3 728 km frente a 3 308, 126 entregas frente a 129 y el
+  doble de Ta. Cada inserción repartida parece más barata, pero cada parte suma una parada de
+  1 h y consume la holgura de otras rutas.
+- El costo por unidad compara fracciones de distinto tamaño: aprovechar el espacio libre de un
+  viaje que pasa cerca cuesta poco por unidad; abrir un viaje nuevo, mucho.
+- Lo usan `ConstructorInicial` y los dos reparadores (el de arrepentimiento, al aplicar el pedido
+  elegido, y para repartir el pendiente de menor deadline cuando ninguno cabe completo).
 - Tras cada destrucción, las partes removidas de un mismo pedido se fusionan
   (`Solucion.consolidar`) para reinsertarlas juntas y fraccionar solo si hace falta.
 - EVALUAR verifica la cobertura por cantidad: Σ partes asignadas = cantidad pendiente del pedido.
-- Se evalúa igual que la solución inicial de Búsqueda Tabú, que también fracciona como último
-  recurso, para que ambos algoritmos resuelvan el mismo problema.
+- Las fracciones prueban el espacio libre de cada viaje, no solo un viaje completo: si el pedido
+  no cabe completo, puede repartirse aprovechando viajes que ya van.
 
 ### 4.4 Rutas con recarga (viajes múltiples)
 
@@ -166,7 +184,8 @@ se **derivan** de la secuencia:
 carga ← 0 ; almacén ← origen
 PARA CADA pedido de la secuencia
     SI carga + cantidad > capacidad
-        ir al almacén más cercano con stock para el siguiente viaje ; recargar ; carga ← 0
+        ir al almacén con stock para el siguiente viaje que menos desvía la ruta ; recargar
+        carga ← 0
     entregar ; carga ← carga + cantidad
 regresar al almacén más cercano
 ```
@@ -175,8 +194,14 @@ regresar al almacén más cercano
   sigue la ruta o vuelve antes a recargar.
 - Capacidad por viaje; a lo sumo `maxViajesPorRuta` viajes (3), que acota el horizonte de la ruta
   y el costo de la búsqueda; el plan se rehace cada Sa.
-- El inventario se descuenta en el almacén donde carga cada viaje; la solución suma los consumos
-  de todas las rutas (restricción global).
+- **Inventario por día**: los intermedios se renuevan a las 00:00 (LE033), así que cada viaje
+  descuenta su carga del almacén donde carga *en el día en que carga*; lo que carga después de
+  medianoche sale del stock renovado. El stock disponible es el actual para hoy y, para días
+  siguientes, la capacidad menos lo que ya cargarán las unidades despachadas. La solución suma
+  los consumos de todas las rutas por almacén y día (restricción global).
+- **Almacén de recarga**: entre los que tienen stock para el viaje —descontando lo que ya toman
+  las demás rutas de la solución—, el que menos alarga el camino de la última entrega a la
+  siguiente. Dos rutas no pueden contar con el mismo stock; el central (ilimitado) siempre está.
 - La hora de alimentación se ubica en cada turno que abarca la ruta (§4.7).
 - Podas de la inserción que no cambian las soluciones factibles: se descarta la unidad si el
   pedido no cabe ni usando todos sus viajes, se deja de probar posiciones una vez que la parada
@@ -244,7 +269,7 @@ REPETIR
     cargar el mes siguiente si t + Sc + 48 h lo alcanza (ventas y bloqueos desplazados)
     registrar entregas con llegada ≤ t ; liberar unidades que regresaron
     SI una entrega llegó tarde → COLAPSO
-    SI cambió el día → recargar almacenes intermedios
+    SI cambió el día → recargar almacenes intermedios (menos las cargas ya despachadas para hoy)
     SI vence el plazo de un pedido sin despachar → COLAPSO
     ctx ← pedidos de la ventana (solo la cantidad no despachada) y unidades disponibles
     plan ← ALNS(ctx, planVigente)
@@ -255,8 +280,9 @@ HASTA colapso, fin de los datos o límite de ciclos
 ```
 
 - **Despacho progresivo por viaje**: un viaje despachado compromete la unidad hasta que llega al
-  almacén donde termina y descuenta el inventario del almacén donde carga; los viajes siguientes
-  y las demás rutas se replanifican en el ciclo siguiente partiendo del plan vigente.
+  almacén donde termina y descuenta el inventario del almacén donde carga, del día en que carga
+  (si es después de medianoche, del stock renovado); los viajes siguientes y las demás rutas se
+  replanifican en el ciclo siguiente partiendo del plan vigente.
 - **Diagnóstico del colapso** (`DiagnosticoColapso`): demanda de la ventana frente a la capacidad
   de un viaje, si el pedido cabe solo o en un segundo viaje, la misma prueba y una replanificación
   sin bloqueos, replanificación desde cero, arrepentimiento desde vacío y mantenimientos.
