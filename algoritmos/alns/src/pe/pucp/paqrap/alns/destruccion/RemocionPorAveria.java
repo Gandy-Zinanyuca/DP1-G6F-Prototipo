@@ -23,9 +23,12 @@ import java.util.Set;
  *     retirar todos los pedidos de esa ruta
  * </pre>
  *
- * <p>Además del mantenimiento programado, se consideran averiadas las unidades que dejaron de
- * estar disponibles en T (fuera del conjunto de unidades asignables). El operador no usa el
- * grado de destrucción: retira todos los pedidos afectados.</p>
+ * <p>
+ * Además del mantenimiento programado, se consideran averiadas las unidades que
+ * dejaron de estar disponibles en T (fuera del conjunto de unidades
+ * asignables). El operador no usa el grado de destrucción: retira todos los
+ * pedidos afectados.
+ * </p>
  */
 public class RemocionPorAveria implements OperadorDestruccion {
 

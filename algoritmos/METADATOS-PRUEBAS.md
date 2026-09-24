@@ -39,7 +39,7 @@ Holguras vacias cuando hay colapso o no hay demanda. No promediar solo pedidos f
 
 ## Restricciones comunes
 
-Servicio 60 min, plazo incluye fin de servicio, turno 480 min con origen 07:00, alimentacion 60 min con INICIO en banda relativa [60,420], retorno antes de fin de turno. Para 07:00-15:00 puede comenzar entre 08:00 y 14:00 y terminar a las 15:00. Si la ruta no cabe en el turno vigente, puede esperar al inicio de un turno posterior siempre que servicio, descanso, retorno y deadline sigan siendo factibles. Se aplican capacidad, stock, disponibilidad, bloqueos temporales, averias y mantenimiento. Partes de hasta 4 unidades. La flota y almacenes son los del cargador comun.
+Servicio 60 min, plazo incluye fin de servicio, turno 480 min con origen 07:00, alimentacion 60 min con INICIO en banda relativa [60,420], retorno antes de fin de turno. Para 07:00-15:00 puede comenzar entre 08:00 y 14:00 y terminar a las 15:00. Si la ruta no cabe en el turno vigente, puede esperar al inicio de un turno posterior siempre que servicio, descanso, retorno y deadline sigan siendo factibles. Se aplican capacidad, stock, disponibilidad, bloqueos temporales. Averias y mantenimiento se conservan en el modelo operativo, pero se excluyen de la experimentacion. Partes de hasta 4 unidades. La flota y almacenes son los del cargador comun.
 
 En simulacion continua, una hora ininterrumpida de inactividad dentro de la banda acredita la alimentacion del turno. Solo se considera tiempo posterior al inicio de simulacion y al ultimo retorno; una pausa parcial interrumpida por ruta no se acumula. El estado instantaneo que se entregue desde otro backend debe informar los descansos reales. No mezclar campañas anteriores a esta regla con las nuevas para comparar calidad.
 
@@ -55,7 +55,7 @@ Las filas TS y ALNS se emparejan por combinacion y semilla. Conservar todos los 
 
 ## Limites
 
-El cargador lee un mes y selecciona por instante y horizonte; no reconstruye operaciones previas. Factor de carga escala cantidades con techo. Las etiquetas E1/E2/E3 no generan incidencias automaticamente. Los archivos determinan bloqueos y mantenimiento; --averias permite intervalos adicionales. Rutas en curso pueden suministrarse por la API Java, pero no desde el CLI actual.
+El cargador lee un mes y selecciona por instante y horizonte; no reconstruye operaciones previas. Factor de carga escala cantidades con techo. Las etiquetas E1/E2/E3 no generan incidencias automaticamente. Los archivos determinan los bloqueos; no se admite --averias y el mantenimiento se excluye. Rutas en curso pueden suministrarse por la API Java, pero no desde el CLI actual.
 
 El comparador evalua una combinacion por invocacion. Para estimar ultimo nivel soportado se debe ejecutar la secuencia de niveles con la misma instancia y semillas y analizar sus filas; no se infiere a partir de una corrida aislada. No se calcula duracion mensual hasta colapso con este ejecutor.
 
@@ -64,3 +64,7 @@ Los resultados del objetivo antiguo basado en costo no son comparables con este 
 ## Verificacion
 
 Las regresiones compartidas comprueban restricciones, inicial comun y reproducibilidad. ExperimentacionTest comprueba ultima parte, fin de servicio, completitud, colapso, ausencia de demanda, prioridad de holgura y exportacion individual/pareada.
+
+## Configuracion experimental v3
+
+Almacen central (27,14), stock ilimitado; Nor-Oeste (12,38) y Este (57,27), stock inicial de 1000 cada uno, repuesto diariamente en la simulacion. La flota inicia en el central. Se mantienen turnos, alimentacion, capacidad, servicio y retorno. Usar - en el antiguo argumento de mantenimiento; no se requiere archivo vacio. No mezclar nuevas campanas con resultados previos a estas coordenadas y a la exclusion de mantenimiento. Las metricas principales siguen siendo Ta y holgura temporal; duracion hasta colapso y cobertura complementan su interpretacion.

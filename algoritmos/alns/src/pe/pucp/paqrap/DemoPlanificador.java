@@ -18,20 +18,25 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Programa de ejecución del componente planificador sobre los archivos del curso.
+ * Programa de ejecución del componente planificador sobre los archivos del
+ * curso.
  *
- * <p>Construye la instancia con el mes del archivo de ventas y la simula con {@link Simulador}:
- * reloj de Sa minutos, despacho progresivo de rutas, entregas registradas al llegar y meses
- * encadenados. Dos modos:</p>
+ * <p>
+ * Construye la instancia con el mes del archivo de ventas y la simula con
+ * {@link Simulador}: reloj de Sa minutos, despacho progresivo de rutas,
+ * entregas registradas al llegar y meses encadenados. Dos modos:
+ * </p>
  * <ul>
- *   <li><b>Por ciclos</b> (por defecto): simula {@code --ciclos N} ciclos de planificación con
- *       la configuración de operación diaria.</li>
- *   <li><b>Hasta el colapso</b> ({@code --colapso}): sin límite de ciclos, encadenando los meses
- *       siguientes que existan en las mismas carpetas, hasta que un pedido no pueda entregarse a
- *       tiempo. Usa la configuración de colapso de ALNS.</li>
+ * <li><b>Por ciclos</b> (por defecto): simula {@code --ciclos N} ciclos de
+ * planificación con la configuración de operación diaria.</li>
+ * <li><b>Hasta el colapso</b> ({@code --colapso}): sin límite de ciclos,
+ * encadenando los meses siguientes que existan en las mismas carpetas, hasta
+ * que un pedido no pueda entregarse a tiempo. Usa la configuración de colapso
+ * de ALNS.</li>
  * </ul>
  *
  * <h2>Uso</h2>
+ *
  * <pre>
  *   java -cp out pe.pucp.paqrap.DemoPlanificador &lt;ventas.txt&gt; [bloqueos.txt] [mantenimiento.txt]
  *        [--colapso] [--dia N] [--hora N] [--ciclos N] [--sa MIN] [--k N] [--iteraciones N]
@@ -40,10 +45,13 @@ import java.util.List;
  *        [--sin-recargas] [--max-viajes N] [--sin-reprogramacion] [--holgura-reprogramacion MIN]
  * </pre>
  *
- * <p>El año y el mes se deducen del nombre del archivo de ventas ({@code ventas.AAAAMM.txt}); con
- * {@code --anio} y {@code --mes} se pueden forzar. Los meses siguientes se buscan en la carpeta
- * del archivo de ventas ({@code ventas.AAAAMM.txt}) y en la del archivo de bloqueos
- * ({@code bloqueo.AAMM.txt}).</p>
+ * <p>
+ * El año y el mes se deducen del nombre del archivo de ventas
+ * ({@code ventas.AAAAMM.txt}); con {@code --anio} y {@code --mes} se pueden
+ * forzar. Los meses siguientes se buscan en la carpeta del archivo de ventas
+ * ({@code ventas.AAAAMM.txt}) y en la del archivo de bloqueos
+ * ({@code bloqueo.AAMM.txt}).
+ * </p>
  */
 public final class DemoPlanificador {
 
@@ -76,62 +84,62 @@ public final class DemoPlanificador {
         List<String> posicionales = new ArrayList<>();
         for (int i = 1; i < args.length; i++) {
             switch (args[i]) {
-                case "--colapso":
-                    colapso = true;
-                    break;
-                case "--dia":
-                    parSim.diaInicial = Integer.parseInt(args[++i]);
-                    break;
-                case "--hora":
-                    parSim.horaInicial = Integer.parseInt(args[++i]);
-                    break;
-                case "--ciclos":
-                    ciclos = Integer.parseInt(args[++i]);
-                    break;
-                case "--anio":
-                    anio = Integer.parseInt(args[++i]);
-                    break;
-                case "--mes":
-                    mes = Integer.parseInt(args[++i]);
-                    break;
-                case "--semilla":
-                    semilla = Long.parseLong(args[++i]);
-                    break;
-                case "--traza":
-                    traza = true;
-                    break;
-                case "--detalle":
-                    parSim.detalle = true;
-                    break;
-                case "--csv-ciclos":
-                    parSim.csvCiclos = Paths.get(args[++i]);
-                    break;
-                case "--sin-recargas":
-                    parPlan.permitirRecargas = false;
-                    break;
-                case "--max-viajes":
-                    parPlan.maxViajesPorRuta = Integer.parseInt(args[++i]);
-                    break;
-                case "--sin-reprogramacion":
-                    parPlan.permitirPostergacion = false;
-                    break;
-                case "--holgura-reprogramacion":
-                    parPlan.holguraMinimaPostergacionMin = Integer.parseInt(args[++i]);
-                    break;
-                case "--csv-resumen":
-                    parSim.csvResumen = Paths.get(args[++i]);
-                    break;
-                case "--sa":
-                    saMinutos = Long.parseLong(args[++i]);
-                    break;
-                case "--k":
-                    k = Integer.parseInt(args[++i]);
-                    break;
-                case "--iteraciones":
-                    iteraciones = Integer.parseInt(args[++i]);
-                    break;
-                default:
-                    posicionales.add(args[i]);
+            case "--colapso":
+                colapso = true;
+                break;
+            case "--dia":
+                parSim.diaInicial = Integer.parseInt(args[++i]);
+                break;
+            case "--hora":
+                parSim.horaInicial = Integer.parseInt(args[++i]);
+                break;
+            case "--ciclos":
+                ciclos = Integer.parseInt(args[++i]);
+                break;
+            case "--anio":
+                anio = Integer.parseInt(args[++i]);
+                break;
+            case "--mes":
+                mes = Integer.parseInt(args[++i]);
+                break;
+            case "--semilla":
+                semilla = Long.parseLong(args[++i]);
+                break;
+            case "--traza":
+                traza = true;
+                break;
+            case "--detalle":
+                parSim.detalle = true;
+                break;
+            case "--csv-ciclos":
+                parSim.csvCiclos = Paths.get(args[++i]);
+                break;
+            case "--sin-recargas":
+                parPlan.permitirRecargas = false;
+                break;
+            case "--max-viajes":
+                parPlan.maxViajesPorRuta = Integer.parseInt(args[++i]);
+                break;
+            case "--sin-reprogramacion":
+                parPlan.permitirPostergacion = false;
+                break;
+            case "--holgura-reprogramacion":
+                parPlan.holguraMinimaPostergacionMin = Integer.parseInt(args[++i]);
+                break;
+            case "--csv-resumen":
+                parSim.csvResumen = Paths.get(args[++i]);
+                break;
+            case "--sa":
+                saMinutos = Long.parseLong(args[++i]);
+                break;
+            case "--k":
+                k = Integer.parseInt(args[++i]);
+                break;
+            case "--iteraciones":
+                iteraciones = Integer.parseInt(args[++i]);
+                break;
+            default:
+                posicionales.add(args[i]);
             }
         }
         if (!posicionales.isEmpty()) {
@@ -148,7 +156,8 @@ public final class DemoPlanificador {
             mantenimiento = null;
         }
 
-        // Año y mes del archivo de ventas (ventas.AAAAMM.txt), salvo que se indiquen explícitamente.
+        // Año y mes del archivo de ventas (ventas.AAAAMM.txt), salvo que se indiquen
+        // explícitamente.
         java.util.regex.Matcher m = java.util.regex.Pattern.compile("(\\d{4})(\\d{2})")
                 .matcher(ventas.getFileName().toString());
         if (m.find()) {
@@ -165,16 +174,11 @@ public final class DemoPlanificador {
         }
 
         // ---------------------------------------------------------------- carga
-        Instancia instancia = Instancia.construir(
-                ventas, bloqueos, mantenimiento,
-                anio, mes,
-                Almacen.CAPACIDAD_INTERMEDIO_POR_DEFECTO,
-                Instancia.AUTOS_POR_DEFECTO,
-                Instancia.MOTOS_POR_DEFECTO,
+        Instancia instancia = Instancia.construir(ventas, bloqueos, mantenimiento, anio, mes,
+                Almacen.CAPACIDAD_INTERMEDIO_POR_DEFECTO, Instancia.AUTOS_POR_DEFECTO, Instancia.MOTOS_POR_DEFECTO,
                 Instancia.BICICLETAS_POR_DEFECTO);
 
-        PlanificadorALNS planificador = colapso
-                ? PlanificadorALNS.paraColapso()
+        PlanificadorALNS planificador = colapso ? PlanificadorALNS.paraColapso()
                 : PlanificadorALNS.paraOperacionDiaria();
         ParametrosALNS parAlns = planificador.getParametros();
         parAlns.traza = traza;
@@ -193,24 +197,24 @@ public final class DemoPlanificador {
         parSim.maxCiclos = colapso ? 0 : ciclos;
 
         System.out.println("=====================================================================");
-        System.out.println(" PaqRap · Componente planificador · ALNS"
-                + (colapso ? " · simulación hasta el colapso" : ""));
+        System.out.println(
+                " PaqRap · Componente planificador · ALNS" + (colapso ? " · simulación hasta el colapso" : ""));
         System.out.println("=====================================================================");
         System.out.printf("Mes inicial: %04d-%02d · %s%n", anio, mes, instancia);
         System.out.println("Almacenes: " + instancia.getAlmacenes());
         System.out.printf("Recargas en ruta: %s · reprogramación: %s%n",
                 parPlan.permitirRecargas ? "sí (hasta " + parPlan.maxViajesPorRuta + " viajes por ruta)" : "no",
-                parPlan.permitirPostergacion ? "sí (holgura > " + parPlan.holguraMinimaPostergacionMin + " min)" : "no");
-        System.out.printf("Sa=%d min · K=%d · Sc=%d min · maxIteraciones=%d · proporciónDestrucción=%.2f"
+                parPlan.permitirPostergacion ? "sí (holgura > " + parPlan.holguraMinimaPostergacionMin + " min)"
+                        : "no");
+        System.out.printf(
+                "Sa=%d min · K=%d · Sc=%d min · maxIteraciones=%d · proporciónDestrucción=%.2f"
                         + " · semilla=%d · %s%n%n",
-                parSim.saMinutos, parAlns.k, parSim.scMinutos, parAlns.maxIteraciones,
-                parAlns.proporcionDestruccion, semilla,
-                colapso ? "sin límite de ciclos" : "ciclos=" + ciclos);
+                parSim.saMinutos, parAlns.k, parSim.scMinutos, parAlns.maxIteraciones, parAlns.proporcionDestruccion,
+                semilla, colapso ? "sin límite de ciclos" : "ciclos=" + ciclos);
 
         YearMonth mesInicial = YearMonth.of(anio, mes);
         FuentesDeDatos fuentes = new FuentesDeDatos(ventas.toAbsolutePath().getParent(), carpetaBloqueos);
-        Simulador simulador = new Simulador(instancia, mesInicial, fuentes, planificador, parSim,
-                parPlan, System.out);
+        Simulador simulador = new Simulador(instancia, mesInicial, fuentes, planificador, parSim, parPlan, System.out);
 
         ResultadoSimulacion r = simulador.getResultado();
         r.parametros.put("algoritmo", planificador.nombre());
@@ -221,9 +225,10 @@ public final class DemoPlanificador {
         r.parametros.put("k", String.valueOf(parAlns.k));
         r.parametros.put("max_iteraciones", String.valueOf(parAlns.maxIteraciones));
         r.parametros.put("proporcion_destruccion", String.valueOf(parAlns.proporcionDestruccion));
-        r.parametros.put("recargas_en_ruta", parPlan.permitirRecargas ? "max" + parPlan.maxViajesPorRuta + "viajes" : "no");
-        r.parametros.put("reprogramacion", parPlan.permitirPostergacion
-                ? "holgura>" + parPlan.holguraMinimaPostergacionMin + "min" : "no");
+        r.parametros.put("recargas_en_ruta",
+                parPlan.permitirRecargas ? "max" + parPlan.maxViajesPorRuta + "viajes" : "no");
+        r.parametros.put("reprogramacion",
+                parPlan.permitirPostergacion ? "holgura>" + parPlan.holguraMinimaPostergacionMin + "min" : "no");
 
         simulador.ejecutar();
 

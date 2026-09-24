@@ -22,8 +22,8 @@ import java.util.Map;
 import java.util.Random;
 
 /**
- * Adaptive Large Neighborhood Search, implementado según el pseudocódigo del Informe de
- * Selección de Algoritmos (ISA v3.0, sección 5.2).
+ * Adaptive Large Neighborhood Search, implementado según el pseudocódigo del
+ * Informe de Selección de Algoritmos (ISA v3.0, sección 5.2).
  *
  * <pre>
  * inicioReal ← System.nanoTime()
@@ -44,9 +44,12 @@ import java.util.Random;
  * RETORNAR mejorGlobal
  * </pre>
  *
- * <p>Toda la aleatoriedad proviene de un único {@link Random} con semilla configurable, y las
- * colecciones recorridas tienen orden estable: dos ejecuciones con la misma semilla y la misma
- * entrada producen la misma asignación (LE008).</p>
+ * <p>
+ * Toda la aleatoriedad proviene de un único {@link Random} con semilla
+ * configurable, y las colecciones recorridas tienen orden estable: dos
+ * ejecuciones con la misma semilla y la misma entrada producen la misma
+ * asignación (LE008).
+ * </p>
  */
 public class ALNS {
 
@@ -66,7 +69,10 @@ public class ALNS {
         public List<String> errores = new ArrayList<>();
         public double costoInicial;
         public double costoFinal;
-        /** Origen de la solución inicial: "heredado", "desde cero" o "único" (sin plan previo). */
+        /**
+         * Origen de la solución inicial: "heredado", "desde cero" o "único" (sin plan
+         * previo).
+         */
         public String origenInicial = "único";
         /** Pedidos y paquetes que el mejor plan reprograma para un ciclo posterior. */
         public int pedidosPostergados;
@@ -92,23 +98,25 @@ public class ALNS {
                 }
                 return sb.toString();
             }
-            sb.append(String.format("ALNS: %d iteraciones en %d ms | costo %.2f -> %.2f "
+            sb.append(String.format(
+                    "ALNS: %d iteraciones en %d ms | costo %.2f -> %.2f "
                             + "(mejor en iter %d) | inicial %s | reprogramados %d pedidos / %d paquetes%n",
                     iteraciones, milisegundos, costoInicial, costoFinal, iteracionMejor, origenInicial,
                     pedidosPostergados, paquetesPostergados));
-            sb.append(String.format("      candidatos evaluados=%d factibles=%d noFactibles=%d | "
+            sb.append(String.format(
+                    "      candidatos evaluados=%d factibles=%d noFactibles=%d | "
                             + "aceptados=%d rechazados=%d nuevosMejores=%d%n",
-                    candidatosEvaluados, candidatosFactibles, candidatosNoFactibles,
-                    aceptados, rechazados, nuevasMejores));
+                    candidatosEvaluados, candidatosFactibles, candidatosNoFactibles, aceptados, rechazados,
+                    nuevasMejores));
             sb.append("      pesos destrucción:\n");
             for (int i = 0; i < nombresDestruccion.length; i++) {
-                sb.append(String.format("        %-28s w=%.3f usos=%d%n",
-                        nombresDestruccion[i], pesosDestruccion[i], usosDestruccion[i]));
+                sb.append(String.format("        %-28s w=%.3f usos=%d%n", nombresDestruccion[i], pesosDestruccion[i],
+                        usosDestruccion[i]));
             }
             sb.append("      pesos reparación:\n");
             for (int i = 0; i < nombresReparacion.length; i++) {
-                sb.append(String.format("        %-28s w=%.3f usos=%d%n",
-                        nombresReparacion[i], pesosReparacion[i], usosReparacion[i]));
+                sb.append(String.format("        %-28s w=%.3f usos=%d%n", nombresReparacion[i], pesosReparacion[i],
+                        usosReparacion[i]));
             }
             return sb.toString();
         }
@@ -121,7 +129,10 @@ public class ALNS {
         this.par = par;
     }
 
-    /** INICIALIZAR_OPERADORES_DESTRUCCIÓN: los cinco operadores del ISA, en su orden. */
+    /**
+     * INICIALIZAR_OPERADORES_DESTRUCCIÓN: los cinco operadores del ISA, en su
+     * orden.
+     */
     private static List<OperadorDestruccion> operadoresDestruccion() {
         List<OperadorDestruccion> lista = new ArrayList<>();
         lista.add(new RemocionAleatoria());
@@ -132,7 +143,10 @@ public class ALNS {
         return lista;
     }
 
-    /** INICIALIZAR_OPERADORES_REPARACIÓN: inserción voraz e inserción por arrepentimiento. */
+    /**
+     * INICIALIZAR_OPERADORES_REPARACIÓN: inserción voraz e inserción por
+     * arrepentimiento.
+     */
     private static List<OperadorReparacion> operadoresReparacion(ParametrosALNS par) {
         List<OperadorReparacion> lista = new ArrayList<>();
         lista.add(new InsercionGolosa());
@@ -147,23 +161,27 @@ public class ALNS {
     /**
      * Ejecuta ALNS sobre los pedidos considerados del contexto.
      *
-     * @return la mejor solución global; si la solución inicial no es factible, esa solución
-     *         (con {@link Solucion#esFactible()} falso y sus errores)
+     * @return la mejor solución global; si la solución inicial no es factible, esa
+     *         solución (con {@link Solucion#esFactible()} falso y sus errores)
      */
     public Solucion resolver(ContextoPlanificacion ctx) {
         return resolver(ctx, null);
     }
 
     /**
-     * Ejecuta ALNS sobre los pedidos considerados del contexto, reutilizando el plan vigente
-     * cuando existe. Las rutas que siguen siendo compatibles se heredan; los pedidos de rutas
-     * afectadas por unidades no disponibles o arcos bloqueados se liberan y se reinsertan.
+     * Ejecuta ALNS sobre los pedidos considerados del contexto, reutilizando el
+     * plan vigente cuando existe. Las rutas que siguen siendo compatibles se
+     * heredan; los pedidos de rutas afectadas por unidades no disponibles o arcos
+     * bloqueados se liberan y se reinsertan.
      *
-     * <p>Con plan previo se construyen dos soluciones iniciales: la heredada —retiene los
-     * pedidos del plan vigente que aún no salieron y los reevalúa junto con los nuevos— y la de
-     * GENERAR_SOLUCIÓN_INICIAL desde cero. ALNS parte de la mejor: la factible, y entre dos
-     * factibles, la de menor costo. Así la reoptimización incremental no puede dejar el plan en
-     * un estado peor que el que se obtendría replanificando.</p>
+     * <p>
+     * Con plan previo se construyen dos soluciones iniciales: la heredada —retiene
+     * los pedidos del plan vigente que aún no salieron y los reevalúa junto con los
+     * nuevos— y la de GENERAR_SOLUCIÓN_INICIAL desde cero. ALNS parte de la mejor:
+     * la factible, y entre dos factibles, la de menor costo. Así la reoptimización
+     * incremental no puede dejar el plan en un estado peor que el que se obtendría
+     * replanificando.
+     * </p>
      */
     public Solucion resolver(ContextoPlanificacion ctx, Solucion planPrevio) {
         long inicioReal = System.nanoTime();
@@ -202,10 +220,10 @@ public class ALNS {
         Solucion mejorGlobal = solucionInicial.copia();
         double costoMejor = costoInicial;
 
-        SelectorAdaptativo<OperadorDestruccion> destruccion =
-                new SelectorAdaptativo<>(operadoresDestruccion(), par.pesoInicial, par.factorReaccion);
-        SelectorAdaptativo<OperadorReparacion> reparacion =
-                new SelectorAdaptativo<>(operadoresReparacion(par), par.pesoInicial, par.factorReaccion);
+        SelectorAdaptativo<OperadorDestruccion> destruccion = new SelectorAdaptativo<>(operadoresDestruccion(),
+                par.pesoInicial, par.factorReaccion);
+        SelectorAdaptativo<OperadorReparacion> reparacion = new SelectorAdaptativo<>(operadoresReparacion(par),
+                par.pesoInicial, par.factorReaccion);
         CriterioAceptacion criterio = new CriterioAceptacion(par);
 
         int iteracion = 0;
@@ -221,8 +239,7 @@ public class ALNS {
             int grado = determinarGradoDestruccion(actual, ctx);
 
             Solucion candidato = actual.copia();
-            List<Pedido> removidos = destruccion.operador(iDestruccion)
-                    .destruir(candidato, grado, ctx, aleatorio);
+            List<Pedido> removidos = destruccion.operador(iDestruccion).destruir(candidato, grado, ctx, aleatorio);
             // Las fracciones removidas de un mismo pedido se reinsertan juntas.
             removidos = candidato.consolidar(removidos);
             reparacion.operador(iReparacion).reparar(candidato, removidos, ctx, aleatorio);
@@ -236,8 +253,8 @@ public class ALNS {
                 estadisticas.rechazados++;
             } else {
                 estadisticas.candidatosFactibles++;
-                CriterioAceptacion.Resultado resultado =
-                        criterio.evaluar(costoActual, costoCandidato, iteracion, aleatorio);
+                CriterioAceptacion.Resultado resultado = criterio.evaluar(costoActual, costoCandidato, iteracion,
+                        aleatorio);
                 if (resultado.aceptar) {
                     actual = candidato;
                     costoActual = costoCandidato;
@@ -264,8 +281,8 @@ public class ALNS {
                 destruccion.actualizarPesos();
                 reparacion.actualizarPesos();
                 if (par.traza) {
-                    System.out.printf("  iter %5d  actual=S/ %.2f  mejor=S/ %.2f  T=%.3f%n",
-                            iteracion, costoActual, costoMejor, criterio.calcularTemperatura(iteracion));
+                    System.out.printf("  iter %5d  actual=S/ %.2f  mejor=S/ %.2f  T=%.3f%n", iteracion, costoActual,
+                            costoMejor, criterio.calcularTemperatura(iteracion));
                 }
             }
         }
@@ -286,18 +303,21 @@ public class ALNS {
         estadisticas.pesosReparacion = reparacion.getPesos();
         estadisticas.usosDestruccion = destruccion.getUsosAcumulados();
         estadisticas.usosReparacion = reparacion.getUsosAcumulados();
-        estadisticas.nombresDestruccion = destruccion.getOperadores().stream()
-                .map(OperadorDestruccion::nombre).toArray(String[]::new);
-        estadisticas.nombresReparacion = reparacion.getOperadores().stream()
-                .map(OperadorReparacion::nombre).toArray(String[]::new);
+        estadisticas.nombresDestruccion = destruccion.getOperadores().stream().map(OperadorDestruccion::nombre)
+                .toArray(String[]::new);
+        estadisticas.nombresReparacion = reparacion.getOperadores().stream().map(OperadorReparacion::nombre)
+                .toArray(String[]::new);
         return mejorGlobal;
     }
 
     /**
-     * DETERMINAR_GRADO_DESTRUCCIÓN: grado ← máx(1, redondear(totalPedidos × proporciónDestrucción)).
+     * DETERMINAR_GRADO_DESTRUCCIÓN: grado ← máx(1, redondear(totalPedidos ×
+     * proporciónDestrucción)).
      *
-     * <p>Conforme al ISA, la proporción se reduce dinámicamente con la ocupación de la flota:
-     * proporción × (1 − 0,7 · ocupación), cuando la opción está activa.</p>
+     * <p>
+     * Conforme al ISA, la proporción se reduce dinámicamente con la ocupación de la
+     * flota: proporción × (1 − 0,7 · ocupación), cuando la opción está activa.
+     * </p>
      */
     private int determinarGradoDestruccion(Solucion s, ContextoPlanificacion ctx) {
         int totalPedidos = s.pedidosAsignados().size();
@@ -309,11 +329,11 @@ public class ALNS {
     }
 
     /**
-     * Reoptimización incremental: conserva asignaciones previas que todavía pertenecen al
-     * contexto actual y libera las que deben replanificarse por incidencia o indisponibilidad.
+     * Reoptimización incremental: conserva asignaciones previas que todavía
+     * pertenecen al contexto actual y libera las que deben replanificarse por
+     * incidencia o indisponibilidad.
      */
-    private Solucion construirDesdePlanPrevio(ContextoPlanificacion ctx, Solucion planPrevio,
-                                              Random aleatorio) {
+    private Solucion construirDesdePlanPrevio(ContextoPlanificacion ctx, Solucion planPrevio, Random aleatorio) {
         Solucion heredada = heredarAsignacionesVigentes(ctx, planPrevio);
 
         List<Pedido> removidos = new ArrayList<>();
@@ -334,11 +354,11 @@ public class ALNS {
     }
 
     /**
-     * Hereda del plan previo las partes que siguen pendientes de planificar: su pedido está en
-     * el contexto actual, la parte no fue despachada y su unidad sigue siendo asignable. La
-     * cobertura se lleva por cantidad, porque un pedido puede estar repartido entre varias
-     * rutas o haberse despachado solo en parte. Lo que queda sin cubrir se marca como no
-     * asignado para reinsertarlo.
+     * Hereda del plan previo las partes que siguen pendientes de planificar: su
+     * pedido está en el contexto actual, la parte no fue despachada y su unidad
+     * sigue siendo asignable. La cobertura se lleva por cantidad, porque un pedido
+     * puede estar repartido entre varias rutas o haberse despachado solo en parte.
+     * Lo que queda sin cubrir se marca como no asignado para reinsertarlo.
      */
     private Solucion heredarAsignacionesVigentes(ContextoPlanificacion ctx, Solucion planPrevio) {
         Solucion heredada = new Solucion();
@@ -362,14 +382,14 @@ public class ALNS {
                 int restante = porCubrir.getOrDefault(p.getOriginal(), 0);
                 if (p.getEstado() != Pedido.Estado.REGISTRADO || p.getCantidad() > restante
                         || nueva.contienePedido(p)) {
-                    continue;   // despachada, ya cubierta o fuera del contexto actual
+                    continue; // despachada, ya cubierta o fuera del contexto actual
                 }
                 heredada.asignar(nueva, nueva.tamanio(), p);
                 nueva.recalcular(ctx);
                 if (heredada.stockAlcanza(ctx)) {
                     porCubrir.put(p.getOriginal(), restante - p.getCantidad());
                 } else {
-                    heredada.olvidar(p);   // sin stock: se reinsertará con el resto
+                    heredada.olvidar(p); // sin stock: se reinsertará con el resto
                 }
             }
             nueva.recalcular(ctx);
@@ -387,9 +407,10 @@ public class ALNS {
     }
 
     /**
-     * Almacén de origen de la ruta heredada. Si la unidad ya salió con los primeros viajes de
-     * su ruta, los viajes pendientes parten del almacén donde terminó el último viaje
-     * despachado (su posición actual); si no, se conserva el origen elegido.
+     * Almacén de origen de la ruta heredada. Si la unidad ya salió con los primeros
+     * viajes de su ruta, los viajes pendientes parten del almacén donde terminó el
+     * último viaje despachado (su posición actual); si no, se conserva el origen
+     * elegido.
      */
     private static Almacen origenHeredado(ContextoPlanificacion ctx, Ruta rutaAnterior, Vehiculo vehiculo) {
         for (Pedido p : rutaAnterior.getSecuencia()) {
@@ -420,7 +441,9 @@ public class ALNS {
         return removidos;
     }
 
-    /** Fracción de la capacidad total de la flota disponible que está comprometida. */
+    /**
+     * Fracción de la capacidad total de la flota disponible que está comprometida.
+     */
     private static double ocupacionFlota(Solucion s, ContextoPlanificacion ctx) {
         int capacidadTotal = 0;
         for (Vehiculo v : ctx.getUnidadesAsignables()) {

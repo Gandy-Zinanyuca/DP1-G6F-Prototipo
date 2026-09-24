@@ -24,18 +24,24 @@ import java.util.Set;
  * Banco de pruebas de verificación del componente planificador ALNS (ISA 5.2).
  *
  * <ol>
- *   <li><b>Factibilidad</b>: la solución devuelta cumple todas las restricciones duras, o se
- *       reporta como no factible (colapso) sin iterar.</li>
- *   <li><b>Aporte del metaheurístico</b>: el costo de ALNS no supera al de la solución inicial.</li>
- *   <li><b>Métricas</b>: candidatosEvaluados = maxIteraciones = factibles + noFactibles.</li>
- *   <li><b>Operadores</b>: 5 de destrucción y 2 de reparación.</li>
- *   <li><b>Reproducibilidad</b>: dos ejecuciones con la misma semilla dan el mismo costo (LE008).</li>
- *   <li><b>Integridad</b>: ninguna parte aparece dos veces y la cantidad de cada pedido
- *       considerado queda cubierta exactamente, completa o repartida entre unidades (LE006).</li>
- *   <li><b>Capacidad, plazos e inventario</b> verificados de forma independiente.</li>
+ * <li><b>Factibilidad</b>: la solución devuelta cumple todas las restricciones
+ * duras, o se reporta como no factible (colapso) sin iterar.</li>
+ * <li><b>Aporte del metaheurístico</b>: el costo de ALNS no supera al de la
+ * solución inicial.</li>
+ * <li><b>Métricas</b>: candidatosEvaluados = maxIteraciones = factibles +
+ * noFactibles.</li>
+ * <li><b>Operadores</b>: 5 de destrucción y 2 de reparación.</li>
+ * <li><b>Reproducibilidad</b>: dos ejecuciones con la misma semilla dan el
+ * mismo costo (LE008).</li>
+ * <li><b>Integridad</b>: ninguna parte aparece dos veces y la cantidad de cada
+ * pedido considerado queda cubierta exactamente, completa o repartida entre
+ * unidades (LE006).</li>
+ * <li><b>Capacidad, plazos e inventario</b> verificados de forma
+ * independiente.</li>
  * </ol>
  *
  * <h2>Uso</h2>
+ *
  * <pre>
  *   java -cp out pe.pucp.paqrap.PruebaPlanificador &lt;ventas.txt&gt; [bloqueos.txt] [--dia N] [--hora N]
  *                                                  [--iteraciones N]
@@ -70,8 +76,7 @@ public final class PruebaPlanificador {
         }
 
         Instancia instancia = Instancia.construir(ventas, bloqueos, null, 2026, 1,
-                Almacen.CAPACIDAD_INTERMEDIO_POR_DEFECTO,
-                Instancia.AUTOS_POR_DEFECTO, Instancia.MOTOS_POR_DEFECTO,
+                Almacen.CAPACIDAD_INTERMEDIO_POR_DEFECTO, Instancia.AUTOS_POR_DEFECTO, Instancia.MOTOS_POR_DEFECTO,
                 Instancia.BICICLETAS_POR_DEFECTO);
 
         ParametrosALNS parAlns = new ParametrosALNS();
@@ -79,9 +84,10 @@ public final class PruebaPlanificador {
 
         ParametrosPlanificador parPlan = new ParametrosPlanificador();
         int minuto = Turnos.aMinutos(dia, hora, 0);
-        // Sin pedidos entregados previamente: se consideran los registrados hasta T + Sc.
-        ContextoPlanificacion ctx = ContextoPlanificacion.construir(instancia, minuto,
-                (int) parAlns.scMinutos(), instancia.getPedidos(), Collections.emptyList(), parPlan);
+        // Sin pedidos entregados previamente: se consideran los registrados hasta T +
+        // Sc.
+        ContextoPlanificacion ctx = ContextoPlanificacion.construir(instancia, minuto, (int) parAlns.scMinutos(),
+                instancia.getPedidos(), Collections.emptyList(), parPlan);
 
         System.out.println("=====================================================================");
         System.out.println(" Verificación del componente planificador (ALNS)");
@@ -103,7 +109,8 @@ public final class PruebaPlanificador {
         ALNS.Estadisticas est = alns.getEstadisticas();
         System.out.print(est);
 
-        // --- 1. Factibilidad --------------------------------------------------------------
+        // --- 1. Factibilidad
+        // --------------------------------------------------------------
         if (!inicial.esFactible()) {
             System.out.println("\n [1] Solución inicial NO FACTIBLE (colapso): " + inicial.getErrores().get(0));
             verificar("ALNS devuelve resultado no factible sin iterar",
@@ -114,25 +121,29 @@ public final class PruebaPlanificador {
         System.out.printf("%n [1] Solución inicial: S/ %.2f · ALNS: S/ %.2f%n", costoInicial, resultado.getCosto());
         verificar("La solución de ALNS es factible", resultado.esFactible());
 
-        // --- 2. Aporte ---------------------------------------------------------------------
+        // --- 2. Aporte
+        // ---------------------------------------------------------------------
         verificar("ALNS no empeora la solución inicial", resultado.getCosto() <= costoInicial + 1e-6);
 
-        // --- 3. Métricas -------------------------------------------------------------------
-        verificar("candidatosEvaluados = maxIteraciones",
-                est.candidatosEvaluados == parAlns.maxIteraciones);
+        // --- 3. Métricas
+        // -------------------------------------------------------------------
+        verificar("candidatosEvaluados = maxIteraciones", est.candidatosEvaluados == parAlns.maxIteraciones);
         verificar("candidatosEvaluados = factibles + noFactibles",
                 est.candidatosEvaluados == est.candidatosFactibles + est.candidatosNoFactibles);
 
-        // --- 4. Operadores -----------------------------------------------------------------
+        // --- 4. Operadores
+        // -----------------------------------------------------------------
         verificar("5 operadores de destrucción y 2 de reparación",
                 est.nombresDestruccion.length == 5 && est.nombresReparacion.length == 2);
 
-        // --- 5. Reproducibilidad -----------------------------------------------------------
+        // --- 5. Reproducibilidad
+        // -----------------------------------------------------------
         double repetido = new ALNS(parAlns).resolver(ctx).getCosto();
         verificar("Ejecuciones con igual semilla dan igual costo (LE008)",
                 Math.abs(repetido - resultado.getCosto()) < 1e-6);
 
-        // --- 6. Integridad -----------------------------------------------------------------
+        // --- 6. Integridad
+        // -----------------------------------------------------------------
         Set<Pedido> vistos = Collections.newSetFromMap(new IdentityHashMap<>());
         Map<Pedido, Integer> cubierto = new IdentityHashMap<>();
         boolean duplicados = false;
@@ -143,7 +154,8 @@ public final class PruebaPlanificador {
                 cubierto.merge(p.getOriginal(), p.getCantidad(), Integer::sum);
             }
         }
-        // Cobertura: lo asignado más lo reprogramado cubre cada pedido, y solo se reprograma lo
+        // Cobertura: lo asignado más lo reprogramado cubre cada pedido, y solo se
+        // reprograma lo
         // que todavía tiene holgura para un ciclo posterior.
         Map<Pedido, Integer> reprogramado = new IdentityHashMap<>();
         boolean reprogramacionValida = true;
@@ -153,22 +165,22 @@ public final class PruebaPlanificador {
         }
         boolean cubiertos = true;
         for (Pedido p : ctx.getPedidosPorAtender()) {
-            cubiertos &= cubierto.getOrDefault(p.getOriginal(), 0)
-                    + reprogramado.getOrDefault(p.getOriginal(), 0) == p.getCantidad();
+            cubiertos &= cubierto.getOrDefault(p.getOriginal(), 0) + reprogramado.getOrDefault(p.getOriginal(), 0) == p
+                    .getCantidad();
         }
         for (Pedido p : vistos) {
             if (p.esFraccion()) {
                 fraccionados++;
             }
         }
-        System.out.printf(" [6] Partes asignadas: %d (%d fracciones de pedidos repartidos) · reprogramados:"
+        System.out.printf(
+                " [6] Partes asignadas: %d (%d fracciones de pedidos repartidos) · reprogramados:"
                         + " %d pedidos / %d paquetes%n",
                 vistos.size(), fraccionados, resultado.getPedidosPostergados(), resultado.getPaquetesPostergados());
         boolean mismaHora = true;
         for (Pedido p : vistos) {
             Pedido o = p.getOriginal();
-            mismaHora &= p.getMinutoLimite() == o.getMinutoLimite()
-                    && p.getMinutoRegistro() == o.getMinutoRegistro()
+            mismaHora &= p.getMinutoLimite() == o.getMinutoLimite() && p.getMinutoRegistro() == o.getMinutoRegistro()
                     && p.getDestino().equals(o.getDestino());
         }
         verificar("Ninguna parte de pedido duplicada", !duplicados);
@@ -177,7 +189,8 @@ public final class PruebaPlanificador {
                 + " reprogramada (LE006)", cubiertos);
         verificar("Solo se reprograman pedidos con holgura suficiente", reprogramacionValida);
 
-        // --- 7. Capacidad, plazos e inventario ---------------------------------------------
+        // --- 7. Capacidad, plazos e inventario
+        // ---------------------------------------------
         boolean capacidadOk = true;
         boolean plazosOk = true;
         int viajes = 0;
@@ -218,9 +231,7 @@ public final class PruebaPlanificador {
 
     private static void terminar() {
         System.out.println("=====================================================================");
-        System.out.println(fallos == 0
-                ? " TODAS LAS VERIFICACIONES PASARON"
-                : " VERIFICACIONES FALLIDAS: " + fallos);
+        System.out.println(fallos == 0 ? " TODAS LAS VERIFICACIONES PASARON" : " VERIFICACIONES FALLIDAS: " + fallos);
         System.out.println("=====================================================================");
         if (fallos > 0) {
             System.exit(1);

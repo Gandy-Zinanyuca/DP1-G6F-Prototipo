@@ -1,8 +1,9 @@
 package pe.pucp.paqrap.tabu;
 
 /** Atributos del movimiento independientes de las posiciones de insercion. */
-public record TabuMove(Tipo tipo,String pedidoA,String pedidoB,String origen,String destino){public enum Tipo {
-    ASIGNACION, SWAP, RELOCATE
+public record TabuMove(Tipo tipo, String pedidoA, String pedidoB, String origen, String destino) {
+    public enum Tipo {
+        ASIGNACION, SWAP, RELOCATE
 
     }
 

@@ -5,10 +5,14 @@ import pe.pucp.paqrap.alns.ParametrosALNS;
 import pe.pucp.paqrap.solucion.Solucion;
 
 /**
- * Implementación del componente planificador basada en Adaptive Large Neighborhood Search.
+ * Implementación del componente planificador basada en Adaptive Large
+ * Neighborhood Search.
  *
- * <p>Las configuraciones por escenario solo cambian parámetros de ConfiguracionALNS; los
- * valores deben calibrarse mediante experimentación numérica (ISA 5.2).</p>
+ * <p>
+ * Las configuraciones por escenario solo cambian parámetros de
+ * ConfiguracionALNS; los valores deben calibrarse mediante experimentación
+ * numérica (ISA 5.2).
+ * </p>
  */
 public class PlanificadorALNS implements Planificador {
 
@@ -72,7 +76,9 @@ public class PlanificadorALNS implements Planificador {
         return parametros;
     }
 
-    /** Reinicia el motor, útil para repetir un escenario con una semilla distinta. */
+    /**
+     * Reinicia el motor, útil para repetir un escenario con una semilla distinta.
+     */
     public void reiniciarMotor(long semilla) {
         parametros.semilla = semilla;
         this.motor = new ALNS(parametros);

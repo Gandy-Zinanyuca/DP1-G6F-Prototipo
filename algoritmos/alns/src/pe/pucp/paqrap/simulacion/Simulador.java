@@ -31,34 +31,46 @@ import java.util.Locale;
  * Simulación con reloj discreto sobre el componente planificador.
  *
  * <h2>Avance temporal</h2>
- * <p>Cada ciclo ocurre en un instante T; el siguiente, en T + Sa. En cada ciclo:</p>
+ * <p>
+ * Cada ciclo ocurre en un instante T; el siguiente, en T + Sa. En cada ciclo:
+ * </p>
  * <ol>
- *   <li>Se registran las entregas cuya llegada ya ocurrió (≤ T) y se liberan las unidades que
- *       regresaron a un almacén. Un pedido se marca como entregado solo cuando llegó su última
- *       parte.</li>
- *   <li>A medianoche se recargan los almacenes intermedios (LE033).</li>
- *   <li>Se planifica la cantidad no despachada de los pedidos de la ventana (pendientes más los
- *       registrados en (T, T + Sc]), partiendo del plan vigente.</li>
- *   <li>Se <b>despachan</b> solo las rutas que salen antes del siguiente ciclo (inicio &lt;
- *       T + Sa): la unidad carga en el almacén y queda comprometida hasta su regreso. Las
- *       rutas que salen después siguen siendo parte del plan y se replanifican en el ciclo
- *       siguiente, con la información nueva.</li>
+ * <li>Se registran las entregas cuya llegada ya ocurrió (≤ T) y se liberan las
+ * unidades que regresaron a un almacén. Un pedido se marca como entregado solo
+ * cuando llegó su última parte.</li>
+ * <li>A medianoche se recargan los almacenes intermedios (LE033).</li>
+ * <li>Se planifica la cantidad no despachada de los pedidos de la ventana
+ * (pendientes más los registrados en (T, T + Sc]), partiendo del plan
+ * vigente.</li>
+ * <li>Se <b>despachan</b> solo las rutas que salen antes del siguiente ciclo
+ * (inicio &lt; T + Sa): la unidad carga en el almacén y queda comprometida
+ * hasta su regreso. Las rutas que salen después siguen siendo parte del plan y
+ * se replanifican en el ciclo siguiente, con la información nueva.</li>
  * </ol>
  *
  * <h2>Meses encadenados</h2>
- * <p>El reloj cuenta minutos desde el día 1, 00:00, del mes inicial. Cuando la ventana de
- * planificación se acerca al fin del último mes cargado, se cargan las ventas y los bloqueos
- * del mes siguiente con el desplazamiento correspondiente, sin interrumpir la simulación.</p>
+ * <p>
+ * El reloj cuenta minutos desde el día 1, 00:00, del mes inicial. Cuando la
+ * ventana de planificación se acerca al fin del último mes cargado, se cargan
+ * las ventas y los bloqueos del mes siguiente con el desplazamiento
+ * correspondiente, sin interrumpir la simulación.
+ * </p>
  *
  * <h2>Colapso</h2>
- * <p>La simulación colapsa cuando un pedido no puede entregarse dentro de su plazo: el
- * planificador no encuentra un plan factible para los pedidos de la ventana (criterio del ISA),
- * una parte despachada llega tarde o vence el plazo de un pedido sin despachar. Sin límite de
- * ciclos, la simulación avanza hasta el colapso o hasta que se acaban los datos.</p>
+ * <p>
+ * La simulación colapsa cuando un pedido no puede entregarse dentro de su
+ * plazo: el planificador no encuentra un plan factible para los pedidos de la
+ * ventana (criterio del ISA), una parte despachada llega tarde o vence el plazo
+ * de un pedido sin despachar. Sin límite de ciclos, la simulación avanza hasta
+ * el colapso o hasta que se acaban los datos.
+ * </p>
  */
 public class Simulador {
 
-    /** Horizonte de carga anticipada: la ventana más los plazos más largos (36 h) y el regreso. */
+    /**
+     * Horizonte de carga anticipada: la ventana más los plazos más largos (36 h) y
+     * el regreso.
+     */
     private static final int HORIZONTE_CARGA_MIN = 48 * 60;
 
     /** Parada de una ruta despachada, pendiente de entregar. */
@@ -91,14 +103,13 @@ public class Simulador {
     private int pedidosCargados;
 
     /**
-     * @param instancia    instancia construida con el mes inicial (sus pedidos y bloqueos son
-     *                     los de ese mes)
-     * @param mesInicial   mes al que corresponde el minuto 0
-     * @param fuentes      carpetas de donde se toman los meses siguientes
+     * @param instancia  instancia construida con el mes inicial (sus pedidos y
+     *                   bloqueos son los de ese mes)
+     * @param mesInicial mes al que corresponde el minuto 0
+     * @param fuentes    carpetas de donde se toman los meses siguientes
      */
-    public Simulador(Instancia instancia, YearMonth mesInicial, FuentesDeDatos fuentes,
-                     Planificador planificador, ParametrosSimulacion par,
-                     ParametrosPlanificador parPlan, PrintStream salida) {
+    public Simulador(Instancia instancia, YearMonth mesInicial, FuentesDeDatos fuentes, Planificador planificador,
+            ParametrosSimulacion par, ParametrosPlanificador parPlan, PrintStream salida) {
         this.instancia = instancia;
         this.fuentes = fuentes;
         this.planificador = planificador;
@@ -120,7 +131,10 @@ public class Simulador {
         return resultado;
     }
 
-    /** Ejecuta la simulación hasta el colapso, el fin de los datos o el límite de ciclos. */
+    /**
+     * Ejecuta la simulación hasta el colapso, el fin de los datos o el límite de
+     * ciclos.
+     */
     public ResultadoSimulacion ejecutar() throws IOException {
         long inicioReal = System.nanoTime();
         int t = Turnos.aMinutos(par.diaInicial, par.horaInicial, 0);
@@ -171,8 +185,8 @@ public class Simulador {
                     break;
                 }
 
-                ContextoPlanificacion ctx = ContextoPlanificacion.construir(instancia, t, par.scMinutos,
-                        pedidosVivos, Collections.emptyList(), parPlan);
+                ContextoPlanificacion ctx = ContextoPlanificacion.construir(instancia, t, par.scMinutos, pedidosVivos,
+                        Collections.emptyList(), parPlan);
 
                 if (ctx.getPedidosPorAtender().isEmpty()) {
                     escribirCiclo(csv, t, ctx, 0, true, 0, 0);
@@ -192,9 +206,8 @@ public class Simulador {
 
                 if (!plan.esFactible()) {
                     escribirCiclo(csv, t, ctx, ta, false, 0, plan.getCostoOperacionSoles());
-                    salida.printf("--- Ciclo %d · %s · pedidos por atender: %d · unidades: %d%n",
-                            resultado.ciclos + 1, formatear(t), ctx.getPedidosPorAtender().size(),
-                            ctx.getUnidadesAsignables().size());
+                    salida.printf("--- Ciclo %d · %s · pedidos por atender: %d · unidades: %d%n", resultado.ciclos + 1,
+                            formatear(t), ctx.getPedidosPorAtender().size(), ctx.getUnidadesAsignables().size());
                     salida.print(planificador.resumenUltimaEjecucion());
                     colapsar("no existe plan factible: " + String.join("; ", primeros(plan.getErrores(), 3)));
                     resultado.diagnosticoColapso = new DiagnosticoColapso(instancia, ctx, plan, planVigente,
@@ -210,11 +223,12 @@ public class Simulador {
                 int despachadas = despachar(plan, t + par.saMinutos);
                 escribirCiclo(csv, t, ctx, ta, true, despachadas, plan.getCostoOperacionSoles());
                 if (par.detalle) {
-                    salida.printf("--- Ciclo %d · %s · pedidos por atender: %d · unidades: %d · "
+                    salida.printf(
+                            "--- Ciclo %d · %s · pedidos por atender: %d · unidades: %d · "
                                     + "bloqueos vigentes: %d · rutas despachadas: %d%n",
                             resultado.ciclos + 1, formatear(t), ctx.getPedidosPorAtender().size(),
-                            ctx.getUnidadesAsignables().size(),
-                            ctx.getMapa().getBloqueosVigentes().size(), despachadas);
+                            ctx.getUnidadesAsignables().size(), ctx.getMapa().getBloqueosVigentes().size(),
+                            despachadas);
                     salida.print(planificador.resumenUltimaEjecucion());
                 }
 
@@ -247,11 +261,12 @@ public class Simulador {
     // ------------------------------------------------------------------ datos
 
     /**
-     * Pedidos pendientes en el punto de inicio. Un pedido registrado antes del arranque sigue
-     * pendiente si su plazo aún no venció: se mantiene y se planifica desde el primer ciclo,
-     * aunque se haya registrado en el mes anterior (por eso se lee también ese archivo). Los
-     * pedidos cuyo plazo venció antes del arranque pertenecen a la operación previa y quedan
-     * fuera del periodo simulado. Los bloqueos del mes anterior que siguen vigentes también se
+     * Pedidos pendientes en el punto de inicio. Un pedido registrado antes del
+     * arranque sigue pendiente si su plazo aún no venció: se mantiene y se
+     * planifica desde el primer ciclo, aunque se haya registrado en el mes anterior
+     * (por eso se lee también ese archivo). Los pedidos cuyo plazo venció antes del
+     * arranque pertenecen a la operación previa y quedan fuera del periodo
+     * simulado. Los bloqueos del mes anterior que siguen vigentes también se
      * incorporan.
      */
     private void prepararPendientesIniciales(int t) throws IOException {
@@ -291,7 +306,8 @@ public class Simulador {
         }
         pedidosCargados = pedidosVivos.size();
         resultado.pedidosPendientesAlInicio = pendientes;
-        salida.printf("Pedidos pendientes al inicio (%s): %d (%d del mes anterior); %d con plazo "
+        salida.printf(
+                "Pedidos pendientes al inicio (%s): %d (%d del mes anterior); %d con plazo "
                         + "vencido antes del inicio quedan fuera del periodo simulado%n%n",
                 formatear(t), pendientes, delMesAnterior, vencidos);
     }
@@ -305,8 +321,8 @@ public class Simulador {
     }
 
     /**
-     * Carga los meses siguientes mientras su inicio caiga dentro del horizonte. Si falta el
-     * archivo de ventas de un mes, la simulación ya no tiene más datos.
+     * Carga los meses siguientes mientras su inicio caiga dentro del horizonte. Si
+     * falta el archivo de ventas de un mes, la simulación ya no tiene más datos.
      */
     private void cargarMesesHasta(int limite, int ahora) throws IOException {
         while (hayMasMeses && inicioMesSiguiente <= limite) {
@@ -328,8 +344,8 @@ public class Simulador {
                 nBloqueos = rb.bloqueos.size();
             }
             instancia.getMapa().descartarBloqueosTerminadosAntesDe(ahora);
-            salida.printf("    [%s] mes %s cargado: %d pedidos, %d bloqueos%n",
-                    formatear(ahora), mes, rv.pedidos.size(), nBloqueos);
+            salida.printf("    [%s] mes %s cargado: %d pedidos, %d bloqueos%n", formatear(ahora), mes,
+                    rv.pedidos.size(), nBloqueos);
             ultimoMesCargado = mes;
             inicioMesSiguiente += mes.lengthOfMonth() * Turnos.MINUTOS_POR_DIA;
             resultado.mesesCargados++;
@@ -339,10 +355,11 @@ public class Simulador {
     // ------------------------------------------------------------------ avance
 
     /**
-     * Despacha, viaje por viaje, lo que sale antes del siguiente ciclo. Un viaje despachado
-     * descuenta su carga del almacén donde carga y compromete a la unidad hasta que llega al
-     * almacén donde termina; sus paradas quedan en curso. Los viajes siguientes de la ruta no se
-     * despachan todavía: siguen en el plan vigente y se replanifican en el próximo ciclo.
+     * Despacha, viaje por viaje, lo que sale antes del siguiente ciclo. Un viaje
+     * despachado descuenta su carga del almacén donde carga y compromete a la
+     * unidad hasta que llega al almacén donde termina; sus paradas quedan en curso.
+     * Los viajes siguientes de la ruta no se despachan todavía: siguen en el plan
+     * vigente y se replanifican en el próximo ciclo.
      *
      * @return número de rutas con al menos un viaje despachado
      */
@@ -392,9 +409,11 @@ public class Simulador {
     }
 
     /**
-     * Registra las entregas con llegada ≤ T y libera las unidades que ya regresaron.
+     * Registra las entregas con llegada ≤ T y libera las unidades que ya
+     * regresaron.
      *
-     * @return descripción de una entrega tardía, o {@code null} si todas llegaron a tiempo
+     * @return descripción de una entrega tardía, o {@code null} si todas llegaron a
+     *         tiempo
      */
     private String registrarEntregas(int t) {
         String tardia = null;
@@ -435,7 +454,9 @@ public class Simulador {
         return tardia;
     }
 
-    /** Pedido registrado cuyo plazo venció en T sin haberse despachado por completo. */
+    /**
+     * Pedido registrado cuyo plazo venció en T sin haberse despachado por completo.
+     */
     private String plazoVencido(int t) {
         for (Pedido p : pedidosVivos) {
             if (p.getMinutoRegistro() <= t && p.cantidadPendiente() > 0 && p.getMinutoLimite() < t) {
@@ -459,8 +480,8 @@ public class Simulador {
     /** Instante simulado como fecha y hora de calendario. */
     public String formatear(int minuto) {
         LocalDateTime f = instante(minuto);
-        return String.format("%04d-%02d-%02d %02d:%02d", f.getYear(), f.getMonthValue(),
-                f.getDayOfMonth(), f.getHour(), f.getMinute());
+        return String.format("%04d-%02d-%02d %02d:%02d", f.getYear(), f.getMonthValue(), f.getDayOfMonth(), f.getHour(),
+                f.getMinute());
     }
 
     private void imprimirDia(int dia, long nsDia, int ejecuciones) {
@@ -474,12 +495,12 @@ public class Simulador {
                 pendientes++;
             }
         }
-        salida.printf(Locale.ROOT, "[%s] entregados=%d fraccionados=%d en curso/pendientes=%d "
+        salida.printf(Locale.ROOT,
+                "[%s] entregados=%d fraccionados=%d en curso/pendientes=%d "
                         + "rutas=%d km=%.0f · planificador %d ejec. %.2f s (Ta prom. %.1f ms)%n",
-                formatear((dia - 1) * Turnos.MINUTOS_POR_DIA).substring(0, 10),
-                resultado.pedidosEntregados, resultado.pedidosFraccionados, pendientes,
-                resultado.rutasDespachadas, resultado.kmRecorridos, ejecuciones, nsDia / 1e9,
-                ejecuciones == 0 ? 0 : nsDia / 1e6 / ejecuciones);
+                formatear((dia - 1) * Turnos.MINUTOS_POR_DIA).substring(0, 10), resultado.pedidosEntregados,
+                resultado.pedidosFraccionados, pendientes, resultado.rutasDespachadas, resultado.kmRecorridos,
+                ejecuciones, nsDia / 1e9, ejecuciones == 0 ? 0 : nsDia / 1e6 / ejecuciones);
     }
 
     private BufferedWriter abrirCsvCiclos() throws IOException {
@@ -495,15 +516,14 @@ public class Simulador {
         return w;
     }
 
-    private void escribirCiclo(BufferedWriter w, int t, ContextoPlanificacion ctx, long taNs,
-                               boolean factible, int despachadas, double costoPlan) throws IOException {
+    private void escribirCiclo(BufferedWriter w, int t, ContextoPlanificacion ctx, long taNs, boolean factible,
+            int despachadas, double costoPlan) throws IOException {
         if (w == null) {
             return;
         }
-        w.write(String.format(Locale.ROOT, "%d,%d,%s,%d,%d,%.3f,%s,%d,%.2f,%d%n",
-                resultado.ciclos + 1, t, formatear(t), ctx.getPedidosPorAtender().size(),
-                ctx.getUnidadesAsignables().size(), taNs / 1e6, factible, despachadas, costoPlan,
-                resultado.pedidosEntregados));
+        w.write(String.format(Locale.ROOT, "%d,%d,%s,%d,%d,%.3f,%s,%d,%.2f,%d%n", resultado.ciclos + 1, t, formatear(t),
+                ctx.getPedidosPorAtender().size(), ctx.getUnidadesAsignables().size(), taNs / 1e6, factible,
+                despachadas, costoPlan, resultado.pedidosEntregados));
     }
 
     private static List<String> primeros(List<String> lista, int n) {

@@ -24,21 +24,27 @@ import java.util.Random;
 import java.util.function.IntFunction;
 
 /**
- * Diagnóstico del ciclo en que la simulación colapsa: por qué el planificador no encontró un
- * plan factible.
+ * Diagnóstico del ciclo en que la simulación colapsa: por qué el planificador
+ * no encontró un plan factible.
  *
- * <p>Contrasta las causas posibles con experimentos sobre el mismo instante:</p>
+ * <p>
+ * Contrasta las causas posibles con experimentos sobre el mismo instante:
+ * </p>
  * <ul>
- *   <li><b>Demanda</b>: pedidos y paquetes de la ventana frente a la capacidad de la flota en un
- *       solo viaje, viajes del plan y pedidos reprogramados.</li>
- *   <li><b>Pedido aislado</b>: si el pedido no asignado cabe, solo, en alguna unidad; si cabe
- *       en un segundo viaje de una unidad, después de la ruta que ya tiene en el plan.</li>
- *   <li><b>Bloqueos</b>: las mismas pruebas y una replanificación sobre un mapa sin bloqueos.</li>
- *   <li><b>Heurística</b>: replanificación desde cero (sin plan previo) e inserción por
- *       arrepentimiento desde una solución vacía.</li>
- *   <li><b>Mantenimiento</b>: unidades fuera de servicio ese día.</li>
+ * <li><b>Demanda</b>: pedidos y paquetes de la ventana frente a la capacidad de
+ * la flota en un solo viaje, viajes del plan y pedidos reprogramados.</li>
+ * <li><b>Pedido aislado</b>: si el pedido no asignado cabe, solo, en alguna
+ * unidad; si cabe en un segundo viaje de una unidad, después de la ruta que ya
+ * tiene en el plan.</li>
+ * <li><b>Bloqueos</b>: las mismas pruebas y una replanificación sobre un mapa
+ * sin bloqueos.</li>
+ * <li><b>Heurística</b>: replanificación desde cero (sin plan previo) e
+ * inserción por arrepentimiento desde una solución vacía.</li>
+ * <li><b>Mantenimiento</b>: unidades fuera de servicio ese día.</li>
  * </ul>
- * <p>No modifica el estado de la simulación.</p>
+ * <p>
+ * No modifica el estado de la simulación.
+ * </p>
  */
 final class DiagnosticoColapso {
 
@@ -54,8 +60,8 @@ final class DiagnosticoColapso {
     private final IntFunction<String> formato;
 
     DiagnosticoColapso(Instancia instancia, ContextoPlanificacion ctx, Solucion plan, Solucion planVigente,
-                       Planificador planificador, ParametrosSimulacion par, ParametrosPlanificador parPlan,
-                       List<Pedido> pedidosVivos, PrintStream salida, IntFunction<String> formato) {
+            Planificador planificador, ParametrosSimulacion par, ParametrosPlanificador parPlan,
+            List<Pedido> pedidosVivos, PrintStream salida, IntFunction<String> formato) {
         this.instancia = instancia;
         this.ctx = ctx;
         this.plan = plan;
@@ -87,8 +93,8 @@ final class DiagnosticoColapso {
     }
 
     /**
-     * Imprime el diagnóstico y devuelve un resumen de una línea con los resultados clave, para
-     * el CSV de la corrida.
+     * Imprime el diagnóstico y devuelve un resumen de una línea con los resultados
+     * clave, para el CSV de la corrida.
      */
     String ejecutar() {
         int t = ctx.getMinutoActual();
@@ -131,23 +137,24 @@ final class DiagnosticoColapso {
                 }
             }
         }
-        salida.printf("    [demanda] %d pedidos / %d paquetes en la ventana (%d ya registrados, %d por"
+        salida.printf(
+                "    [demanda] %d pedidos / %d paquetes en la ventana (%d ya registrados, %d por"
                         + " registrarse hasta %s); por plazo (h: pedidos/paquetes) %s%n",
-                ctx.getPedidosPorAtender().size(), paquetes, atrasados,
-                ctx.getPedidosPorAtender().size() - atrasados, formato.apply(t + par.scMinutos),
-                formatoPlazos(porPlazo));
-        salida.printf("    [demanda] capacidad de la flota en un viaje: %d paquetes (%.0f%% ocupada por la"
+                ctx.getPedidosPorAtender().size(), paquetes, atrasados, ctx.getPedidosPorAtender().size() - atrasados,
+                formato.apply(t + par.scMinutos), formatoPlazos(porPlazo));
+        salida.printf(
+                "    [demanda] capacidad de la flota en un viaje: %d paquetes (%.0f%% ocupada por la"
                         + " ventana); el plan usa %d rutas y %d viajes con %d paquetes, %d viajes llenos;"
                         + " reprograma %d pedidos / %d paquetes%n",
-                capacidadViaje, 100.0 * paquetes / Math.max(1, capacidadViaje), rutasPlan, viajesPlan,
-                cargaPlan, viajesLlenos, plan.getPedidosPostergados(), plan.getPaquetesPostergados());
+                capacidadViaje, 100.0 * paquetes / Math.max(1, capacidadViaje), rutasPlan, viajesPlan, cargaPlan,
+                viajesLlenos, plan.getPedidosPostergados(), plan.getPaquetesPostergados());
 
         // 2. Flota y mantenimiento
         List<String> mant = instancia.unidadesEnMantenimiento(Turnos.dia(t));
-        salida.printf("    [flota] %d unidades asignables (%d libres en T, %d en ruta); %d en mantenimiento"
-                        + " ese día%s%n",
-                ctx.getUnidadesAsignables().size(), libres, ctx.getUnidadesAsignables().size() - libres,
-                mant.size(), mant.isEmpty() ? "" : " " + mant);
+        salida.printf(
+                "    [flota] %d unidades asignables (%d libres en T, %d en ruta); %d en mantenimiento" + " ese día%s%n",
+                ctx.getUnidadesAsignables().size(), libres, ctx.getUnidadesAsignables().size() - libres, mant.size(),
+                mant.isEmpty() ? "" : " " + mant);
 
         // 3. El pedido no asignado
         ContextoPlanificacion ctxSinBloqueos = contextoSinBloqueos(t);
@@ -155,16 +162,17 @@ final class DiagnosticoColapso {
         int segundoViaje = 0;
         int soloSinBloqueos = 0;
         List<Pedido> noAsignados = new ArrayList<>(plan.getNoAsignados());
-        noAsignados.removeIf(ctx::esPostergable);   // los reprogramables no causan el colapso
+        noAsignados.removeIf(ctx::esPostergable); // los reprogramables no causan el colapso
         for (Pedido p : noAsignados.subList(0, Math.min(3, noAsignados.size()))) {
             int dist = Integer.MAX_VALUE;
             for (Almacen a : ctx.getAlmacenes()) {
                 dist = Math.min(dist, a.getUbicacion().distanciaManhattan(p.getDestino()));
             }
-            salida.printf("    [pedido] %s: registro %s, plazo %d h, límite %s (holgura desde T: %d min),"
+            salida.printf(
+                    "    [pedido] %s: registro %s, plazo %d h, límite %s (holgura desde T: %d min),"
                             + " %d km del almacén más cercano%n",
-                    p, formato.apply(p.getMinutoRegistro()), p.getPlazoHoras(),
-                    formato.apply(p.getMinutoLimite()), p.getMinutoLimite() - t, dist);
+                    p, formato.apply(p.getMinutoRegistro()), p.getPlazoHoras(), formato.apply(p.getMinutoLimite()),
+                    p.getMinutoLimite() - t, dist);
 
             Prueba solo = probarSolo(p, ctx);
             Prueba segundo = probarSegundoViaje(p);
@@ -191,10 +199,10 @@ final class DiagnosticoColapso {
         new InsercionPorArrepentimiento(1_000_000.0).reparar(arrep, ctx.getPedidosPorAtender(), ctx, new Random(1));
         arrep.evaluar(ctx);
         boolean arrepentimiento = arrep.esFactible();
-        salida.printf("    [replan] sin bloqueos: %s · desde cero (sin plan previo): %s · arrepentimiento"
+        salida.printf(
+                "    [replan] sin bloqueos: %s · desde cero (sin plan previo): %s · arrepentimiento"
                         + " desde vacío: %s (%d sin asignar)%n",
-                factible(sinBloqueos), factible(desdeCero), factible(arrepentimiento),
-                arrep.getNoAsignados().size());
+                factible(sinBloqueos), factible(desdeCero), factible(arrepentimiento), arrep.getNoAsignados().size());
 
         // 5. Conclusión
         String causa;
@@ -211,11 +219,12 @@ final class DiagnosticoColapso {
         } else {
             causa = "plazo_inalcanzable";
         }
-        String resumen = String.format("causa=%s; ventana=%d pedidos/%d paquetes; capacidad_viaje=%d;"
+        String resumen = String.format(
+                "causa=%s; ventana=%d pedidos/%d paquetes; capacidad_viaje=%d;"
                         + " solo_factible=%d; segundo_viaje=%d; sin_bloqueos=%s; desde_cero=%s;"
                         + " arrepentimiento=%s; mantenimiento=%d",
-                causa, ctx.getPedidosPorAtender().size(), paquetes, capacidadViaje, soloFactible,
-                segundoViaje, factible(sinBloqueos), factible(desdeCero), factible(arrepentimiento), mant.size());
+                causa, ctx.getPedidosPorAtender().size(), paquetes, capacidadViaje, soloFactible, segundoViaje,
+                factible(sinBloqueos), factible(desdeCero), factible(arrepentimiento), mant.size());
         salida.println("    [conclusión] " + resumen);
         return resumen;
     }
@@ -252,9 +261,10 @@ final class DiagnosticoColapso {
     }
 
     /**
-     * El pedido en un segundo viaje de cada unidad que ya tiene ruta en el plan: sale del
-     * almacén de retorno cuando termina esa ruta. El plan no admite dos rutas por unidad; esta
-     * prueba mide si esa restricción es la que impide atender el pedido.
+     * El pedido en un segundo viaje de cada unidad que ya tiene ruta en el plan:
+     * sale del almacén de retorno cuando termina esa ruta. El plan no admite dos
+     * rutas por unidad; esta prueba mide si esa restricción es la que impide
+     * atender el pedido.
      */
     private Prueba probarSegundoViaje(Pedido p) {
         Prueba prueba = new Prueba();
@@ -288,9 +298,9 @@ final class DiagnosticoColapso {
     private ContextoPlanificacion contextoSinBloqueos(int t) {
         YearMonth mes = YearMonth.from(instancia.getFechaInicio());
         Instancia sinBloqueos = new Instancia(new MapaUrbano(Collections.emptyList()), instancia.getAlmacenes(),
-                instancia.getFlota(), instancia.getPedidos(), instancia.getMantenimientos(),
-                mes.getYear(), mes.getMonthValue());
-        return ContextoPlanificacion.construir(sinBloqueos, t, par.scMinutos, pedidosVivos,
-                Collections.emptyList(), parPlan);
+                instancia.getFlota(), instancia.getPedidos(), instancia.getMantenimientos(), mes.getYear(),
+                mes.getMonthValue());
+        return ContextoPlanificacion.construir(sinBloqueos, t, par.scMinutos, pedidosVivos, Collections.emptyList(),
+                parPlan);
     }
 }

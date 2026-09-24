@@ -26,8 +26,7 @@ import java.util.Random;
 public class InsercionGolosa implements OperadorReparacion {
 
     @Override
-    public void reparar(Solucion solucion, List<Pedido> removidos,
-                        ContextoPlanificacion ctx, Random aleatorio) {
+    public void reparar(Solucion solucion, List<Pedido> removidos, ContextoPlanificacion ctx, Random aleatorio) {
         List<Pedido> ordenados = new ArrayList<>(removidos);
         ordenados.sort(Comparator.comparingInt(Pedido::getMinutoLimite).thenComparingInt(Pedido::getId));
 

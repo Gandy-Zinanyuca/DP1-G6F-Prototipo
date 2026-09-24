@@ -29,7 +29,9 @@ public final class ALNSPlanner implements PlanificadorEstricto {
             throw new IllegalStateException("Inicial invalida");
         long iniciales = ev.evaluaciones();
         double costo = ev.evaluar(actual).objetivo(), mejorCosto = costo;
-        Double primeraMs = ev.evaluar(actual).completa() && !estado.pedidos().isEmpty() ? (System.nanoTime()-inicio)/1e6 : null;
+        Double primeraMs = ev.evaluar(actual).completa() && !estado.pedidos().isEmpty()
+                ? (System.nanoTime() - inicio) / 1e6
+                : null;
         Integer primeraIter = primeraMs == null ? null : 0;
         var random = new Random(config.semilla());
         var destroy = new SelectorAdaptativo<Integer>(List.of(0, 1), 1.0, config.reaccion());
@@ -82,13 +84,14 @@ public final class ALNSPlanner implements PlanificadorEstricto {
             double premio = 0;
             if (ec.factible()) {
                 if (primeraMs == null && ec.completa()) {
-                    primeraMs = (System.nanoTime()-inicio)/1e6;
+                    primeraMs = (System.nanoTime() - inicio) / 1e6;
                     primeraIter = iter;
                 }
                 if (ec.objetivo() < mejorCosto - 1e-9) {
                     mejor = candidata;
                     mejorCosto = ec.objetivo();
-                    sinMejora = 0; iteracionMejor = iter;
+                    sinMejora = 0;
+                    iteracionMejor = iter;
                     premio = 8;
                 } else
                     sinMejora++;

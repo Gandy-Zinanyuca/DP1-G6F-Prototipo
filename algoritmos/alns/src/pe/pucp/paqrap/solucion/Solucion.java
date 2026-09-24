@@ -15,10 +15,11 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Solución completa de un ciclo de planificación: una ruta por unidad utilizada más el
- * conjunto de pedidos que quedaron sin asignar.
+ * Solución completa de un ciclo de planificación: una ruta por unidad utilizada
+ * más el conjunto de pedidos que quedaron sin asignar.
  *
  * <h2>Estructura de datos</h2>
+ *
  * <pre>
  * Solucion
  *   ├── rutas          : LinkedHashMap&lt;codigoUnidad, Ruta&gt;   (orden estable ⇒ reproducible)
@@ -27,18 +28,27 @@ import java.util.Set;
  *   └── (consumo por almacén: derivado de los viajes de cada ruta, control de LE019)
  * </pre>
  *
- * <p>El índice inverso {@code ubicacion} es lo que hace baratos los operadores de destrucción:
- * remover un pedido no exige recorrer todas las rutas, sino localizar la suya en O(1). El
- * inventario acopla varias rutas —es una restricción global—: cada ruta calcula cuánto toma de
- * cada almacén en sus viajes y la solución suma esos consumos.</p>
+ * <p>
+ * El índice inverso {@code ubicacion} es lo que hace baratos los operadores de
+ * destrucción: remover un pedido no exige recorrer todas las rutas, sino
+ * localizar la suya en O(1). El inventario acopla varias rutas —es una
+ * restricción global—: cada ruta calcula cuánto toma de cada almacén en sus
+ * viajes y la solución suma esos consumos.
+ * </p>
  *
- * <p>Las rutas transportan <i>partes</i>: pedidos completos o fracciones de un pedido (ver
- * {@link Pedido#fraccion}). Un mismo pedido puede repartirse entre varias rutas, por eso el
- * índice inverso usa la identidad del objeto y EVALUAR verifica la cobertura por cantidad.</p>
+ * <p>
+ * Las rutas transportan <i>partes</i>: pedidos completos o fracciones de un
+ * pedido (ver {@link Pedido#fraccion}). Un mismo pedido puede repartirse entre
+ * varias rutas, por eso el índice inverso usa la identidad del objeto y EVALUAR
+ * verifica la cobertura por cantidad.
+ * </p>
  *
- * <p>El uso de colecciones con orden de inserción estable (LinkedHashMap / LinkedHashSet) no
- * es cosmético: junto con una semilla fija del generador aleatorio, es lo que permite que dos
- * ejecuciones del mismo escenario produzcan resultados idénticos, como exigen LE008 y LE009.</p>
+ * <p>
+ * El uso de colecciones con orden de inserción estable (LinkedHashMap /
+ * LinkedHashSet) no es cosmético: junto con una semilla fija del generador
+ * aleatorio, es lo que permite que dos ejecuciones del mismo escenario
+ * produzcan resultados idénticos, como exigen LE008 y LE009.
+ * </p>
  */
 public class Solucion {
 
@@ -56,7 +66,10 @@ public class Solucion {
     public Solucion() {
     }
 
-    /** Copia profunda: cada ruta se clona, de modo que los operadores no comparten estado. */
+    /**
+     * Copia profunda: cada ruta se clona, de modo que los operadores no comparten
+     * estado.
+     */
     public Solucion copia() {
         Solucion s = new Solucion();
         for (Map.Entry<String, Ruta> e : rutas.entrySet()) {
@@ -87,7 +100,10 @@ public class Solucion {
         return rutas.get(v.getCodigo());
     }
 
-    /** Devuelve la ruta de la unidad, creándola vacía sobre el almacén indicado si no existía. */
+    /**
+     * Devuelve la ruta de la unidad, creándola vacía sobre el almacén indicado si
+     * no existía.
+     */
     public Ruta rutaDe(Vehiculo v, Almacen almacenPorDefecto) {
         Ruta r = rutas.get(v.getCodigo());
         if (r == null) {
@@ -107,8 +123,9 @@ public class Solucion {
     }
 
     /**
-     * Retira la parte de la solución sin dejarla como no asignada: se usa cuando la parte deja
-     * de existir porque se fusionó con otras o se repartió en fracciones.
+     * Retira la parte de la solución sin dejarla como no asignada: se usa cuando la
+     * parte deja de existir porque se fusionó con otras o se repartió en
+     * fracciones.
      */
     public void olvidar(Pedido p) {
         if (ubicacion.containsKey(p)) {
@@ -118,11 +135,13 @@ public class Solucion {
     }
 
     /**
-     * Fusiona las partes removidas que pertenecen a un mismo pedido en una sola, para que la
-     * reparación las reinserte juntas y solo vuelva a fraccionar si hace falta. Las partes
-     * fusionadas se reemplazan en el conjunto de no asignados por la parte resultante.
+     * Fusiona las partes removidas que pertenecen a un mismo pedido en una sola,
+     * para que la reparación las reinserte juntas y solo vuelva a fraccionar si
+     * hace falta. Las partes fusionadas se reemplazan en el conjunto de no
+     * asignados por la parte resultante.
      *
-     * @return las partes a reinsertar, en el orden de la primera aparición de cada pedido
+     * @return las partes a reinsertar, en el orden de la primera aparición de cada
+     *         pedido
      */
     public List<Pedido> consolidar(List<Pedido> removidos) {
         Map<Pedido, List<Pedido>> porOriginal = new LinkedHashMap<>();
@@ -158,9 +177,9 @@ public class Solucion {
     }
 
     /**
-     * Inserta el pedido en la posición indicada de la ruta de la unidad, actualizando el índice
-     * inverso. No verifica factibilidad: el llamador ya la comprobó al evaluar el costo de
-     * inserción.
+     * Inserta el pedido en la posición indicada de la ruta de la unidad,
+     * actualizando el índice inverso. No verifica factibilidad: el llamador ya la
+     * comprobó al evaluar el costo de inserción.
      */
     public void asignar(Ruta ruta, int posicion, Pedido pedido) {
         ruta.insertar(posicion, pedido);
@@ -169,10 +188,11 @@ public class Solucion {
     }
 
     /**
-     * Extrae el pedido de la ruta que lo contiene y lo deja sin asignar. Es la operación
-     * elemental de todos los operadores de destrucción del ALNS.
+     * Extrae el pedido de la ruta que lo contiene y lo deja sin asignar. Es la
+     * operación elemental de todos los operadores de destrucción del ALNS.
      *
-     * @return la ruta de la que fue removido, o {@code null} si el pedido no estaba asignado
+     * @return la ruta de la que fue removido, o {@code null} si el pedido no estaba
+     *         asignado
      */
     public Ruta desasignar(Pedido pedido) {
         String codigo = ubicacion.remove(pedido);
@@ -206,9 +226,13 @@ public class Solucion {
         return n;
     }
 
-    // ------------------------------------------------------------------ inventario (LE019)
+    // ------------------------------------------------------------------ inventario
+    // (LE019)
 
-    /** Unidades que las rutas de la solución toman del almacén, sumando todos sus viajes. */
+    /**
+     * Unidades que las rutas de la solución toman del almacén, sumando todos sus
+     * viajes.
+     */
     public int consumo(ContextoPlanificacion ctx, Almacen almacen) {
         int total = 0;
         for (Ruta r : rutas.values()) {
@@ -220,7 +244,10 @@ public class Solucion {
         return total;
     }
 
-    /** Verifica que el almacén pueda soportar una carga adicional sin dejar stock negativo. */
+    /**
+     * Verifica que el almacén pueda soportar una carga adicional sin dejar stock
+     * negativo.
+     */
     public boolean hayStock(ContextoPlanificacion ctx, Almacen almacen, int cantidad) {
         if (almacen.esCentral()) {
             return true;
@@ -228,7 +255,10 @@ public class Solucion {
         return ctx.stockInicial(almacen) - consumo(ctx, almacen) >= cantidad;
     }
 
-    /** Verifica que ningún almacén intermedio quede con stock negativo con las rutas actuales. */
+    /**
+     * Verifica que ningún almacén intermedio quede con stock negativo con las rutas
+     * actuales.
+     */
     public boolean stockAlcanza(ContextoPlanificacion ctx) {
         for (Almacen a : ctx.getAlmacenes()) {
             if (!a.esCentral() && consumo(ctx, a) > ctx.stockInicial(a)) {
@@ -239,9 +269,9 @@ public class Solucion {
     }
 
     /**
-     * Como {@link #stockAlcanza(ContextoPlanificacion)}, pero tras modificar una sola ruta de una
-     * solución que ya respetaba el inventario: solo pueden haberse excedido los almacenes
-     * intermedios de los que esa ruta toma carga.
+     * Como {@link #stockAlcanza(ContextoPlanificacion)}, pero tras modificar una
+     * sola ruta de una solución que ya respetaba el inventario: solo pueden haberse
+     * excedido los almacenes intermedios de los que esa ruta toma carga.
      */
     public boolean stockAlcanza(ContextoPlanificacion ctx, Ruta modificada) {
         modificada.asegurarCalculada(ctx);
@@ -261,19 +291,25 @@ public class Solucion {
     // ------------------------------------------------------------------ evaluación
 
     /**
-     * EVALUAR(solución) del ISA (sección 5.1): comprueba todas las restricciones duras y
-     * calcula el costo.
+     * EVALUAR(solución) del ISA (sección 5.1): comprueba todas las restricciones
+     * duras y calcula el costo.
      *
-     * <p>La solución es factible si y solo si no se registra ningún error: toda ruta es factible
-     * (capacidad, plazos, caminos, mantenimiento, alimentación y turno), la cantidad pendiente
-     * de cada pedido considerado queda cubierta exactamente por las partes asignadas (un pedido
-     * puede repartirse entre varias rutas), no hay pedidos adicionales ni partes sin asignar, y
-     * ningún almacén intermedio queda con stock negativo. El costo es
-     * Σ distanciaRuta × costoKmVehículo y solo se usa para comparar soluciones factibles.</p>
+     * <p>
+     * La solución es factible si y solo si no se registra ningún error: toda ruta
+     * es factible (capacidad, plazos, caminos, mantenimiento, alimentación y
+     * turno), la cantidad pendiente de cada pedido considerado queda cubierta
+     * exactamente por las partes asignadas (un pedido puede repartirse entre varias
+     * rutas), no hay pedidos adicionales ni partes sin asignar, y ningún almacén
+     * intermedio queda con stock negativo. El costo es Σ distanciaRuta ×
+     * costoKmVehículo y solo se usa para comparar soluciones factibles.
+     * </p>
      *
-     * <p>Reprogramación: una parte sin asignar cuyo pedido todavía tiene holgura suficiente
-     * ({@link ContextoPlanificacion#esPostergable}) no es un error —se atenderá en un ciclo
-     * posterior—, pero cada paquete reprogramado suma la penalización configurada al costo.</p>
+     * <p>
+     * Reprogramación: una parte sin asignar cuyo pedido todavía tiene holgura
+     * suficiente ({@link ContextoPlanificacion#esPostergable}) no es un error —se
+     * atenderá en un ciclo posterior—, pero cada paquete reprogramado suma la
+     * penalización configurada al costo.
+     * </p>
      *
      * @return el costo total de la solución
      */
@@ -340,12 +376,13 @@ public class Solucion {
             }
         }
 
-        costo = costoOperacionSoles
-                + ctx.getParametros().penalizacionPorPaquetePostergado * paquetesPostergados;
+        costo = costoOperacionSoles + ctx.getParametros().penalizacionPorPaquetePostergado * paquetesPostergados;
         return costo;
     }
 
-    /** Resultado de la última evaluación: verdadero si no se registró ningún error. */
+    /**
+     * Resultado de la última evaluación: verdadero si no se registró ningún error.
+     */
     public boolean esFactible() {
         return errores != null && errores.isEmpty();
     }
@@ -381,8 +418,8 @@ public class Solucion {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append(String.format("Solución  %s  costo=S/ %.2f  unidades=%d  km=%.0f  noAsignados=%d%n",
-                esFactible() ? "FACTIBLE" : "NO FACTIBLE", costo, numeroUnidadesUsadas(),
-                distanciaTotalKm, noAsignados.size()));
+                esFactible() ? "FACTIBLE" : "NO FACTIBLE", costo, numeroUnidadesUsadas(), distanciaTotalKm,
+                noAsignados.size()));
         for (Ruta r : rutas.values()) {
             if (!r.estaVacia()) {
                 sb.append(r).append('\n');

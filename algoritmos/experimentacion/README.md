@@ -1,6 +1,6 @@
 # Experimentacion pareada por EstadoOperacion
 
-Framework oficial de comparacion TS vs ALNS: [SimulacionComparada](SIMULACION-COMPARADA.md), sembrado y corriendo por defecto hasta el colapso o fin de datos (`maxCiclos=0`; use `maxCiclos=720` con `Sa=10` para una ventana acotada de 5 dias). Es el unico framework simetrico entre ambos motores (misma instancia, mismos bloqueos y mantenimiento para TS y ALNS de cada semilla; las averias no se modelan por defecto, ver nota en [SIMULACION-COMPARADA.md](SIMULACION-COMPARADA.md#averias-no-modeladas-por-defecto)) y sus resultados se versionan en Git.
+Framework oficial de comparacion TS vs ALNS: [SimulacionComparada](SIMULACION-COMPARADA.md), sembrado y corriendo por defecto hasta el colapso o fin de datos (`maxCiclos=0`; use `maxCiclos=720` con `Sa=10` para una ventana acotada de 5 dias). Es el unico framework simetrico entre ambos motores (misma instancia y mismos bloqueos para TS y ALNS de cada semilla; averias y mantenimiento excluidos, ver nota en [SIMULACION-COMPARADA.md](SIMULACION-COMPARADA.md#incidencias-excluidas-de-experimentacion)) y sus resultados se versionan en Git.
 
 La ejecucion vigente TS/ALNS, las metricas de Ta y holgura, los CSV individuales y el protocolo de colapso de planificacion se describen en la [guia comun](../README.md) y los [metadatos](../METADATOS-PRUEBAS.md). Ambos motores usan la misma instancia y semillas. No mezclar estos CSV con el script R historico descrito abajo.
 
@@ -94,3 +94,7 @@ partir de la dispersión observada: sirve para fijar N antes de correr Tabú.
 Salida: `informe_colapso.txt`, `resumen_descriptivo.csv`, `boxplot_colapso.png`,
 `supervivencia_colapso.png` (fracción de corridas sin colapsar a lo largo del tiempo) y
 `qqplot_colapso.png`.
+
+## Configuracion experimental v3
+
+Almacen central (27,14), stock ilimitado; Nor-Oeste (12,38) y Este (57,27), stock inicial de 1000 cada uno, repuesto diariamente en la simulacion. La flota inicia en el central. Se mantienen turnos, alimentacion, capacidad, servicio y retorno. Usar - en el antiguo argumento de mantenimiento; no se requiere archivo vacio. No mezclar nuevas campanas con resultados previos a estas coordenadas y a la exclusion de mantenimiento. Las metricas principales siguen siendo Ta y holgura temporal; duracion hasta colapso y cobertura complementan su interpretacion.

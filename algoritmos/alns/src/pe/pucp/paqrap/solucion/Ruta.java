@@ -18,46 +18,62 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Ruta asignada a una unidad de transporte dentro de una ejecución del planificador.
+ * Ruta asignada a una unidad de transporte dentro de una ejecución del
+ * planificador.
  *
  * <h2>Representación</h2>
- * <p>Una ruta se representa como la terna <i>(unidad, almacén de origen, secuencia ordenada de
- * pedidos)</i>. Todo lo demás —viajes, tiempos de llegada, distancia, carga, hora de
- * alimentación, consumo de inventario y almacén de retorno— es <b>derivado</b> y se recalcula
- * con {@link #recalcular}.</p>
+ * <p>
+ * Una ruta se representa como la terna <i>(unidad, almacén de origen, secuencia
+ * ordenada de pedidos)</i>. Todo lo demás —viajes, tiempos de llegada,
+ * distancia, carga, hora de alimentación, consumo de inventario y almacén de
+ * retorno— es <b>derivado</b> y se recalcula con {@link #recalcular}.
+ * </p>
  *
  * <h2>Viajes y recargas</h2>
- * <p>La unidad puede recargar en cualquier almacén con stock y seguir repartiendo (enunciado del
- * curso). La secuencia se reparte en <i>viajes</i> de forma determinista: la unidad carga en el
- * almacén de origen y entrega en orden; cuando el siguiente pedido ya no cabe en la carga del
- * viaje, va al almacén más cercano con stock suficiente, recarga y continúa. Así el orden de la
- * secuencia —que deciden la inserción y los operadores de ALNS— determina también dónde recargar:
- * seguir la ruta o volver al almacén es parte de la misma decisión. Con
- * {@link ParametrosPlanificador#permitirRecargas} desactivado la ruta es un único viaje.</p>
+ * <p>
+ * La unidad puede recargar en cualquier almacén con stock y seguir repartiendo
+ * (enunciado del curso). La secuencia se reparte en <i>viajes</i> de forma
+ * determinista: la unidad carga en el almacén de origen y entrega en orden;
+ * cuando el siguiente pedido ya no cabe en la carga del viaje, va al almacén
+ * más cercano con stock suficiente, recarga y continúa. Así el orden de la
+ * secuencia —que deciden la inserción y los operadores de ALNS— determina
+ * también dónde recargar: seguir la ruta o volver al almacén es parte de la
+ * misma decisión. Con {@link ParametrosPlanificador#permitirRecargas}
+ * desactivado la ruta es un único viaje.
+ * </p>
  *
  * <h2>Evaluación de la ruta (EVALUAR, ISA 5.1)</h2>
- * <p>Todas las restricciones son duras; cualquier violación deja la ruta no factible:</p>
+ * <p>
+ * Todas las restricciones son duras; cualquier violación deja la ruta no
+ * factible:
+ * </p>
  * <ul>
- *   <li>Capacidad de la unidad en cada viaje (LE014, LE027) y a lo sumo
- *       {@link ParametrosPlanificador#maxViajesPorRuta} viajes.</li>
- *   <li>Momento de salida = máx(T, disponibilidad de la unidad, registro más tardío de los
- *       pedidos cargados).</li>
- *   <li>Cada tramo se recorre con CAMINO_MÁS_RÁPIDO, respetando los bloqueos en la hora real
- *       de cruce (LE075).</li>
- *   <li>Llegada a cada destino no posterior a su hora límite (LE015, LE021).</li>
- *   <li>Tiempo de entrega de 1 hora por destinatario (LE016, LE023).</li>
- *   <li>Hora de alimentación de 1 hora, separada al menos 1 hora de los cambios de turno (LE018).</li>
- *   <li>Confinamiento al turno, si el parámetro lo exige (LE017).</li>
- *   <li>Sin mantenimiento preventivo en ningún día que abarque la ruta hasta el regreso.</li>
- *   <li>Regreso al almacén más cercano al finalizar (LE020).</li>
+ * <li>Capacidad de la unidad en cada viaje (LE014, LE027) y a lo sumo
+ * {@link ParametrosPlanificador#maxViajesPorRuta} viajes.</li>
+ * <li>Momento de salida = máx(T, disponibilidad de la unidad, registro más
+ * tardío de los pedidos cargados).</li>
+ * <li>Cada tramo se recorre con CAMINO_MÁS_RÁPIDO, respetando los bloqueos en
+ * la hora real de cruce (LE075).</li>
+ * <li>Llegada a cada destino no posterior a su hora límite (LE015, LE021).</li>
+ * <li>Tiempo de entrega de 1 hora por destinatario (LE016, LE023).</li>
+ * <li>Hora de alimentación de 1 hora, separada al menos 1 hora de los cambios
+ * de turno (LE018).</li>
+ * <li>Confinamiento al turno, si el parámetro lo exige (LE017).</li>
+ * <li>Sin mantenimiento preventivo en ningún día que abarque la ruta hasta el
+ * regreso.</li>
+ * <li>Regreso al almacén más cercano al finalizar (LE020).</li>
  * </ul>
- * <p>El inventario de los almacenes intermedios acopla varias rutas: lo valida la solución.</p>
+ * <p>
+ * El inventario de los almacenes intermedios acopla varias rutas: lo valida la
+ * solución.
+ * </p>
  */
 public class Ruta {
 
     /**
-     * Viaje de la ruta: carga en un almacén, entrega los pedidos [desde, hasta) de la secuencia y
-     * termina en un almacén (el de la siguiente recarga o el de retorno).
+     * Viaje de la ruta: carga en un almacén, entrega los pedidos [desde, hasta) de
+     * la secuencia y termina en un almacén (el de la siguiente recarga o el de
+     * retorno).
      */
     public static final class Viaje {
         private final int desde;
@@ -69,8 +85,8 @@ public class Ruta {
         private final int carga;
         private final double distanciaKm;
 
-        Viaje(int desde, int hasta, int salida, int fin, Almacen almacenCarga, Almacen almacenFin,
-              int carga, double distanciaKm) {
+        Viaje(int desde, int hasta, int salida, int fin, Almacen almacenCarga, Almacen almacenFin, int carga,
+                double distanciaKm) {
             this.desde = desde;
             this.hasta = hasta;
             this.salida = salida;
@@ -92,14 +108,16 @@ public class Ruta {
         }
 
         /**
-         * Minuto en que la unidad queda comprometida con el viaje: el inicio de la ruta para el
-         * primero, la llegada al almacén de recarga para los siguientes.
+         * Minuto en que la unidad queda comprometida con el viaje: el inicio de la ruta
+         * para el primero, la llegada al almacén de recarga para los siguientes.
          */
         public int getSalida() {
             return salida;
         }
 
-        /** Llegada al almacén en que termina el viaje; desde allí la unidad queda libre. */
+        /**
+         * Llegada al almacén en que termina el viaje; desde allí la unidad queda libre.
+         */
         public int getFin() {
             return fin;
         }
@@ -131,7 +149,10 @@ public class Ruta {
     private int[] minutosLlegada = new int[0];
     /** Salida (minuto con fracción) del tramo que llega al pedido i. */
     private double[] salidasTramo = new double[0];
-    /** Punto de partida del tramo que llega al pedido i (destino anterior o almacén). */
+    /**
+     * Punto de partida del tramo que llega al pedido i (destino anterior o
+     * almacén).
+     */
     private Coordenada[] origenesTramo = new Coordenada[0];
     private int minutoInicio;
     private int minutoRetorno;
@@ -139,7 +160,9 @@ public class Ruta {
     private boolean factible = true;
     private Almacen almacenRetorno;
     private int minutoInicioAlimentacion = -1;
-    /** Entrega tras la cual se toma la alimentación (−1: en el almacén de origen). */
+    /**
+     * Entrega tras la cual se toma la alimentación (−1: en el almacén de origen).
+     */
     private int indiceAlimentacion = Integer.MIN_VALUE;
     private String motivoInfactibilidad;
     private List<Viaje> viajes = Collections.emptyList();
@@ -167,8 +190,8 @@ public class Ruta {
         r.minutoInicioAlimentacion = minutoInicioAlimentacion;
         r.indiceAlimentacion = indiceAlimentacion;
         r.motivoInfactibilidad = motivoInfactibilidad;
-        r.viajes = viajes;                      // inmutable tras recalcular
-        r.consumo = consumo;                    // inmutable tras recalcular
+        r.viajes = viajes; // inmutable tras recalcular
+        r.consumo = consumo; // inmutable tras recalcular
         return r;
     }
 
@@ -275,7 +298,8 @@ public class Ruta {
             return;
         }
 
-        // Ventana admisible de la hora de alimentación dentro del turno en que arranca la ruta.
+        // Ventana admisible de la hora de alimentación dentro del turno en que arranca
+        // la ruta.
         int inicioTurno = Turnos.inicioTurno(minutoInicio);
         int finTurno = inicioTurno + Turnos.DURACION_TURNO_MIN;
         int ventanaIni = inicioTurno + Turnos.SEPARACION_CAMBIO_TURNO_MIN;
@@ -293,7 +317,8 @@ public class Ruta {
             infactible("demasiados viajes (" + nViajes + ">" + par.maxViajesPorRuta + ")");
         }
 
-        // Primera pasada sin alimentación: sirve para ubicar el mejor momento de tomarla.
+        // Primera pasada sin alimentación: sirve para ubicar el mejor momento de
+        // tomarla.
         Recorrido sinAlimentacion = simular(ctx, recargaAntes, Integer.MIN_VALUE, 0);
         if (!sinAlimentacion.alcanzable) {
             infactible(sinAlimentacion.motivo);
@@ -305,8 +330,7 @@ public class Ruta {
         if (alimentacionPendiente) {
             int posicion = ubicarAlimentacion(sinAlimentacion, ventanaIni, ventanaFin);
             if (posicion != Integer.MIN_VALUE) {
-                double disponible = (posicion < 0)
-                        ? sinAlimentacion.minutoEnOrigen
+                double disponible = (posicion < 0) ? sinAlimentacion.minutoEnOrigen
                         : sinAlimentacion.completado[posicion];
                 int inicioComida = (int) Math.ceil(Math.max(disponible, ventanaIni));
                 definitivo = simular(ctx, recargaAntes, posicion, inicioComida);
@@ -333,16 +357,15 @@ public class Ruta {
         for (int i = 0; i < secuencia.size(); i++) {
             Pedido p = secuencia.get(i);
             if (minutosLlegada[i] > p.getMinutoLimite()) {
-                infactible("entrega fuera de plazo de P" + p.getId() + " ("
-                        + Turnos.formatear(minutosLlegada[i]) + " > "
-                        + Turnos.formatear(p.getMinutoLimite()) + ")");
+                infactible("entrega fuera de plazo de P" + p.getId() + " (" + Turnos.formatear(minutosLlegada[i])
+                        + " > " + Turnos.formatear(p.getMinutoLimite()) + ")");
                 break;
             }
         }
 
         if (par.limitarRutaAlTurno && minutoRetorno > finTurno) {
-            infactible("la ruta excede el turno (" + Turnos.formatear(minutoRetorno)
-                    + " > " + Turnos.formatear(finTurno) + ")");
+            infactible("la ruta excede el turno (" + Turnos.formatear(minutoRetorno) + " > "
+                    + Turnos.formatear(finTurno) + ")");
         }
 
         // Mantenimiento durante toda la ruta, hasta finalizar el regreso.
@@ -355,10 +378,11 @@ public class Ruta {
     }
 
     /**
-     * Reparte la secuencia en viajes: un pedido abre viaje nuevo cuando ya no cabe en la carga
-     * del viaje en curso.
+     * Reparte la secuencia en viajes: un pedido abre viaje nuevo cuando ya no cabe
+     * en la carga del viaje en curso.
      *
-     * @return {@code recargaAntes[i]} verdadero si la unidad recarga antes de entregar el pedido i
+     * @return {@code recargaAntes[i]} verdadero si la unidad recarga antes de
+     *         entregar el pedido i
      */
     private boolean[] cortesDeViaje(boolean permitirRecargas) {
         boolean[] recargaAntes = new boolean[secuencia.size()];
@@ -386,11 +410,12 @@ public class Ruta {
     }
 
     /**
-     * Decide en qué punto de la ruta se ubica la hora de alimentación: lo más tarde posible
-     * dentro de la ventana admisible.
+     * Decide en qué punto de la ruta se ubica la hora de alimentación: lo más tarde
+     * posible dentro de la ventana admisible.
      *
-     * @return índice de la entrega tras la cual se toma la comida, −1 para tomarla en el
-     *         almacén antes de salir, o {@link Integer#MIN_VALUE} si no corresponde en ruta
+     * @return índice de la entrega tras la cual se toma la comida, −1 para tomarla
+     *         en el almacén antes de salir, o {@link Integer#MIN_VALUE} si no
+     *         corresponde en ruta
      */
     private int ubicarAlimentacion(Recorrido base, int ventanaIni, int ventanaFin) {
         if (base.minutoEnOrigen > ventanaFin) {
@@ -430,13 +455,14 @@ public class Ruta {
      * Pasada de evaluación hacia adelante con CAMINO_MÁS_RÁPIDO en cada tramo.
      *
      * @param recargaAntes         cortes de viaje (ver {@link #cortesDeViaje})
-     * @param posicionAlimentacion índice de la entrega tras la cual se inserta la hora de
-     *                             alimentación, −1 para insertarla en el almacén de origen, o
-     *                             {@link Integer#MIN_VALUE} para no insertarla
+     * @param posicionAlimentacion índice de la entrega tras la cual se inserta la
+     *                             hora de alimentación, −1 para insertarla en el
+     *                             almacén de origen, o {@link Integer#MIN_VALUE}
+     *                             para no insertarla
      * @param inicioAlimentacion   instante en que comienza la hora de alimentación
      */
     private Recorrido simular(ContextoPlanificacion ctx, boolean[] recargaAntes, int posicionAlimentacion,
-                              int inicioAlimentacion) {
+            int inicioAlimentacion) {
         ParametrosPlanificador par = ctx.getParametros();
         MapaUrbano mapa = ctx.getMapa();
         TipoVehiculo tipo = vehiculo.getTipo();
@@ -449,7 +475,8 @@ public class Ruta {
         r.origen = new Coordenada[n];
         r.completado = new double[n];
 
-        // Stock que la ruta aún puede tomar de cada almacén intermedio al elegir dónde recargar.
+        // Stock que la ruta aún puede tomar de cada almacén intermedio al elegir dónde
+        // recargar.
         Map<Almacen, Integer> stockRestante = new LinkedHashMap<>();
         for (Almacen a : ctx.getAlmacenes()) {
             stockRestante.put(a, ctx.stockInicial(a));
@@ -498,8 +525,8 @@ public class Ruta {
                 r.distancia += tramo.km;
                 t = tramo.llegada;
                 int llegadaRecarga = (int) Math.ceil(t - 1e-9);
-                r.viajes.add(new Viaje(inicioViaje, i, salidaViaje, llegadaRecarga, cargaEn, recarga,
-                        cargaViaje, distanciaViaje));
+                r.viajes.add(new Viaje(inicioViaje, i, salidaViaje, llegadaRecarga, cargaEn, recarga, cargaViaje,
+                        distanciaViaje));
                 pos = recarga.getUbicacion();
                 inicioViaje = i;
                 salidaViaje = llegadaRecarga;
@@ -545,8 +572,8 @@ public class Ruta {
         distanciaViaje += tramo.km;
         r.distancia += tramo.km;
         r.minutoRetorno = (int) Math.ceil(tramo.llegada - 1e-9);
-        r.viajes.add(new Viaje(inicioViaje, n, salidaViaje, r.minutoRetorno, cargaEn, r.almacenRetorno,
-                cargaViaje, distanciaViaje));
+        r.viajes.add(new Viaje(inicioViaje, n, salidaViaje, r.minutoRetorno, cargaEn, r.almacenRetorno, cargaViaje,
+                distanciaViaje));
         return r;
     }
 
@@ -570,11 +597,12 @@ public class Ruta {
     }
 
     /**
-     * Almacén de recarga: el más cercano (distancia de retícula) con stock suficiente para el
-     * viaje. El central tiene inventario ilimitado, así que siempre hay uno.
+     * Almacén de recarga: el más cercano (distancia de retícula) con stock
+     * suficiente para el viaje. El central tiene inventario ilimitado, así que
+     * siempre hay uno.
      */
     private static Almacen almacenDeRecarga(ContextoPlanificacion ctx, Coordenada desde, int carga,
-                                            Map<Almacen, Integer> stockRestante) {
+            Map<Almacen, Integer> stockRestante) {
         Almacen mejor = null;
         int mejorDistancia = Integer.MAX_VALUE;
         for (Almacen a : ctx.getAlmacenes()) {
@@ -591,8 +619,9 @@ public class Ruta {
     }
 
     /**
-     * Pedidos de la ruta cuyo tramo de llegada, según el camino calculado, atraviesa alguna de
-     * las calles indicadas. Lo usa el operador <i>blocked-arc removal</i>.
+     * Pedidos de la ruta cuyo tramo de llegada, según el camino calculado,
+     * atraviesa alguna de las calles indicadas. Lo usa el operador <i>blocked-arc
+     * removal</i>.
      */
     public List<Pedido> pedidosQueAtraviesan(Set<Long> arcos, ContextoPlanificacion ctx) {
         List<Pedido> afectados = new ArrayList<>();
@@ -605,8 +634,7 @@ public class Ruta {
         for (int i = 0; i < secuencia.size(); i++) {
             Pedido p = secuencia.get(i);
             Coordenada anterior = origenesTramo[i] != null ? origenesTramo[i] : almacenOrigen.getUbicacion();
-            MapaUrbano.Tramo tramo = mapa.caminoMasRapido(anterior, p.getDestino(), salidasTramo[i],
-                    velocidad, true);
+            MapaUrbano.Tramo tramo = mapa.caminoMasRapido(anterior, p.getDestino(), salidasTramo[i], velocidad, true);
             if (tramo != null) {
                 for (Long arco : tramo.arcos) {
                     if (arcos.contains(arco)) {
@@ -666,7 +694,8 @@ public class Ruta {
     }
 
     /**
-     * Índice del viaje en que se toma la hora de alimentación, o −1 si la ruta no la incluye.
+     * Índice del viaje en que se toma la hora de alimentación, o −1 si la ruta no
+     * la incluye.
      */
     public int viajeDeAlimentacion() {
         if (minutoInicioAlimentacion < 0 || viajes.isEmpty()) {
@@ -699,7 +728,10 @@ public class Ruta {
         return motivoInfactibilidad;
     }
 
-    /** Utilización media de la capacidad por viaje, para el semáforo de carga del visualizador. */
+    /**
+     * Utilización media de la capacidad por viaje, para el semáforo de carga del
+     * visualizador.
+     */
     public double utilizacion() {
         int nViajes = Math.max(1, viajes.size());
         return getCargaTotal() / (double) (vehiculo.getCapacidad() * nViajes);
@@ -708,17 +740,16 @@ public class Ruta {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append(vehiculo.getCodigo()).append(" desde ").append(almacenOrigen.getId())
-                .append(" carga=").append(cargaTotal).append(" (cap. ").append(vehiculo.getCapacidad())
-                .append(" por viaje, ").append(Math.max(1, viajes.size())).append(" viaje(s))")
-                .append(" km=").append(String.format("%.0f", distanciaKm))
-                .append(" inicio=").append(Turnos.formatear(minutoInicio));
+        sb.append(vehiculo.getCodigo()).append(" desde ").append(almacenOrigen.getId()).append(" carga=")
+                .append(cargaTotal).append(" (cap. ").append(vehiculo.getCapacidad()).append(" por viaje, ")
+                .append(Math.max(1, viajes.size())).append(" viaje(s))").append(" km=")
+                .append(String.format("%.0f", distanciaKm)).append(" inicio=").append(Turnos.formatear(minutoInicio));
         int k = 0;
         for (int i = 0; i < secuencia.size(); i++) {
             if (k < viajes.size() && viajes.get(k).getDesde() == i) {
                 Viaje v = viajes.get(k);
-                sb.append("\n    [viaje ").append(k + 1).append(": carga ").append(v.getCarga())
-                        .append(" en ").append(v.getAlmacenCarga().getId())
+                sb.append("\n    [viaje ").append(k + 1).append(": carga ").append(v.getCarga()).append(" en ")
+                        .append(v.getAlmacenCarga().getId())
                         .append(k == 0 ? "" : " a las " + Turnos.formatear(v.getSalida())).append(']');
                 k++;
             }
@@ -726,15 +757,14 @@ public class Ruta {
             if (i < minutosLlegada.length) {
                 sb.append(" llega ").append(Turnos.formatear(minutosLlegada[i]));
                 int holgura = secuencia.get(i).getMinutoLimite() - minutosLlegada[i];
-                sb.append(holgura >= 0 ? "  holgura " + holgura + " min"
-                        : "  TARDE " + (-holgura) + " min");
+                sb.append(holgura >= 0 ? "  holgura " + holgura + " min" : "  TARDE " + (-holgura) + " min");
             }
         }
         if (minutoInicioAlimentacion >= 0) {
             sb.append("\n    (alimentación ").append(Turnos.formatear(minutoInicioAlimentacion)).append(')');
         }
-        sb.append("\n    retorno ").append(almacenRetorno == null ? "?" : almacenRetorno.getId())
-                .append(' ').append(Turnos.formatear(minutoRetorno));
+        sb.append("\n    retorno ").append(almacenRetorno == null ? "?" : almacenRetorno.getId()).append(' ')
+                .append(Turnos.formatear(minutoRetorno));
         if (!esFactible()) {
             sb.append("  [NO FACTIBLE: ").append(motivoInfactibilidad).append(']');
         }

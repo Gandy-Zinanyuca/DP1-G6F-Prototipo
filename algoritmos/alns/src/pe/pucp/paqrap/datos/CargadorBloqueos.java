@@ -14,13 +14,18 @@ import java.util.List;
 /**
  * Lector del archivo mensual de bloqueos de calles (LE073, LE075, LE081).
  *
- * <p>Formato de línea: {@code DDdHHhMMm-DDdHHhMMm:x1,y1,x2,y2,...,xn,yn}, por ejemplo
- * {@code 01d02h22m-01d04h42m:25,45,45,45,45,40}. El primer campo es el intervalo de vigencia
- * y el segundo una polilínea de nodos cuyos tramos quedan cerrados en ambos sentidos.</p>
+ * <p>
+ * Formato de línea: {@code DDdHHhMMm-DDdHHhMMm:x1,y1,x2,y2,...,xn,yn}, por
+ * ejemplo {@code 01d02h22m-01d04h42m:25,45,45,45,45,40}. El primer campo es el
+ * intervalo de vigencia y el segundo una polilínea de nodos cuyos tramos quedan
+ * cerrados en ambos sentidos.
+ * </p>
  *
- * <p>Se rechazan las líneas con número impar de coordenadas, con vértices fuera de la
- * retícula (LE081) o con intervalo invertido, informando el motivo sin interrumpir la carga
- * del resto del archivo.</p>
+ * <p>
+ * Se rechazan las líneas con número impar de coordenadas, con vértices fuera de
+ * la retícula (LE081) o con intervalo invertido, informando el motivo sin
+ * interrumpir la carga del resto del archivo.
+ * </p>
  */
 public final class CargadorBloqueos {
 
@@ -44,8 +49,8 @@ public final class CargadorBloqueos {
     }
 
     /**
-     * Carga un archivo mensual cuyo día 1, 00:00, corresponde al minuto {@code desplazamiento}
-     * del reloj de la simulación; se usa al encadenar meses.
+     * Carga un archivo mensual cuyo día 1, 00:00, corresponde al minuto
+     * {@code desplazamiento} del reloj de la simulación; se usa al encadenar meses.
      */
     public static Resultado cargar(Path archivo, int desplazamiento) throws IOException {
         List<Bloqueo> bloqueos = new ArrayList<>();
@@ -94,9 +99,7 @@ public final class CargadorBloqueos {
         }
         List<Coordenada> vertices = new ArrayList<>(campos.length / 2);
         for (int i = 0; i < campos.length; i += 2) {
-            Coordenada c = new Coordenada(
-                    Integer.parseInt(campos[i].trim()),
-                    Integer.parseInt(campos[i + 1].trim()));
+            Coordenada c = new Coordenada(Integer.parseInt(campos[i].trim()), Integer.parseInt(campos[i + 1].trim()));
             if (!c.dentroDelMapa()) {
                 throw new IllegalArgumentException("vértice fuera de la retícula: " + c);
             }

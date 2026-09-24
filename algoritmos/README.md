@@ -16,16 +16,16 @@ java -cp algoritmos/out pe.pucp.paqrap.RestriccionesTabuTest
 ## Una ejecucion por algoritmo
 
 ~~~bat
-algoritmos\ejecutar-tabu.bat algoritmos/alns/data/ventas.v20260909/ventas.202609.txt algoritmos/alns/data/bloqueos.v20260909/bloqueo.2609.txt algoritmos/alns/data/mant.preventivo.09.10.txt 2026-09-01T08:00 20 20262 0 --salida algoritmos/experimentacion/resultados/ts-01
-algoritmos\ejecutar-alns.bat algoritmos/alns/data/ventas.v20260909/ventas.202609.txt algoritmos/alns/data/bloqueos.v20260909/bloqueo.2609.txt algoritmos/alns/data/mant.preventivo.09.10.txt 2026-09-01T08:00 20 20262 0 --salida algoritmos/experimentacion/resultados/alns-01
+algoritmos\ejecutar-tabu.bat algoritmos/alns/data/ventas.v20260909/ventas.202609.txt algoritmos/alns/data/bloqueos.v20260909/bloqueo.2609.txt - 2026-09-01T08:00 20 20262 0 --salida algoritmos/experimentacion/resultados/ts-01
+algoritmos\ejecutar-alns.bat algoritmos/alns/data/ventas.v20260909/ventas.202609.txt algoritmos/alns/data/bloqueos.v20260909/bloqueo.2609.txt - 2026-09-01T08:00 20 20262 0 --salida algoritmos/experimentacion/resultados/alns-01
 ~~~
 
-Argumentos: ventas, bloqueos, mantenimiento, instante, [iteraciones=100], [semilla=20262], [presupuesto-ms=0]. Las opciones con -- se colocan despues de los argumentos posicionales. La ejecucion individual siempre exporta un CSV propio; sin --salida crea una carpeta unica en algoritmos/experimentacion/resultados.
+Argumentos: ventas, bloqueos, -, instante, [iteraciones=100], [semilla=20262], [presupuesto-ms=0]. Las opciones con -- se colocan despues de los argumentos posicionales. La ejecucion individual siempre exporta un CSV propio; sin --salida crea una carpeta unica en algoritmos/experimentacion/resultados.
 
 ## Comparacion pareada
 
 ~~~bat
-java -cp algoritmos/out pe.pucp.paqrap.CompararAlgoritmos algoritmos/alns/data/ventas.v20260909/ventas.202609.txt algoritmos/alns/data/bloqueos.v20260909/bloqueo.2609.txt algoritmos/alns/data/mant.preventivo.09.10.txt 2026-09-01T08:00 algoritmos/experimentacion/resultados/pares-01 20 20262,20263,20264 0 --escenario E1 --carga base --instancia septiembre-01
+java -cp algoritmos/out pe.pucp.paqrap.CompararAlgoritmos algoritmos/alns/data/ventas.v20260909/ventas.202609.txt algoritmos/alns/data/bloqueos.v20260909/bloqueo.2609.txt - 2026-09-01T08:00 algoritmos/experimentacion/resultados/pares-01 20 20262,20263,20264 0 --escenario E1 --carga base --instancia septiembre-01
 ~~~
 
 Para cada semilla ejecuta TS y luego ALNS sobre la misma entrada, con caches y generadores aleatorios nuevos. Cada motor reconstruye la misma solucion inicial determinista dentro de Ta. La inmutabilidad conserva las condiciones iniciales, y se verifica que el estado no cambie. Hay dos iteraciones de calentamiento por motor excluidas de los resultados.
@@ -50,10 +50,10 @@ La carpeta debe ser nueva o vacia. Los resultados se escriben por corrida; un co
 | --factor-carga 1.5 | Multiplica cantidades y redondea hacia arriba; conserva pedidos, destinos y deadlines |
 | --max-pedidos 400 | Limite externo de pedidos considerados |
 | --horizonte-horas 24 | Incluye deadlines hasta T + horizonte |
-| --averias archivo.txt | Intervalos: vehiculo;inicio-ISO;fin-ISO |
+
 | --salida carpeta | Solo ejecucion individual; el comparador tiene salida posicional |
 
-Para E2 repetir el comparador con factores crecientes (por ejemplo 1, 1.5, 2), la misma lista de semillas y una carpeta diferente por nivel. Para E3 proporcionar los archivos de bloqueos/mantenimiento correspondientes y, cuando aplique, --averias. E1 usa las condiciones base de los archivos: la etiqueta no elimina bloqueos ni mantenimientos.
+Para E2 repetir el comparador con factores crecientes (por ejemplo 1, 1.5, 2), la misma lista de semillas y una carpeta diferente por nivel. Para E3 proporcionar variantes documentadas de bloqueos. E1 usa los bloqueos suministrados. Ningun escenario experimental incluye averias ni mantenimiento.
 
 Las mismas etiquetas, archivos, instante y factor deben usarse para los dos algoritmos; el comparador lo hace automaticamente. El estado_sha256 permite comprobar identidad del estado en los CSV.
 
@@ -80,3 +80,7 @@ Con presupuesto 0 se reproduce el recorrido con la misma semilla, configuracion 
 Las carpetas de resultados se versionan en Git. Registrar el commit y si hay cambios locales junto con los metadatos para identificar la version ejecutada. Para simulaciones cronologicas TS/ALNS y campanas hasta colapso, consultar [SIMULACION-COMPARADA.md](experimentacion/SIMULACION-COMPARADA.md).
 
 El simulador mensual historico de algoritmos/alns/src/pe conserva su contrato propio. Sus CSV y analisis de dias hasta colapso no se mezclan con esta comparacion por EstadoOperacion. Ver [ALNS](alns/README.md) y [TS](tabu/README.md).
+
+## Configuracion experimental v3
+
+Almacen central (27,14), stock ilimitado; Nor-Oeste (12,38) y Este (57,27), stock inicial de 1000 cada uno, repuesto diariamente en la simulacion. La flota inicia en el central. Se mantienen turnos, alimentacion, capacidad, servicio y retorno. Usar - en el antiguo argumento de mantenimiento; no se requiere archivo vacio. No mezclar nuevas campanas con resultados previos a estas coordenadas y a la exclusion de mantenimiento. Las metricas principales siguen siendo Ta y holgura temporal; duracion hasta colapso y cobertura complementan su interpretacion.

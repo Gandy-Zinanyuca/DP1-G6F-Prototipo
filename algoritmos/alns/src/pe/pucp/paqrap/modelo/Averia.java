@@ -3,17 +3,20 @@ package pe.pucp.paqrap.modelo;
 /**
  * Incidencia de avería de una unidad de transporte (LE072, LE099).
  *
- * <p>El enunciado distingue tres tipos de avería con tiempos de inoperatividad crecientes.
- * Los valores por defecto son parámetros configurables del simulador; el planificador solo
- * necesita saber hasta qué minuto la unidad no admite asignaciones (LE076, LE087).</p>
+ * <p>
+ * El enunciado distingue tres tipos de avería con tiempos de inoperatividad
+ * crecientes. Los valores por defecto son parámetros configurables del
+ * simulador; el planificador solo necesita saber hasta qué minuto la unidad no
+ * admite asignaciones (LE076, LE087).
+ * </p>
  */
 public class Averia {
 
     /** Tipos de avería con su tiempo de inoperatividad por defecto, en minutos. */
     public enum Tipo {
-        TIPO_1(120),    // incidente leve, la unidad se recupera en el mismo turno
-        TIPO_2(360),    // requiere traslado a taller
-        TIPO_3(1440);   // inmoviliza la unidad por el resto del día simulado
+        TIPO_1(120), // incidente leve, la unidad se recupera en el mismo turno
+        TIPO_2(360), // requiere traslado a taller
+        TIPO_3(1440); // inmoviliza la unidad por el resto del día simulado
 
         private int minutosInoperatividad;
 
@@ -58,7 +61,9 @@ public class Averia {
         return ubicacion;
     }
 
-    /** Minuto en que la unidad vuelve automáticamente al estado disponible (LE076). */
+    /**
+     * Minuto en que la unidad vuelve automáticamente al estado disponible (LE076).
+     */
     public int minutoRecuperacion() {
         return minutoOcurrencia + tipo.getMinutosInoperatividad();
     }

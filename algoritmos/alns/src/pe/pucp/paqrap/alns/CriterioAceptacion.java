@@ -3,8 +3,8 @@ package pe.pucp.paqrap.alns;
 import java.util.Random;
 
 /**
- * CRITERIO_ACEPTACIÓN y CALCULAR_TEMPERATURA del ISA (sección 5.2): esquema tipo recocido
- * simulado.
+ * CRITERIO_ACEPTACIÓN y CALCULAR_TEMPERATURA del ISA (sección 5.2): esquema
+ * tipo recocido simulado.
  *
  * <pre>
  * SI costo(candidato) &lt; costo(actual) → aceptar con puntuaciónMejoraActual
@@ -16,7 +16,10 @@ import java.util.Random;
  */
 public class CriterioAceptacion {
 
-    /** Resultado de la aceptación: si se acepta y la puntuación que recibe el par de operadores. */
+    /**
+     * Resultado de la aceptación: si se acepta y la puntuación que recibe el par de
+     * operadores.
+     */
     public static final class Resultado {
         public final boolean aceptar;
         public final double puntuacion;
