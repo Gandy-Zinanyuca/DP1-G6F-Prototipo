@@ -60,6 +60,10 @@ public class ALNS {
         public int rechazados;
         public int nuevasMejores;
         public int iteracionMejor;
+        /** Destrucciones que no removieron nada: se descartan sin contar como iteración. */
+        public int destruccionesSinEfecto;
+        /** Operadores de destrucción sin nada que remover en esta ejecución (no se sortean). */
+        public List<String> noAplicables = new ArrayList<>();
         /** Ta: tiempo de ejecución del algoritmo, en milisegundos. */
         public long milisegundos;
         public boolean factible;
@@ -100,6 +104,8 @@ public class ALNS {
                             + "aceptados=%d rechazados=%d nuevosMejores=%d%n",
                     candidatosEvaluados, candidatosFactibles, candidatosNoFactibles,
                     aceptados, rechazados, nuevasMejores));
+            sb.append(String.format("      destrucciones vacías descartadas=%d | no aplicables: %s%n",
+                    destruccionesSinEfecto, noAplicables.isEmpty() ? "ninguno" : String.join(", ", noAplicables)));
             sb.append("      pesos destrucción:\n");
             for (int i = 0; i < nombresDestruccion.length; i++) {
                 sb.append(String.format("        %-28s w=%.3f usos=%d%n",
@@ -208,23 +214,56 @@ public class ALNS {
                 new SelectorAdaptativo<>(operadoresReparacion(par), par.pesoInicial, par.factorReaccion);
         CriterioAceptacion criterio = new CriterioAceptacion(par);
 
+        // Operadores sin nada que remover en esta ejecución (p. ej. vehicle-failure sin averías ni
+        // mantenimientos, blocked-arc sin bloqueos vigentes): no se sortean. Siguen en la cartera
+        // y se usan normalmente en cuanto el contexto presenta esas incidencias.
+        int nDestruccion = destruccion.getOperadores().size();
+        boolean[] noAplicables = new boolean[nDestruccion];
+        for (int i = 0; i < nDestruccion; i++) {
+            noAplicables[i] = !destruccion.operador(i).aplicable(actual, ctx);
+            if (noAplicables[i]) {
+                estadisticas.noAplicables.add(destruccion.operador(i).nombre());
+            }
+        }
+        // Excluidos hasta que cambie la solución actual: los no aplicables y los que acaban de
+        // devolver una destrucción vacía sobre ella.
+        boolean[] excluidos = noAplicables.clone();
+
         int iteracion = 0;
         int iteracionMejor = 0;
 
         while (iteracion < par.maxIteraciones) {
-            iteracion++;
-            estadisticas.candidatosEvaluados++;
-
-            int iDestruccion = destruccion.seleccionar(aleatorio);
-            int iReparacion = reparacion.seleccionar(aleatorio);
-
             int grado = determinarGradoDestruccion(actual, ctx);
 
-            Solucion candidato = actual.copia();
-            List<Pedido> removidos = destruccion.operador(iDestruccion)
-                    .destruir(candidato, grado, ctx, aleatorio);
-            // Las fracciones removidas de un mismo pedido se reinsertan juntas.
-            removidos = candidato.consolidar(removidos);
+            // Una destrucción vacía no cuenta como iteración: se descarta y se sortea otro operador.
+            int iDestruccion;
+            Solucion candidato = null;
+            do {
+                iDestruccion = destruccion.seleccionar(aleatorio, excluidos);
+                if (iDestruccion < 0) {
+                    break;
+                }
+                candidato = actual.copia();
+                List<Pedido> destruidos =
+                        destruccion.operador(iDestruccion).destruir(candidato, grado, ctx, aleatorio);
+                if (destruidos.isEmpty()) {
+                    excluidos[iDestruccion] = true;
+                    estadisticas.destruccionesSinEfecto++;
+                    candidato = null;
+                }
+            } while (candidato == null);
+            if (iDestruccion < 0) {
+                break;   // ningún operador puede remover nada de la solución actual
+            }
+
+            iteracion++;
+            estadisticas.candidatosEvaluados++;
+            int iReparacion = reparacion.seleccionar(aleatorio);
+
+            // Se reinsertan los removidos y también los reprogramados de iteraciones anteriores
+            // (todos quedan en noAsignados): el espacio que libera la destrucción puede
+            // alcanzar para atenderlos ahora. Las fracciones de un mismo pedido van juntas.
+            List<Pedido> removidos = candidato.consolidar(new ArrayList<>(candidato.getNoAsignados()));
             reparacion.operador(iReparacion).reparar(candidato, removidos, ctx, aleatorio);
 
             double costoCandidato = candidato.evaluar(ctx);
@@ -241,6 +280,9 @@ public class ALNS {
                 if (resultado.aceptar) {
                     actual = candidato;
                     costoActual = costoCandidato;
+                    // Cambió la solución actual: los operadores que no removían nada de la
+                    // anterior vuelven a sortearse.
+                    excluidos = noAplicables.clone();
                     puntuacion = resultado.puntuacion;
                     estadisticas.aceptados++;
 

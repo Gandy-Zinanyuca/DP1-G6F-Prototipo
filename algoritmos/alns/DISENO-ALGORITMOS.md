@@ -79,15 +79,21 @@ inicioReal ← nanoTime
 soluciónInicial ← GENERAR_SOLUCIÓN_INICIAL ; EVALUAR
 SI no es factible → retornar resultado no factible (colapso), sin iterar
 actual ← mejorGlobal ← soluciónInicial ; pesos ← pesoInicial
+noAplicables ← operadores de destrucción sin nada que remover en esta ejecución
+excluidos ← noAplicables
 MIENTRAS iteración < maxIteraciones
-    iteración++ ; candidatosEvaluados++
-    d ← SELECCIONAR_OPERADOR(destrucción) ; r ← SELECCIONAR_OPERADOR(reparación)
     grado ← DETERMINAR_GRADO_DESTRUCCIÓN(actual)
-    (parcial, removidos) ← APLICAR_DESTRUCCIÓN(copia(actual), d, grado)
-    candidato ← APLICAR_REPARACIÓN(parcial, removidos, r)
+    REPETIR
+        d ← SELECCIONAR_OPERADOR(destrucción, sin excluidos)
+        SI no queda ninguno → terminar la búsqueda
+        (parcial, removidos) ← APLICAR_DESTRUCCIÓN(copia(actual), d, grado)
+        SI removidos vacío → excluidos ← excluidos ∪ {d}     // no cuenta, no se puntúa
+    HASTA removidos no vacío
+    iteración++ ; candidatosEvaluados++ ; r ← SELECCIONAR_OPERADOR(reparación)
+    candidato ← APLICAR_REPARACIÓN(parcial, removidos ∪ reprogramados, r)
     SI EVALUAR(candidato) no factible → candidatosNoFactibles++ ; puntuación ← rechazo
     SINO candidatosFactibles++ ; (aceptar, puntuación) ← CRITERIO_ACEPTACIÓN
-         SI aceptar: actual ← candidato
+         SI aceptar: actual ← candidato ; excluidos ← noAplicables
               SI costo < costo(mejorGlobal): mejorGlobal ← copia ; puntuación ← nuevoMejor
     puntuar d y r ; SI iteración mod tamañoSegmento = 0 → ACTUALIZAR_PESOS
 ACTUALIZAR_PESOS ; Ta ← (nanoTime − inicioReal)/10⁶
@@ -118,7 +124,12 @@ RETORNAR mejorGlobal
 | blocked-arc removal | `RemocionPorArcoBloqueado` | todos los pedidos cuyo tramo de llegada (CAMINO_MÁS_RÁPIDO) usa una calle bloqueada vigente en T |
 | vehicle-failure removal | `RemocionPorAveria` | todos los pedidos de unidades con mantenimiento vigente en T o no disponibles (averiadas) |
 
-Los dos operadores de dominio no usan el grado de destrucción.
+Los dos operadores de dominio no usan el grado de destrucción. Se conservan para la operación con
+averías, mantenimientos y bloqueos, pero solo se sortean cuando pueden remover algo: vehicle-failure
+si la solución inicial tiene rutas en unidades averiadas o en mantenimiento (la reparación nunca
+asigna a esas unidades), blocked-arc si hay bloqueos vigentes en T. Cualquier destrucción que sale
+vacía se descarta sin contar como iteración ni puntuar, y ese operador no se vuelve a sortear hasta
+que cambie la solución actual (§3).
 
 ### 4.2 Reparación
 
@@ -341,9 +352,9 @@ aceptados, rechazados, nuevasMejores, iteraciónMejor, Ta (ms), factible, errore
    cobertura por cantidad.
 7. EVALUAR de ALNS es una implementación equivalente dentro de este módulo, no la misma clase
    que la de TS (módulos Java separados).
-8. Con el esquema de puntuación del ISA, una iteración en la que blocked-arc o vehicle-failure no
-   remueven nada produce un candidato de igual costo que se acepta con
-   `puntuacionAceptacionNoMejora`; esos operadores ganan peso sin aportar. Conviene decidir si una
-   destrucción vacía debe puntuar como rechazo.
+8. Con el esquema de puntuación del ISA, una destrucción vacía produce un candidato de igual
+   costo que se acepta con `puntuacionAceptacionNoMejora`: blocked-arc y vehicle-failure ganaban
+   peso sin aportar (~40 % de las iteraciones sin incidencias). Resuelto: una destrucción vacía no
+   cuenta como iteración ni se puntúa (§3, §4.1).
 9. Rutas con recarga (§4.4), reprogramación con penalización (§4.5) y solución inicial con
    plan previo (§4.6) extienden EVALUAR y GENERAR_SOLUCIÓN_INICIAL del ISA.

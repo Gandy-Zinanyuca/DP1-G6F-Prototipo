@@ -37,19 +37,38 @@ public class SelectorAdaptativo<T> {
 
     /** SELECCIONAR_OPERADOR: ruleta proporcional al peso. */
     public int seleccionar(Random aleatorio) {
+        return seleccionar(aleatorio, new boolean[pesos.length]);
+    }
+
+    /**
+     * SELECCIONAR_OPERADOR restringido a los operadores no excluidos.
+     *
+     * @return el índice elegido, o −1 si todos están excluidos
+     */
+    public int seleccionar(Random aleatorio, boolean[] excluidos) {
         double sumaPesos = 0;
-        for (double w : pesos) {
-            sumaPesos += w;
+        int ultimo = -1;
+        for (int i = 0; i < pesos.length; i++) {
+            if (!excluidos[i]) {
+                sumaPesos += pesos[i];
+                ultimo = i;
+            }
+        }
+        if (ultimo < 0) {
+            return -1;
         }
         double valorAleatorio = aleatorio.nextDouble() * sumaPesos;
         double acumulado = 0;
         for (int i = 0; i < pesos.length; i++) {
+            if (excluidos[i]) {
+                continue;
+            }
             acumulado += pesos[i];
             if (valorAleatorio <= acumulado) {
                 return i;
             }
         }
-        return pesos.length - 1;
+        return ultimo;
     }
 
     public T operador(int indice) {

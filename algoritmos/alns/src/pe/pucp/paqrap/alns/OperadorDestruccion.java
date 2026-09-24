@@ -26,6 +26,16 @@ public interface OperadorDestruccion {
      */
     List<Pedido> destruir(Solucion solucion, int q, ContextoPlanificacion ctx, Random aleatorio);
 
+    /**
+     * Indica si el operador puede remover algo en esta ejecución, a partir de la solución inicial.
+     * ALNS no sortea los operadores no aplicables, para no gastar iteraciones en destrucciones
+     * vacías. Por defecto, verdadero; los operadores de dominio dependen de las incidencias
+     * vigentes (averías, mantenimientos, bloqueos).
+     */
+    default boolean aplicable(Solucion solucion, ContextoPlanificacion ctx) {
+        return true;
+    }
+
     /** Nombre del operador, usado en las estadísticas de pesos adaptativos. */
     String nombre();
 }

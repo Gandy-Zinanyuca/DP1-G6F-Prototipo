@@ -26,22 +26,31 @@ import java.util.Set;
  * <p>Además del mantenimiento programado, se consideran averiadas las unidades que dejaron de
  * estar disponibles en T (fuera del conjunto de unidades asignables). El operador no usa el
  * grado de destrucción: retira todos los pedidos afectados.</p>
+ *
+ * <p>Es aplicable solo si la solución tiene rutas con pedidos en unidades averiadas o en
+ * mantenimiento. La reparación nunca asigna a esas unidades, así que si la solución inicial no
+ * tiene ninguna, el operador no puede remover nada en toda la ejecución y ALNS no lo sortea.</p>
  */
 public class RemocionPorAveria implements OperadorDestruccion {
 
     @Override
-    public List<Pedido> destruir(Solucion solucion, int q, ContextoPlanificacion ctx, Random aleatorio) {
-        Set<String> disponibles = new HashSet<>();
-        for (Vehiculo v : ctx.getUnidadesAsignables()) {
-            disponibles.add(v.getCodigo());
+    public boolean aplicable(Solucion solucion, ContextoPlanificacion ctx) {
+        Set<String> disponibles = disponibles(ctx);
+        for (Ruta r : solucion.getRutas()) {
+            if (!r.estaVacia() && averiado(r, disponibles, ctx)) {
+                return true;
+            }
         }
-        int dia = Turnos.dia(ctx.getMinutoActual());
+        return false;
+    }
+
+    @Override
+    public List<Pedido> destruir(Solucion solucion, int q, ContextoPlanificacion ctx, Random aleatorio) {
+        Set<String> disponibles = disponibles(ctx);
 
         List<Pedido> removidos = new ArrayList<>();
         for (Ruta r : solucion.getRutas()) {
-            String codigo = r.getVehiculo().getCodigo();
-            boolean averiado = ctx.enMantenimiento(codigo, dia) || !disponibles.contains(codigo);
-            if (!averiado) {
+            if (!averiado(r, disponibles, ctx)) {
                 continue;
             }
             for (Pedido p : new ArrayList<>(r.getSecuencia())) {
@@ -50,6 +59,21 @@ public class RemocionPorAveria implements OperadorDestruccion {
             }
         }
         return removidos;
+    }
+
+    private static Set<String> disponibles(ContextoPlanificacion ctx) {
+        Set<String> disponibles = new HashSet<>();
+        for (Vehiculo v : ctx.getUnidadesAsignables()) {
+            disponibles.add(v.getCodigo());
+        }
+        return disponibles;
+    }
+
+    /** Unidad con mantenimiento el día de T o que dejó de estar disponible (avería). */
+    private static boolean averiado(Ruta r, Set<String> disponibles, ContextoPlanificacion ctx) {
+        String codigo = r.getVehiculo().getCodigo();
+        return ctx.enMantenimiento(codigo, Turnos.dia(ctx.getMinutoActual()))
+                || !disponibles.contains(codigo);
     }
 
     @Override

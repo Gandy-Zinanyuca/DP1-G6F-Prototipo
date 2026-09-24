@@ -24,8 +24,17 @@ import java.util.Set;
  * <p>El camino de cada tramo se obtiene con la misma función CAMINO_MÁS_RÁPIDO usada en la
  * evaluación de factibilidad, de modo que un arco se considera afectado bajo el mismo criterio.
  * El operador no usa el grado de destrucción: retira todos los pedidos afectados.</p>
+ *
+ * <p>Es aplicable solo si hay bloqueos vigentes en T; si no, ALNS no lo sortea en la ejecución.
+ * Si hay bloqueos pero ninguna ruta los atraviesa, la destrucción sale vacía y se descarta sin
+ * contar como iteración hasta que cambie la solución actual.</p>
  */
 public class RemocionPorArcoBloqueado implements OperadorDestruccion {
+
+    @Override
+    public boolean aplicable(Solucion solucion, ContextoPlanificacion ctx) {
+        return !ctx.getMapa().arcosBloqueadosEn(ctx.getMinutoActual()).isEmpty();
+    }
 
     @Override
     public List<Pedido> destruir(Solucion solucion, int q, ContextoPlanificacion ctx, Random aleatorio) {
