@@ -66,8 +66,9 @@ java -cp out pe.pucp.paqrap.DemoPlanificador data/ventas.v20260909/ventas.202601
 ```
 
 El resumen final reporta el instante del colapso y su causa, los días simulados, el **tiempo real**
-de la corrida y el tiempo acumulado del planificador (Σ Ta, promedio y máximo por ejecución), los
-pedidos registrados, entregados y fraccionados, y los km y el costo de las rutas despachadas.
+de la corrida y el tiempo acumulado del planificador (Σ Ta, promedio y máximo por ejecución), la
+**holgura promedio de entrega** (`holgura_promedio_min`), los pedidos registrados, entregados y
+fraccionados, y los km y el costo de las rutas despachadas.
 Durante la corrida se imprime una línea por día simulado (`--detalle` imprime una por ciclo).
 
 **Campaña de N corridas para la experimentación numérica**: `./experimentos_colapso.sh N`

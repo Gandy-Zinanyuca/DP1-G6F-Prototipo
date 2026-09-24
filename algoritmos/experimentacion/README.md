@@ -2,7 +2,9 @@
 
 Compara ALNS y Búsqueda Tabú por **cuánto dura la simulación hasta el colapso**: el algoritmo
 que dura más es mejor. La métrica por defecto es `dias_simulados`, el tiempo simulado desde el
-inicio (2026-01-01 00:00) hasta el colapso.
+inicio (2026-01-01 00:00) hasta el colapso. Como métricas operativas complementarias, el CSV de
+ALNS incluye el tiempo total de planificación (`tiempo_planificador_s`) y la holgura promedio de
+entrega (`holgura_promedio_min`).
 
 ## Hipótesis
 
@@ -42,10 +44,11 @@ experimentos_colapso.bat 30
 ## 2. Corridas de Tabú
 
 Deben producir CSV con, al menos, las columnas `fin` (`COLAPSO` si colapsó) y `dias_simulados`,
-una fila por corrida y un archivo por corrida o un único CSV. Opcionales: `algoritmo`,
-`semilla`, `escenario` y los parámetros de la configuración. Para que la comparación sea válida,
-Tabú debe simularse con el mismo escenario: el mismo mes inicial, Sa y K, despacho progresivo,
-meses encadenados y el mismo criterio de colapso.
+una fila por corrida y un archivo por corrida o un único CSV. Para comparar las métricas
+secundarias del diseño experimental, debe agregar también `tiempo_planificador_s` y
+`holgura_promedio_min`. Opcionales: `algoritmo`, `semilla`, `escenario` y los parámetros de la
+configuración. Para que la comparación sea válida, Tabú debe simularse con el mismo escenario: el
+mismo mes inicial, Sa y K, despacho progresivo, meses encadenados y el mismo criterio de colapso.
 
 ## 3. Análisis en R
 

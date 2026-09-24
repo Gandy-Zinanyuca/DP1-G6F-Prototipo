@@ -59,6 +59,10 @@ public class ResultadoSimulacion {
     public int pedidosEntregados;
     public int pedidosFraccionados;
     public long paquetesEntregados;
+    /** Suma de holguras al completar pedidos: hora límite menos llegada de la última parte. */
+    public long holguraEntregaTotalMin;
+    /** Menor holgura observada entre los pedidos completados. */
+    public int holguraEntregaMinimaMin = Integer.MAX_VALUE;
     public int rutasDespachadas;
     /** Viajes despachados (una ruta puede tener varios, recargando entre ellos). */
     public int viajesDespachados;
@@ -86,6 +90,14 @@ public class ResultadoSimulacion {
         return ejecucionesPlanificador == 0 ? 0 : tiempoPlanificadorNs / 1e6 / ejecucionesPlanificador;
     }
 
+    public double holguraPromedioMin() {
+        return pedidosEntregados == 0 ? 0 : holguraEntregaTotalMin / (double) pedidosEntregados;
+    }
+
+    public int holguraMinimaMin() {
+        return pedidosEntregados == 0 ? 0 : holguraEntregaMinimaMin;
+    }
+
     private Map<String, String> metricas() {
         Map<String, String> m = new LinkedHashMap<>();
         m.put("fin", fin.name());
@@ -104,6 +116,8 @@ public class ResultadoSimulacion {
         m.put("pedidos_entregados", String.valueOf(pedidosEntregados));
         m.put("pedidos_fraccionados", String.valueOf(pedidosFraccionados));
         m.put("paquetes_entregados", String.valueOf(paquetesEntregados));
+        m.put("holgura_promedio_min", fmt("%.2f", holguraPromedioMin()));
+        m.put("holgura_minima_min", String.valueOf(holguraMinimaMin()));
         m.put("rutas_despachadas", String.valueOf(rutasDespachadas));
         m.put("viajes_despachados", String.valueOf(viajesDespachados));
         for (String tipo : unidadesPorTipo.keySet()) {
@@ -178,6 +192,8 @@ public class ResultadoSimulacion {
                         + " · %d fraccionados · %d paquetes%n",
                 pedidosRegistrados, pedidosPendientesAlInicio, pedidosEntregados, pedidosFraccionados,
                 paquetesEntregados));
+        sb.append(String.format(" Holgura entregas     : prom. %.1f min · mín. %d min%n",
+                holguraPromedioMin(), holguraMinimaMin()));
         sb.append(String.format(" Rutas despachadas    : %d rutas · %d viajes · %.0f km · S/ %.2f%n",
                 rutasDespachadas, viajesDespachados, kmRecorridos, costoSoles));
         StringBuilder porTipo = new StringBuilder();

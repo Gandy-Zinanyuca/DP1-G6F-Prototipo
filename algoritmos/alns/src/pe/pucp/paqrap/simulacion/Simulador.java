@@ -413,6 +413,9 @@ public class Simulador {
             resultado.paquetesEntregados += parte.getCantidad();
             if (parte.registrarEntrega(parte.getCantidad(), p.llegada)) {
                 resultado.pedidosEntregados++;
+                int holgura = parte.getMinutoLimite() - parte.getOriginal().getMinutoEntregaReal();
+                resultado.holguraEntregaTotalMin += holgura;
+                resultado.holguraEntregaMinimaMin = Math.min(resultado.holguraEntregaMinimaMin, holgura);
                 if (parte.getOriginal().getPartesDespachadas() > 1) {
                     resultado.pedidosFraccionados++;
                 }
