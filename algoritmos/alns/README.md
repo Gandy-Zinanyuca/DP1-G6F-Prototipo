@@ -55,13 +55,13 @@ colapso.bat 202601
 colapso.bat 202601 --iteraciones 1000 --semilla 7
 ```
 
-Por defecto usa `--dia 1 --hora 0 --sa 10 --k 7 --iteraciones 300`. En Linux / macOS:
+Por defecto usa `--dia 1 --hora 0 --sa 10 --k 7 --iteraciones 200`. En Linux / macOS:
 
 ```bash
 mkdir -p resultados
 java -cp out pe.pucp.paqrap.DemoPlanificador data/ventas.v20260909/ventas.202601.txt \
      data/bloqueos.v20260909/bloqueo.2601.txt data/mant.preventivo.09.10.txt \
-     --colapso --dia 1 --hora 0 --iteraciones 300 --csv-resumen resultados/experimentos_colapso.csv \
+     --colapso --dia 1 --hora 0 --iteraciones 200 --csv-resumen resultados/experimentos_colapso.csv \
      > resultados/colapso_202601.txt
 ```
 
@@ -82,13 +82,13 @@ y deja un CSV por corrida; el análisis estadístico (prueba de hipótesis en R)
 simular.bat 202609
 ```
 
-Por defecto usa `--dia 1 --hora 0 --ciclos 4464 --sa 10 --k 7 --iteraciones 300`. Cualquier opción
+Por defecto usa `--dia 1 --hora 0 --ciclos 4464 --sa 10 --k 7 --iteraciones 200`. Cualquier opción
 adicional reemplaza a la de por defecto, por ejemplo `simular.bat 202609 --iteraciones 1000 --k 12`.
 
 **Comando equivalente sin el script:**
 
 ```bat
-java -Dfile.encoding=UTF-8 -cp out pe.pucp.paqrap.DemoPlanificador data\ventas.v20260909\ventas.202609.txt data\bloqueos.v20260909\bloqueo.2609.txt data\mant.preventivo.09.10.txt --dia 1 --hora 0 --ciclos 4464 --sa 10 --k 7 --iteraciones 300 > sim_202609.txt
+java -Dfile.encoding=UTF-8 -cp out pe.pucp.paqrap.DemoPlanificador data\ventas.v20260909\ventas.202609.txt data\bloqueos.v20260909\bloqueo.2609.txt data\mant.preventivo.09.10.txt --dia 1 --hora 0 --ciclos 4464 --sa 10 --k 7 --iteraciones 200 > sim_202609.txt
 ```
 
 Opciones de `DemoPlanificador`: `--colapso` (sin límite de ciclos, configuración de colapso de

@@ -27,7 +27,7 @@ for /l %%S in (1,1,%N%) do (
         echo semilla %%S: ya existe, se omite
     ) else (
         echo semilla %%S: simulando...
-        java -Xmx1g -Dfile.encoding=UTF-8 -cp out pe.pucp.paqrap.DemoPlanificador "%VENTAS%" "%BLOQUEOS%" "%MANT%" --colapso --dia 1 --hora 0 --sa 10 --k 7 --iteraciones 300 --semilla %%S %2 %3 %4 %5 %6 %7 %8 %9 --csv-resumen "%DESTINO%\alns_semilla_%%S.csv.tmp" > "%DESTINO%\alns_semilla_%%S.txt" 2>&1
+        java -Xmx1g -Dfile.encoding=UTF-8 -cp out pe.pucp.paqrap.DemoPlanificador "%VENTAS%" "%BLOQUEOS%" "%MANT%" --colapso --dia 1 --hora 0 --sa 10 --k 7 --iteraciones 200 --semilla %%S %2 %3 %4 %5 %6 %7 %8 %9 --csv-resumen "%DESTINO%\alns_semilla_%%S.csv.tmp" > "%DESTINO%\alns_semilla_%%S.txt" 2>&1
         move /y "%DESTINO%\alns_semilla_%%S.csv.tmp" "%DESTINO%\alns_semilla_%%S.csv" > nul
         findstr /c:"COLAPSO LOG" "%DESTINO%\alns_semilla_%%S.txt"
     )

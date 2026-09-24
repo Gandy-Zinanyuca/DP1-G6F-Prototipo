@@ -35,7 +35,7 @@ public class PlanificadorALNS implements Planificador {
     /** Simulación de 5 días: menos iteraciones por ejecución. */
     public static PlanificadorALNS paraSimulacion5D() {
         ParametrosALNS p = new ParametrosALNS();
-        p.maxIteraciones = 300;
+        p.maxIteraciones = 200;
         return new PlanificadorALNS(p);
     }
 

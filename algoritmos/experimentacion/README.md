@@ -19,7 +19,7 @@ las corridas de un algoritmo difieren solo en la semilla, así que son independi
 Desde `algoritmos/alns`:
 
 ```bash
-./experimentos_colapso.sh 30                    # 30 semillas, 300 iteraciones, en paralelo
+./experimentos_colapso.sh 30                    # 30 semillas, 200 iteraciones, en paralelo
 ./experimentos_colapso.sh 30 --iteraciones 50   # otra configuración
 DESTINO=resultados/experimentos/alns_it50 ./experimentos_colapso.sh 30 --iteraciones 50
 ```

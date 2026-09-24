@@ -3,7 +3,7 @@
 #
 # Uso:      ./experimentos_colapso.sh N [opciones de DemoPlanificador]
 # Ejemplos: ./experimentos_colapso.sh 30
-#           ./experimentos_colapso.sh 30 --iteraciones 300
+#           ./experimentos_colapso.sh 30 --iteraciones 200
 #           PARALELO=4 SEMILLA_BASE=1000 MES=202601 ./experimentos_colapso.sh 10
 #
 # Cada corrida usa la semilla SEMILLA_BASE + i (i = 1..N) y deja en resultados/experimentos/alns/:
@@ -57,7 +57,7 @@ corrida() {
     rm -f "$tmp"
     java $JAVA_OPTS -Dfile.encoding=UTF-8 -cp out pe.pucp.paqrap.DemoPlanificador \
         "$VENTAS" "$BLOQUEOS" "$MANT" --colapso --dia 1 --hora 0 --sa 10 --k 7 \
-        --iteraciones 300 --semilla "$s" "${EXTRA[@]}" --csv-resumen "$tmp" \
+        --iteraciones 200 --semilla "$s" "${EXTRA[@]}" --csv-resumen "$tmp" \
         > "$DESTINO/alns_semilla_${s}.txt" 2>&1
     mv "$tmp" "$csv"
     echo "semilla $s: $(grep -E 'COLAPSO LOG|Fin de la simul' "$DESTINO/alns_semilla_${s}.txt" | head -1 | sed 's/^ *//')"

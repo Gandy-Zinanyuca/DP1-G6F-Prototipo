@@ -5,7 +5,7 @@ REM Uso:      colapso.bat AAAAMM [opciones extra]
 REM Ejemplos: colapso.bat 202601
 REM           colapso.bat 202601 --iteraciones 1000 --semilla 7
 REM Salida en resultados\colapso_AAAAMM.txt; cada corrida agrega una fila a resultados\experimentos_colapso.csv
-REM Las opciones extra reemplazan a las de por defecto (--dia 1 --hora 0 --sa 10 --k 7 --iteraciones 300).
+REM Las opciones extra reemplazan a las de por defecto (--dia 1 --hora 0 --sa 10 --k 7 --iteraciones 200).
 setlocal
 cd /d "%~dp0"
 
@@ -30,6 +30,6 @@ if not exist out\pe\pucp\paqrap\DemoPlanificador.class (
 if not exist resultados mkdir resultados
 
 echo Simulando hasta el colapso desde %MES% ...  salida en resultados\colapso_%MES%.txt
-java -Dfile.encoding=UTF-8 -cp out pe.pucp.paqrap.DemoPlanificador "%VENTAS%" "%BLOQUEOS%" "%MANT%" --colapso --dia 1 --hora 0 --sa 10 --k 7 --iteraciones 300 --csv-resumen resultados\experimentos_colapso.csv %2 %3 %4 %5 %6 %7 %8 %9 > "resultados\colapso_%MES%.txt"
+java -Dfile.encoding=UTF-8 -cp out pe.pucp.paqrap.DemoPlanificador "%VENTAS%" "%BLOQUEOS%" "%MANT%" --colapso --dia 1 --hora 0 --sa 10 --k 7 --iteraciones 200 --csv-resumen resultados\experimentos_colapso.csv %2 %3 %4 %5 %6 %7 %8 %9 > "resultados\colapso_%MES%.txt"
 findstr /c:"COLAPSO LOG" /c:"Fin de la simul" /c:"Causa del" /c:"Periodo simulado" /c:"Tiempo real" "resultados\colapso_%MES%.txt"
 endlocal
