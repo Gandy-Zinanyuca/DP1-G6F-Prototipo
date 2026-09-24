@@ -1,0 +1,21 @@
+inicio: Tue 22 Sep 21:03:35 -05 2026
+ALNS hasta el colapso: N=30, semillas 1..30, 6 en paralelo, mes inicial 202601
+opciones extra: --iteraciones 300
+Terminated                 seq $((SEMILLA_BASE + 1)) $((SEMILLA_BASE + N)) | xargs -P "$PARALELO" -I{} bash -c 'EXTRA=($EXTRA_SERIALIZADO); corrida "$@"' _ {}
+fin: Wed 23 Sep 09:24:39 -05 2026
+semilla 4: COLAPSO LOGÍSTICO en 2027-01-02 13:00
+semilla 6: COLAPSO LOGÍSTICO en 2027-01-05 10:20
+semilla 3: COLAPSO LOGÍSTICO en 2027-01-05 15:20
+semilla 5: COLAPSO LOGÍSTICO en 2027-01-05 15:30
+semilla 2: COLAPSO LOGÍSTICO en 2027-01-05 18:10
+semilla 1: COLAPSO LOGÍSTICO en 2027-01-05 09:40
+
+== Notas de la campaña (agregadas al cerrar, 2026-09-23 10:05)
+- Se lanzó con N=30 (semillas 1..30, 6 en paralelo, 300 iteraciones).
+- La laptop estuvo suspendida de 2026-09-22 21:51 a 2026-09-23 09:17; las corridas se
+  pausaron y continuaron al reanudar. Los tiempos medidos (tiempo_real_s, Ta) no incluyen la
+  suspensión: coinciden con el tiempo de CPU de cada proceso (91-94 min por corrida).
+- 09:24: se detuvo el reparto de semillas ("Terminated" y "fin:" arriba) para reducir la
+  campaña; las semillas 1..6 ya en curso siguieron hasta el final. Por decisión del equipo la
+  campaña quedó en N=6. Para ampliarla: ./experimentos_colapso.sh 15 --iteraciones 300
+  (omite las semillas que ya tienen CSV).
