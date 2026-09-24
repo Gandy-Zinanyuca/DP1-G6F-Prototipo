@@ -70,6 +70,11 @@ public class MapaUrbano {
      * por {@link #indiceCalle}; {@code null} si la calle nunca se cierra.
      */
     private int[][][] cierresPorCalle = new int[2 * NUM_NODOS][][];
+    /**
+     * Por calle, el mayor fin entre sus primeros k cierres (no decreciente): permite saltar con
+     * búsqueda binaria los cierres que ya terminaron, en lugar de recorrerlos todos.
+     */
+    private int[][] maxFinPorCalle = new int[2 * NUM_NODOS][];
 
     /** Inicios de todos los bloqueos, ordenados, y el mayor fin entre los primeros k. */
     private int[] iniciosOrdenados = new int[0];
@@ -115,7 +120,9 @@ public class MapaUrbano {
         }
     }
 
-    private final Map<ClaveTramo, Tramo> cache = new LinkedHashMap<ClaveTramo, Tramo>(4096, 0.75f, true) {
+    // Orden de inserción (descarta el más antiguo): el orden de acceso reordenaba la lista en cada
+    // consulta y el caché es transparente, así que la política de descarte no cambia resultados.
+    private final Map<ClaveTramo, Tramo> cache = new LinkedHashMap<ClaveTramo, Tramo>(4096, 0.75f, false) {
         @Override
         protected boolean removeEldestEntry(Map.Entry<ClaveTramo, Tramo> eldest) {
             return size() > LIMITE_CACHE;
@@ -160,10 +167,19 @@ public class MapaUrbano {
             }
         }
         cierresPorCalle = new int[2 * NUM_NODOS][][];
+        maxFinPorCalle = new int[2 * NUM_NODOS][];
         for (Map.Entry<Integer, List<int[]>> e : porCalle.entrySet()) {
             List<int[]> lista = e.getValue();
             lista.sort((x, y) -> Integer.compare(x[0], y[0]));
-            cierresPorCalle[e.getKey()] = lista.toArray(new int[0][]);
+            int[][] cierres = lista.toArray(new int[0][]);
+            int[] maxFin = new int[cierres.length];
+            int m = Integer.MIN_VALUE;
+            for (int i = 0; i < cierres.length; i++) {
+                m = Math.max(m, cierres[i][1]);
+                maxFin[i] = m;
+            }
+            cierresPorCalle[e.getKey()] = cierres;
+            maxFinPorCalle[e.getKey()] = maxFin;
         }
         Arrays.sort(intervalos, (x, y) -> Integer.compare(x[0], y[0]));
         iniciosOrdenados = new int[intervalos.length];
@@ -236,12 +252,27 @@ public class MapaUrbano {
      * el cruce completo, de duración {@code cruce}, no se solape con ningún bloqueo.
      */
     private double proximaSalida(int a, int b, double llegada, double cruce) {
-        int[][] cierres = cierresPorCalle[indiceCalle(a, b)];
+        int calle = indiceCalle(a, b);
+        int[][] cierres = cierresPorCalle[calle];
         double salida = llegada;
         if (cierres == null) {
             return salida;
         }
-        for (int[] c : cierres) {
+        // Primer cierre tal que alguno de los anteriores o él mismo termina después de la salida:
+        // todos los previos ya terminaron y el recorrido lineal los saltaría igual.
+        int[] maxFin = maxFinPorCalle[calle];
+        int lo = 0;
+        int hi = cierres.length;
+        while (lo < hi) {
+            int mid = (lo + hi) >>> 1;
+            if (maxFin[mid] <= salida) {
+                lo = mid + 1;
+            } else {
+                hi = mid;
+            }
+        }
+        for (int i = lo; i < cierres.length; i++) {
+            int[] c = cierres[i];
             if (salida >= c[1]) {
                 continue;
             }

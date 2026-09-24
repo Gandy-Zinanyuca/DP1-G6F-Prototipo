@@ -16,6 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 
 /**
  * Ruta asignada a una unidad de transporte dentro de una ejecución del planificador.
@@ -219,10 +220,19 @@ public class Ruta {
      * cualquier ubicación de las comidas (las comidas solo retrasan).
      */
     private int[] llegadasSinComida = new int[0];
-    private String motivoInfactibilidad;
+    /** Motivo de la infactibilidad; se arma solo si alguien lo consulta (casi nunca). */
+    private Supplier<String> motivoInfactibilidad;
     private List<Viaje> viajes = Collections.emptyList();
     /** Unidades que la ruta toma de cada almacén, por el día en que carga. */
     private Map<ClaveStock, Integer> consumo = Collections.emptyMap();
+    /**
+     * El mismo consumo en arreglos paralelos: {@link #consumoEn} se consulta por cada ruta de la
+     * solución en cada evaluación, y con pocos almacenes y días un recorrido lineal por identidad
+     * es mucho más barato que buscar una clave en el mapa.
+     */
+    private Almacen[] consumoAlmacen = new Almacen[0];
+    private int[] consumoDia = new int[0];
+    private int[] consumoCantidad = new int[0];
     /**
      * Solución a la que pertenece la ruta: al elegir dónde recargar, descuenta lo que ya toman
      * sus otras rutas. {@code null} si se evalúa aislada.
@@ -254,6 +264,9 @@ public class Ruta {
         r.motivoInfactibilidad = motivoInfactibilidad;
         r.viajes = viajes;                      // inmutable tras recalcular
         r.consumo = consumo;                    // inmutable tras recalcular
+        r.consumoAlmacen = consumoAlmacen;      // inmutables tras recalcular
+        r.consumoDia = consumoDia;
+        r.consumoCantidad = consumoCantidad;
         return r;
     }
 
@@ -334,7 +347,7 @@ public class Ruta {
         salidasTramo = new double[secuencia.size()];
         origenesTramo = new Coordenada[secuencia.size()];
         viajes = Collections.emptyList();
-        consumo = Collections.emptyMap();
+        fijarConsumo(Collections.emptyMap());
 
         int registroMasTardio = Integer.MIN_VALUE;
         for (Pedido p : secuencia) {
@@ -343,11 +356,12 @@ public class Ruta {
         }
         int capacidad = vehiculo.getCapacidad();
         if (!par.permitirRecargas && cargaTotal > capacidad) {
-            infactible("capacidad excedida (" + cargaTotal + ">" + capacidad + ")");
+            int carga = cargaTotal;
+            infactible(() -> "capacidad excedida (" + carga + ">" + capacidad + ")");
         }
         for (Pedido p : secuencia) {
             if (p.getCantidad() > capacidad) {
-                infactible("capacidad excedida (" + p.getCantidad() + ">" + capacidad + ")");
+                infactible(() -> "capacidad excedida (" + p.getCantidad() + ">" + capacidad + ")");
             }
         }
 
@@ -370,7 +384,8 @@ public class Ruta {
             }
         }
         if (nViajes > par.maxViajesPorRuta) {
-            infactible("demasiados viajes (" + nViajes + ">" + par.maxViajesPorRuta + ")");
+            int viajesRuta = nViajes;
+            infactible(() -> "demasiados viajes (" + viajesRuta + ">" + par.maxViajesPorRuta + ")");
         }
 
         // Primera pasada sin alimentación: cota inferior de las llegadas y punto de partida para
@@ -412,8 +427,9 @@ public class Ruta {
                 }
             }
             if (mejor == null) {
-                infactible("sin hora de alimentación posible en el turno de las "
-                        + Turnos.formatear(turno));
+                int turnoSinComida = turno;
+                infactible(() -> "sin hora de alimentación posible en el turno de las "
+                        + Turnos.formatear(turnoSinComida));
                 continue;
             }
             pausas.add(elegida);
@@ -429,28 +445,31 @@ public class Ruta {
         almacenRetorno = definitivo.almacenRetorno;
         minutoRetorno = definitivo.minutoRetorno;
         viajes = Collections.unmodifiableList(definitivo.viajes);
-        consumo = Collections.unmodifiableMap(definitivo.consumo);
+        fijarConsumo(Collections.unmodifiableMap(definitivo.consumo));
 
         // Deadline: restricción dura.
         for (int i = 0; i < secuencia.size(); i++) {
             Pedido p = secuencia.get(i);
             if (minutosLlegada[i] > p.getMinutoLimite()) {
-                infactible("entrega fuera de plazo de P" + p.getId() + " ("
-                        + Turnos.formatear(minutosLlegada[i]) + " > "
+                int llegada = minutosLlegada[i];
+                infactible(() -> "entrega fuera de plazo de P" + p.getId() + " ("
+                        + Turnos.formatear(llegada) + " > "
                         + Turnos.formatear(p.getMinutoLimite()) + ")");
                 break;
             }
         }
 
         if (par.limitarRutaAlTurno && minutoRetorno > finTurno) {
-            infactible("la ruta excede el turno (" + Turnos.formatear(minutoRetorno)
+            int retorno = minutoRetorno;
+            infactible(() -> "la ruta excede el turno (" + Turnos.formatear(retorno)
                     + " > " + Turnos.formatear(finTurno) + ")");
         }
 
         // Mantenimiento durante toda la ruta, hasta finalizar el regreso.
         for (int dia = Turnos.dia(minutoInicio); dia <= Turnos.dia(minutoRetorno); dia++) {
             if (ctx.enMantenimiento(vehiculo.getCodigo(), dia)) {
-                infactible("mantenimiento de " + vehiculo.getCodigo() + " el día " + dia);
+                int diaMantenimiento = dia;
+                infactible(() -> "mantenimiento de " + vehiculo.getCodigo() + " el día " + diaMantenimiento);
                 break;
             }
         }
@@ -480,7 +499,7 @@ public class Ruta {
         return recargaAntes;
     }
 
-    private void infactible(String motivo) {
+    private void infactible(Supplier<String> motivo) {
         if (factible) {
             motivoInfactibilidad = motivo;
         }
@@ -604,7 +623,7 @@ public class Ruta {
         List<Viaje> viajes = new ArrayList<>();
         Map<ClaveStock, Integer> consumo = new LinkedHashMap<>();
         boolean alcanzable = true;
-        String motivo;
+        Supplier<String> motivo;
 
         double finUltimaComida() {
             return comidas.get(comidas.size() - 1).inicio + Turnos.DURACION_ALMUERZO_MIN;
@@ -620,7 +639,7 @@ public class Ruta {
         int inicio = (int) Math.ceil(Math.max(libre, pausa.ventanaIni) - 1e-9);
         if (inicio > pausa.ventanaFin) {
             r.alcanzable = false;
-            r.motivo = "alimentación fuera de la ventana del turno de las " + Turnos.formatear(pausa.turno);
+            r.motivo = () -> "alimentación fuera de la ventana del turno de las " + Turnos.formatear(pausa.turno);
             return false;
         }
         r.comidas.add(new Comida(pausa.posicion, inicio, pausa.turno));
@@ -667,7 +686,7 @@ public class Ruta {
         MapaUrbano.Tramo tramo = mapa.caminoMasRapido(pos, almacenOrigen.getUbicacion(), t, velocidad, false);
         if (tramo == null) {
             r.alcanzable = false;
-            r.motivo = "almacén de origen inalcanzable";
+            r.motivo = () -> "almacén de origen inalcanzable";
             return r;
         }
         double distanciaViaje = tramo.km;
@@ -701,7 +720,8 @@ public class Ruta {
                 tramo = mapa.caminoMasRapido(pos, recarga.getUbicacion(), t, velocidad, false);
                 if (tramo == null) {
                     r.alcanzable = false;
-                    r.motivo = "recarga imposible en " + recarga.getId();
+                    Almacen sinCamino = recarga;
+                    r.motivo = () -> "recarga imposible en " + sinCamino.getId();
                     return r;
                 }
                 distanciaViaje += tramo.km;
@@ -725,7 +745,7 @@ public class Ruta {
             tramo = mapa.caminoMasRapido(pos, p.getDestino(), t, velocidad, false);
             if (tramo == null) {
                 r.alcanzable = false;
-                r.motivo = "desplazamiento imposible hacia " + p.getDestino();
+                r.motivo = () -> "desplazamiento imposible hacia " + p.getDestino();
                 return r;
             }
             distanciaViaje += tramo.km;
@@ -753,7 +773,7 @@ public class Ruta {
         tramo = mapa.caminoMasRapido(pos, r.almacenRetorno.getUbicacion(), t, velocidad, false);
         if (tramo == null) {
             r.alcanzable = false;
-            r.motivo = "regreso al almacén imposible";
+            r.motivo = () -> "regreso al almacén imposible";
             return r;
         }
         distanciaViaje += tramo.km;
@@ -889,7 +909,27 @@ public class Ruta {
 
     /** Unidades que la ruta toma del almacén en el día indicado, sumando sus viajes. */
     public int consumoEn(Almacen almacen, int dia) {
-        return consumo.getOrDefault(new ClaveStock(almacen, dia), 0);
+        for (int i = 0; i < consumoAlmacen.length; i++) {
+            if (consumoAlmacen[i] == almacen && consumoDia[i] == dia) {
+                return consumoCantidad[i];
+            }
+        }
+        return 0;
+    }
+
+    private void fijarConsumo(Map<ClaveStock, Integer> nuevo) {
+        consumo = nuevo;
+        int n = nuevo.size();
+        consumoAlmacen = new Almacen[n];
+        consumoDia = new int[n];
+        consumoCantidad = new int[n];
+        int i = 0;
+        for (Map.Entry<ClaveStock, Integer> e : nuevo.entrySet()) {
+            consumoAlmacen[i] = e.getKey().almacen();
+            consumoDia[i] = e.getKey().dia();
+            consumoCantidad[i] = e.getValue();
+            i++;
+        }
     }
 
     /** Unidades que la ruta toma por almacén y día, según el último cálculo. */
@@ -952,7 +992,7 @@ public class Ruta {
     }
 
     public String getMotivoInfactibilidad() {
-        return motivoInfactibilidad;
+        return motivoInfactibilidad == null ? null : motivoInfactibilidad.get();
     }
 
     /** Utilización media de la capacidad por viaje, para el semáforo de carga del visualizador. */
@@ -996,7 +1036,7 @@ public class Ruta {
         sb.append("\n    retorno ").append(almacenRetorno == null ? "?" : almacenRetorno.getId())
                 .append(' ').append(Turnos.formatear(minutoRetorno));
         if (!esFactible()) {
-            sb.append("  [NO FACTIBLE: ").append(motivoInfactibilidad).append(']');
+            sb.append("  [NO FACTIBLE: ").append(getMotivoInfactibilidad()).append(']');
         }
         return sb.toString();
     }
