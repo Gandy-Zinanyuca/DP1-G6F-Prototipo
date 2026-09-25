@@ -1,4 +1,20 @@
-# Experimentación numérica: duración hasta el colapso
+# Experimentacion pareada por EstadoOperacion
+
+Framework oficial de comparacion TS vs ALNS: [SimulacionComparada](SIMULACION-COMPARADA.md), sembrado y corriendo por defecto hasta el colapso o fin de datos (`maxCiclos=0`; use `maxCiclos=720` con `Sa=10` para una ventana acotada de 5 dias). Es el unico framework simetrico entre ambos motores (misma instancia y mismos bloqueos para TS y ALNS de cada semilla; averias y mantenimiento excluidos, ver nota en [SIMULACION-COMPARADA.md](SIMULACION-COMPARADA.md#incidencias-excluidas-de-experimentacion)) y sus resultados se versionan en Git.
+
+La ejecucion vigente TS/ALNS, las metricas de Ta y holgura, los CSV individuales y el protocolo de colapso de planificacion se describen en la [guia comun](../README.md) y los [metadatos](../METADATOS-PRUEBAS.md). Ambos motores usan la misma instancia y semillas. No mezclar estos CSV con el script R historico descrito abajo.
+
+Para el analisis estadistico de una campana de `SimulacionComparada` (comparacion **pareada** por semilla, ya que TS y ALNS de una misma semilla comparten instancia), use `analisis_colapso_pareado.py` (Python; no requiere R):
+
+```bash
+python analisis_colapso_pareado.py --entrada resultados/campana-colapso --salida resultados/campana-colapso/analisis
+```
+
+Ver la cabecera del script para las opciones (`--metrica`, `--alfa`, `--delta`, `--alternativa`, `--incluir-censuradas`).
+
+## Referencia historica (obsoleta para la comparacion actual): duracion hasta el colapso
+
+**No usar este pipeline para comparar TS y ALNS.** El contenido siguiente pertenece al simulador historico de ALNS (`alns/src/pe/pucp/paqrap/simulacion/Simulador.java`, obsoleto); TS estricto nunca se conecto a ese simulador y no existen corridas de Tabu equivalentes (`alns/resultados/experimentos/alns/*` solo tiene datos de ALNS). Sus hipotesis, scripts (`experimentos_colapso.*`, `analisis_colapso.R`) y comandos quedan documentados por trazabilidad, pero la comparacion pareada vigente usa exclusivamente `SimulacionComparada` (arriba). El modo "hasta el colapso" (duracion abierta) sigue disponible ahi con `maxCiclos=0` si se necesita esa metrica dentro del framework nuevo y simetrico.
 
 Compara ALNS y Búsqueda Tabú por **cuánto dura la simulación hasta el colapso**: el algoritmo
 que dura más es mejor. La métrica por defecto es `dias_simulados`, el tiempo simulado desde el
@@ -81,3 +97,7 @@ partir de la dispersión observada: sirve para fijar N antes de correr Tabú.
 Salida: `informe_colapso.txt`, `resumen_descriptivo.csv`, `boxplot_colapso.png`,
 `supervivencia_colapso.png` (fracción de corridas sin colapsar a lo largo del tiempo) y
 `qqplot_colapso.png`.
+
+## Configuracion experimental v3
+
+Almacen central (27,14), stock ilimitado; Nor-Oeste (12,38) y Este (57,27), stock inicial de 1000 cada uno, repuesto diariamente en la simulacion. La flota inicia en el central. Se mantienen turnos, alimentacion, capacidad, servicio y retorno. Usar - en el antiguo argumento de mantenimiento; no se requiere archivo vacio. No mezclar nuevas campanas con resultados previos a estas coordenadas y a la exclusion de mantenimiento. Las metricas principales siguen siendo Ta y holgura temporal; duracion hasta colapso y cobertura complementan su interpretacion.

@@ -8,13 +8,17 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Operador de destrucción: retira {@code q} pedidos de la solución y los deja sin asignar.
+ * Operador de destrucción: retira {@code q} pedidos de la solución y los deja
+ * sin asignar.
  *
- * <p>El contrato es estricto: el operador <b>solo</b> desasigna pedidos mediante
- * {@link Solucion#desasignar}; nunca reordena rutas ni intenta reparar nada. Toda la
- * reconstrucción es responsabilidad del operador de reparación. Esa separación es lo que
- * permite combinar libremente cualquier destructor con cualquier reparador y es la razón por
- * la que el mecanismo adaptativo puede aprender qué pares funcionan mejor.</p>
+ * <p>
+ * El contrato es estricto: el operador <b>solo</b> desasigna pedidos mediante
+ * {@link Solucion#desasignar}; nunca reordena rutas ni intenta reparar nada.
+ * Toda la reconstrucción es responsabilidad del operador de reparación. Esa
+ * separación es lo que permite combinar libremente cualquier destructor con
+ * cualquier reparador y es la razón por la que el mecanismo adaptativo puede
+ * aprender qué pares funcionan mejor.
+ * </p>
  */
 public interface OperadorDestruccion {
 

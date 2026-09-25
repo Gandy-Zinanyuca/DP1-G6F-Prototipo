@@ -3,32 +3,35 @@ package pe.pucp.paqrap.modelo;
 /**
  * Pedido de producto P registrado por un cliente.
  *
- * <p>El tiempo se maneja como minutos enteros transcurridos desde el instante 0 de la
- * simulación (día 01, 00:00 del mes cargado). La hora límite se deriva del plazo elegido
- * (36 h regular; 4, 8, 12 o 18 h priorizado) según LE002, y el incumplimiento de una sola
- * hora límite constituye colapso logístico (LE021).</p>
+ * <p>
+ * El tiempo se maneja como minutos enteros transcurridos desde el instante 0 de
+ * la simulación (día 01, 00:00 del mes cargado). La hora límite se deriva del
+ * plazo elegido (36 h regular; 4, 8, 12 o 18 h priorizado) según LE002, y el
+ * incumplimiento de una sola hora límite constituye colapso logístico (LE021).
+ * </p>
  *
  * <h2>Fraccionamiento</h2>
- * <p>Un pedido puede repartirse entre varias unidades. Cada parte es una <i>fracción</i>: un
- * objeto {@code Pedido} con el mismo id, destino, registro y hora límite que el pedido original,
- * pero con una cantidad menor. Las rutas contienen fracciones o pedidos completos
- * indistintamente; {@link #getOriginal()} devuelve siempre el pedido registrado. La identidad
- * de cada parte es la del objeto (no se redefine {@code equals}).</p>
+ * <p>
+ * Un pedido puede repartirse entre varias unidades. Cada parte es una
+ * <i>fracción</i>: un objeto {@code Pedido} con el mismo id, destino, registro
+ * y hora límite que el pedido original, pero con una cantidad menor. Las rutas
+ * contienen fracciones o pedidos completos indistintamente;
+ * {@link #getOriginal()} devuelve siempre el pedido registrado. La identidad de
+ * cada parte es la del objeto (no se redefine {@code equals}).
+ * </p>
  *
- * <p>El pedido original lleva, además, la cuenta de las unidades ya despachadas (cargadas en
- * una unidad que salió del almacén) y entregadas; con ellas el simulador sabe qué cantidad
- * queda por planificar y cuándo el pedido está completamente entregado.</p>
+ * <p>
+ * El pedido original lleva, además, la cuenta de las unidades ya despachadas
+ * (cargadas en una unidad que salió del almacén) y entregadas; con ellas el
+ * simulador sabe qué cantidad queda por planificar y cuándo el pedido está
+ * completamente entregado.
+ * </p>
  */
 public class Pedido {
 
     /** Estados del ciclo de vida del pedido (LE013, LE039). */
     public enum Estado {
-        REGISTRADO,
-        ASIGNADO,
-        EN_RUTA,
-        ENTREGADO,
-        REASIGNADO,
-        NO_CUMPLIDO
+        REGISTRADO, ASIGNADO, EN_RUTA, ENTREGADO, REASIGNADO, NO_CUMPLIDO
     }
 
     private final int id;
@@ -38,7 +41,10 @@ public class Pedido {
     private final int minutoRegistro;
     private final int plazoHoras;
     private final int minutoLimite;
-    /** Pedido registrado del que esta parte es fracción; {@code null} si es el original. */
+    /**
+     * Pedido registrado del que esta parte es fracción; {@code null} si es el
+     * original.
+     */
     private final Pedido original;
 
     private int cantidadDespachada;
@@ -50,8 +56,7 @@ public class Pedido {
     private int minutoEntregaEstimado = -1;
     private int minutoEntregaReal = -1;
 
-    public Pedido(int id, String codigoCliente, Coordenada destino, int cantidad,
-                  int minutoRegistro, int plazoHoras) {
+    public Pedido(int id, String codigoCliente, Coordenada destino, int cantidad, int minutoRegistro, int plazoHoras) {
         this.id = id;
         this.codigoCliente = codigoCliente;
         this.destino = destino;
@@ -74,8 +79,8 @@ public class Pedido {
     }
 
     /**
-     * Crea una fracción de {@code cantidad} unidades del pedido original. La fracción de una
-     * fracción se refiere siempre al pedido registrado.
+     * Crea una fracción de {@code cantidad} unidades del pedido original. La
+     * fracción de una fracción se refiere siempre al pedido registrado.
      */
     public Pedido fraccion(int cantidad) {
         Pedido raiz = getOriginal();
@@ -85,7 +90,9 @@ public class Pedido {
         return new Pedido(raiz, cantidad);
     }
 
-    /** Pedido registrado al que pertenece esta parte (él mismo si no es fracción). */
+    /**
+     * Pedido registrado al que pertenece esta parte (él mismo si no es fracción).
+     */
     public Pedido getOriginal() {
         return original == null ? this : original;
     }
@@ -122,15 +129,18 @@ public class Pedido {
         return minutoLimite;
     }
 
-    /** Un pedido es priorizado cuando su plazo es menor al plazo regular de 36 horas. */
+    /**
+     * Un pedido es priorizado cuando su plazo es menor al plazo regular de 36
+     * horas.
+     */
     public boolean esPriorizado() {
         return plazoHoras < 36;
     }
 
     /**
-     * Criticidad del pedido en el instante indicado (LE097): fracción del plazo ya consumida.
-     * Valores cercanos a 1 (o mayores) identifican los pedidos que deben atenderse primero
-     * en la replanificación por incidencias (LE096).
+     * Criticidad del pedido en el instante indicado (LE097): fracción del plazo ya
+     * consumida. Valores cercanos a 1 (o mayores) identifican los pedidos que deben
+     * atenderse primero en la replanificación por incidencias (LE096).
      */
     public double criticidad(int minutoActual) {
         double transcurrido = minutoActual - minutoRegistro;
@@ -142,19 +152,28 @@ public class Pedido {
         return minutoLimite - minutoActual;
     }
 
-    // ------------------------------------------------------------------ avance de la simulación
+    // ------------------------------------------------------------------ avance de
+    // la simulación
 
-    /** Unidades del pedido original ya cargadas en unidades que salieron del almacén. */
+    /**
+     * Unidades del pedido original ya cargadas en unidades que salieron del
+     * almacén.
+     */
     public int getCantidadDespachada() {
         return cantidadDespachada;
     }
 
-    /** Unidades del pedido original que aún no se despachan: lo que queda por planificar. */
+    /**
+     * Unidades del pedido original que aún no se despachan: lo que queda por
+     * planificar.
+     */
     public int cantidadPendiente() {
         return cantidad - cantidadDespachada;
     }
 
-    /** Número de partes en que se despachó el pedido (más de una si se fraccionó). */
+    /**
+     * Número de partes en que se despachó el pedido (más de una si se fraccionó).
+     */
     public int getPartesDespachadas() {
         return partesDespachadas;
     }
@@ -174,7 +193,8 @@ public class Pedido {
     }
 
     /**
-     * Registra en el pedido original la entrega de una de sus partes en el minuto indicado.
+     * Registra en el pedido original la entrega de una de sus partes en el minuto
+     * indicado.
      *
      * @return verdadero si con esta entrega el pedido quedó completamente entregado
      */
@@ -224,7 +244,7 @@ public class Pedido {
     @Override
     public String toString() {
         String q = esFraccion() ? cantidad + "/" + original.cantidad : String.valueOf(cantidad);
-        return "P" + id + "[" + codigoCliente + " " + destino + " q=" + q
-                + " lim=" + Turnos.formatear(minutoLimite) + "]";
+        return "P" + id + "[" + codigoCliente + " " + destino + " q=" + q + " lim=" + Turnos.formatear(minutoLimite)
+                + "]";
     }
 }

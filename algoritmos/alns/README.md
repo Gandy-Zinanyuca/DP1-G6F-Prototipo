@@ -1,46 +1,50 @@
-# PaqRap — Componente planificador (ALNS)
+# ALNS comparable
 
-Implementación en Java del primero de los dos algoritmos metaheurísticos del componente
-planificador del sistema PaqRap (curso 1INF54, Equipo 6F, 2026-2).
+El lanzador principal `algoritmos/ejecutar-alns.bat` ejecuta `EjecutarALNS` sobre el mismo núcleo estricto que TS. Comandos en la [guía común](../README.md).
 
-La implementación sigue el pseudocódigo del Informe de Selección de Algoritmos (ISA v3.0, sección 5.2):
-restricciones duras, costo = distancia × costo por km, ventana de consumo Sc = Sa × K. El detalle está en
-**[`DISENO-ALGORITMOS.md`](DISENO-ALGORITMOS.md)**.
+## Funcionamiento
 
----
+`ALNSPlanner.planificar` recibe EstadoOperacion y ParametrosOperacion. Construye la misma solución inicial que TS; selecciona destrucción aleatoria o por cercanía y repara mediante inserción común, ordenada por plazo o aleatoria. Compara usando el objetivo del evaluador compartido y conserva la mejor solución.
 
-## Requisitos
+Reutiliza `SelectorAdaptativo` y `CriterioAceptacion` del ALNS original. El objetivo prioriza completitud y luego holgura; la temperatura inicial es 0.05 en unidades de este objetivo. El contrato experimental no recibe Sa/K/Sc. La clase histórica ParametrosALNS se usa internamente únicamente como soporte del criterio de aceptación.
 
-Java 11 o superior. Sin dependencias externas ni herramienta de construcción.
-
-## Compilar
-
-Desde la raíz del proyecto:
-
-```bash
-# Linux / macOS
-find src -name "*.java" > sources.txt
-javac -encoding UTF-8 -d out @sources.txt
-```
+## Ejecución y reporte
 
 ```bat
-REM Windows
-dir /s /b src\*.java > sources.txt
-javac -encoding UTF-8 -d out @sources.txt
+algoritmos\compilar.bat -Pruebas
+algoritmos\ejecutar-alns.bat algoritmos/alns/data/ventas.v20260909/ventas.202609.txt algoritmos/alns/data/bloqueos.v20260909/bloqueo.2609.txt algoritmos/alns/data/mant.preventivo.09.10.txt 2026-09-01T08:00 20 20262
 ```
 
-## Datos
+Argumentos opcionales finales: iteraciones, semilla, presupuesto-ms y opciones experimentales. Se imprime Ta, holgura promedio/minima, completitud o colapso, cobertura, costo, km y utilizacion. Cada ejecucion exporta CSV; ver [guia comun](../README.md).
 
-Los archivos de entrada están en `data/`, con rutas relativas a esta carpeta:
-
+```mermaid
+sequenceDiagram
+    participant CLI as EjecutarALNS
+    participant L as DatasetLoader
+    participant A as ALNSPlanner
+    participant G as GeneradorSolucionInicial
+    participant E as EvaluadorFactibilidad
+    CLI->>L: Cargar fotografía común
+    CLI->>A: Planificar estado y parámetros
+    A->>G: Construir inicial común
+    loop Iteraciones
+        A->>A: Seleccionar y destruir
+        A->>G: Reparar partes y pendientes
+        G->>E: Evaluar inserciones
+        A->>E: Evaluar candidato
+        A->>A: Aceptar y actualizar mejor
+    end
+    A-->>CLI: ResultadoPlanificacion
+    CLI->>E: Auditar y mostrar resumen
 ```
-data/
-├── ventas.v20260909/     ventas.AAAAMM.txt   (2026-01 a 2028-12)
-├── bloqueos.v20260909/   bloqueo.AAMM.txt    (2026-01 a 2028-12)
-└── mant.preventivo.09.10.txt
-```
 
-## Ejecutar
+## Versión histórica
+
+Las fuentes de `src/pe` conservan el ALNS de algorithms con su cartera original de 5 destrucciones y 2 reparaciones. Compilar con `algoritmos/alns/compilar.bat`; `simular.bat` continúa usando `alns/out`. Ese arnés ejecuta rutas completas por ciclo, conserva Sa/K/Sc y su propio evaluador. Sus resultados no pertenecen al experimento común y no deben mezclarse con él.
+
+### Simulación histórica hasta el colapso
+
+Esta simulación corresponde al ALNS histórico de `src/pe`; es independiente del núcleo estricto comparable descrito arriba.
 
 Todos los comandos se ejecutan desde `algoritmos/alns`, después de `compilar.bat`.
 

@@ -3,15 +3,21 @@ package pe.pucp.paqrap.alns;
 /**
  * ConfiguracionALNS del ISA (sección 5.2).
  *
- * <p>El ISA no fija valores numéricos para estos parámetros: deben determinarse mediante
- * experimentación numérica. Los valores por defecto son solo un punto de partida para la
- * calibración.</p>
+ * <p>
+ * El ISA no fija valores numéricos para estos parámetros: deben determinarse
+ * mediante experimentación numérica. Los valores por defecto son solo un punto
+ * de partida para la calibración.
+ * </p>
  */
 public class ParametrosALNS {
 
-    // ---------------------------------------------------------------- ventana de consumo
+    // ---------------------------------------------------------------- ventana de
+    // consumo
 
-    /** Sa: salto de planificación, en minutos (cada cuánto se ejecuta el planificador). */
+    /**
+     * Sa: salto de planificación, en minutos (cada cuánto se ejecuta el
+     * planificador).
+     */
     public long saMinutos = 10;
 
     /** K: factor de consumo, a calibrar. */
@@ -27,16 +33,21 @@ public class ParametrosALNS {
     /** Número máximo de iteraciones del bucle principal. */
     public int maxIteraciones = 1_000;
 
-    /** Proporción de pedidos de la solución que remueve un operador de destrucción. */
+    /**
+     * Proporción de pedidos de la solución que remueve un operador de destrucción.
+     */
     public double proporcionDestruccion = 0.20;
 
     /**
-     * Reducción dinámica del grado de destrucción conforme aumenta la ocupación de la flota
-     * (ISA 4.1 y 5.2): grado = total × proporción × (1 − 0,7 · ocupación).
+     * Reducción dinámica del grado de destrucción conforme aumenta la ocupación de
+     * la flota (ISA 4.1 y 5.2): grado = total × proporción × (1 − 0,7 · ocupación).
      */
     public boolean destruccionAdaptativaPorOcupacion = true;
 
-    /** Semilla del generador aleatorio; fijarla garantiza ejecuciones reproducibles (LE008). */
+    /**
+     * Semilla del generador aleatorio; fijarla garantiza ejecuciones reproducibles
+     * (LE008).
+     */
     public long semilla = 20262L;
 
     // ---------------------------------------------------------------- adaptación
@@ -53,7 +64,10 @@ public class ParametrosALNS {
     /** Puntuación cuando el candidato mejora a mejorGlobal. */
     public double puntuacionNuevoMejor = 33.0;
 
-    /** Puntuación cuando el candidato mejora a la solución actual sin ser nuevo mejor. */
+    /**
+     * Puntuación cuando el candidato mejora a la solución actual sin ser nuevo
+     * mejor.
+     */
     public double puntuacionMejoraActual = 9.0;
 
     /** Puntuación cuando el candidato no mejora a la actual pero es aceptado. */
@@ -72,7 +86,10 @@ public class ParametrosALNS {
     /** Temperatura inicial del criterio tipo recocido simulado. */
     public double temperaturaInicial = 100.0;
 
-    /** Factor de enfriamiento: T = temperaturaInicial × factorEnfriamiento ^ iteración. */
+    /**
+     * Factor de enfriamiento: T = temperaturaInicial × factorEnfriamiento ^
+     * iteración.
+     */
     public double factorEnfriamiento = 0.995;
 
     // ---------------------------------------------------------------- diagnóstico

@@ -21,9 +21,12 @@ import java.util.Random;
  * REPETIR grado veces: retirar el siguiente candidato más relacionado
  * </pre>
  *
- * <p>La relación se mide como suma de tres términos normalizados en [0,1]; un valor bajo indica
- * alta relación: distancia de retícula / (70+50), |Δ deadline| / rango de deadlines, y 0 si
- * comparte ruta con la semilla o 1 si no. La semilla cuenta como el primer pedido removido.</p>
+ * <p>
+ * La relación se mide como suma de tres términos normalizados en [0,1]; un
+ * valor bajo indica alta relación: distancia de retícula / (70+50), |Δ
+ * deadline| / rango de deadlines, y 0 si comparte ruta con la semilla o 1 si
+ * no. La semilla cuenta como el primer pedido removido.
+ * </p>
  */
 public class RemocionRelacionadaShaw implements OperadorDestruccion {
 
@@ -47,9 +50,9 @@ public class RemocionRelacionadaShaw implements OperadorDestruccion {
         final double dMax = Coordenada.ANCHO_MAX + Coordenada.ALTO_MAX;
         final double tMax = Math.max(1, limiteMax - limiteMin);
 
-        candidatos.sort(Comparator
-                .comparingDouble((Pedido p) -> relacion(semilla, rutaSemilla, p, solucion, dMax, tMax))
-                .thenComparingInt(Pedido::getId));
+        candidatos
+                .sort(Comparator.comparingDouble((Pedido p) -> relacion(semilla, rutaSemilla, p, solucion, dMax, tMax))
+                        .thenComparingInt(Pedido::getId));
 
         solucion.desasignar(semilla);
         removidos.add(semilla);
@@ -63,8 +66,7 @@ public class RemocionRelacionadaShaw implements OperadorDestruccion {
         return removidos;
     }
 
-    private static double relacion(Pedido semilla, String rutaSemilla, Pedido p, Solucion s,
-                                   double dMax, double tMax) {
+    private static double relacion(Pedido semilla, String rutaSemilla, Pedido p, Solucion s, double dMax, double tMax) {
         double distancia = semilla.getDestino().distanciaManhattan(p.getDestino()) / dMax;
         double deadline = Math.abs(semilla.getMinutoLimite() - p.getMinutoLimite()) / tMax;
         double mismaRuta = rutaSemilla != null && rutaSemilla.equals(s.unidadDe(p)) ? 0.0 : 1.0;

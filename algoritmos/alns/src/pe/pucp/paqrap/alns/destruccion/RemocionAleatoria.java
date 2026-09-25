@@ -13,14 +13,19 @@ import java.util.Random;
 /**
  * Remoción aleatoria (<i>random removal</i>).
  *
- * <p>Elige q pedidos al azar entre los asignados y los retira. Es el operador de
- * diversificación puro: no explota ninguna estructura del problema, y precisamente por eso es
- * el que permite escapar de óptimos locales que los operadores dirigidos refuerzan. En el
- * esquema adaptativo su peso tiende a bajar en fases de intensificación y a recuperarse cuando
- * la búsqueda se estanca.</p>
+ * <p>
+ * Elige q pedidos al azar entre los asignados y los retira. Es el operador de
+ * diversificación puro: no explota ninguna estructura del problema, y
+ * precisamente por eso es el que permite escapar de óptimos locales que los
+ * operadores dirigidos refuerzan. En el esquema adaptativo su peso tiende a
+ * bajar en fases de intensificación y a recuperarse cuando la búsqueda se
+ * estanca.
+ * </p>
  *
- * <p>Complejidad: O(n) para recolectar los asignados más O(q) remociones en O(1) cada una
- * gracias al índice inverso de la solución.</p>
+ * <p>
+ * Complejidad: O(n) para recolectar los asignados más O(q) remociones en O(1)
+ * cada una gracias al índice inverso de la solución.
+ * </p>
  */
 public class RemocionAleatoria implements OperadorDestruccion {
 

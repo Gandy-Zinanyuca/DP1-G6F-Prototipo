@@ -1,0 +1,49 @@
+La empresa PaqRap se dedica a la venta regular del producto “P” (única presentación) y ofrece la
+posibilidad de entrega priorizada. PaqRap se compromete a entregar los productos en un plazo máximo de
+36 horas y entregas priorizadas en máximo 4, 8, 12 o 18 horas. La política es que todos los productos
+llegan dentro del plazo fijado. Además, cuenta con un almacén central que es permanentemente
+abastecido (considerar inventario infinito), y con 2 (dos) almacenes intermedios que se recargan cada 24
+horas (a las 23:59:59). Para efectos del curso se asume recarga instantánea. La capacidad máxima de cada
+almacén intermedio es de 1,000 unidades del producto P.
+La empresa cuenta con una flota de autos, motos, bicicletas cuyas capacidades son de 24, 08 y 04
+paquetes respectivamente. Las motos, autos y bicicletas tienen una velocidad promedio de 25, 40 y 12
+Km/hora respectivamente. El tiempo de carga (del almacén y a la unidad de transporte) es despreciable y
+el tiempo de entrega al destinatario es de 1 hora. Los cambios de turno se realizan cada 8 horas (07:00,
+15:00, 23:00) y se debe respetar una hora para alimentación (p.e. almuerzo, cena) dentro del horario de la
+jornada y al menos una hora antes o una hora después de un cambio de turno.
+La empresa PaqRap, desde el inicio de sus operaciones, ha incrementado su demanda y aún pueden
+atender los pedidos con su flota actual. Sin embargo, el manejo manual de los pedidos se vuelve cada vez
+más engorroso y se ha verificado que la ruta generada manualmente implica mayores gastos en la
+operación. El costo total por kilómetro recorrido es de S/ 8.00 para los autos, S/ 6.00 para las motos y S/
+3.00 para las bicicletas. Un problema muy crítico e importante es asegurar las entregas en plazo
+(cumplimiento de la política), en especial, cuando hay calles cerradas (bloqueos) e incidencias en las
+unidades de transporte (fallas). Ante estos hechos, han tenido que reasignar productos en camino de un
+cliente hacia otro cliente, de modo que cumplan con el plazo de entrega del cliente más crítico.
+La empresa PaqRap ha contratado a usted y su equipo para que desarrolle una solución informática
+para sus principales necesidades. Dichas necesidades se resumen en: (i) registrar la cantidad de productos
+a ser enviados por cliente; (ii) planificar -y replanificar- las rutas de manera que se cumplan los plazos
+comprometidos (componente planificador) considerando lo que se conoce de la operación; y (iii)
+presentar gráficamente el monitoreo de las operaciones, en un mapa (componente visualizador) al que
+pueda conectarse cualquier dispositivo en tiempo real y cada cual pudiendo interactuar en distintas zonas
+y maneras.
+Para la evaluación del curso, se manejará 3 escenarios: las operaciones día a día (el tiempo real), la
+simulación de periodo de 5 días (5d) y la simulación hasta el colapso logístico de la empresa. Para ello, se
+requiere que: (a) el componente planificador resuelva mediante parámetros los 3 escenarios; y (b)
+presente de manera gráfica información relevante del desempeño de las operaciones (en los 3
+escenarios). El primer escenario en resolverse es el de la simulación 5D que debe tomar en ejecutarse
+entre 30 y 60 minutos. La simulación del periodo significa por ejemplo que, en 30 minutos, se pueda ver
+una representación gráfica de los 5 días de operaciones.
+Requisitos No Funcionales:
+Para este proyecto se establecen los siguientes requisitos no funcionales:
+a. Presentar dos soluciones algorítmicas para el planificador de la solución en Lenguaje Java y evaluadas por
+experimentación numérica.
+b. Los dos algoritmos de la experimentación numérica deben ser del tipo metaheurísticos.
+c. Las calles tienen doble sentido.
+d. Usar colores de semáforo (verde, ámbar y rojo) en lo que se requiera. Los rangos deben ser parámetros
+configurables.
+e. La solución debe funcionar en el equipamiento (computadores y servidores) provisto por el laboratorio de
+Ingeniería Informática.
+f. Se evalúa el proceso seguido utilizando NTP-ISO/IEC 29110-5-1-2 (VSE)
+g. Se graba los videos de la presentación final del equipo (exposiciones).
+h. Se entrega videos (avances, final u otros) sobre los 3 escenarios requeridos a indicación del equipo docente.
+San

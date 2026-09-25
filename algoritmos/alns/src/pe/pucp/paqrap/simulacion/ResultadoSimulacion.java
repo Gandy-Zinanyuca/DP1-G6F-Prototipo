@@ -13,9 +13,12 @@ import java.util.Map;
 /**
  * Métricas de una corrida de simulación, insumo de la experimentación numérica.
  *
- * <p>La medida principal del escenario "hasta el colapso" es cuánto dura: en tiempo simulado
- * (instante del colapso, días simulados) y en tiempo real de cómputo (tiempo total de la
- * corrida y tiempo acumulado dentro del planificador).</p>
+ * <p>
+ * La medida principal del escenario "hasta el colapso" es cuánto dura: en
+ * tiempo simulado (instante del colapso, días simulados) y en tiempo real de
+ * cómputo (tiempo total de la corrida y tiempo acumulado dentro del
+ * planificador).
+ * </p>
  */
 public class ResultadoSimulacion {
 
@@ -29,7 +32,10 @@ public class ResultadoSimulacion {
         LIMITE_DE_CICLOS
     }
 
-    /** Parámetros de la corrida (algoritmo, semilla, Sa, K, ...), en el orden en que se agregan. */
+    /**
+     * Parámetros de la corrida (algoritmo, semilla, Sa, K, ...), en el orden en que
+     * se agregan.
+     */
     public final Map<String, String> parametros = new LinkedHashMap<>();
 
     public Fin fin;
@@ -48,12 +54,17 @@ public class ResultadoSimulacion {
     public int ejecucionesPlanificador;
     /** Tiempo real de toda la corrida, en milisegundos. */
     public long tiempoRealMs;
-    /** Suma de los tiempos de ejecución del planificador (Σ Ta), en nanosegundos. */
+    /**
+     * Suma de los tiempos de ejecución del planificador (Σ Ta), en nanosegundos.
+     */
     public long tiempoPlanificadorNs;
     /** Mayor Ta observado, en nanosegundos. */
     public long taMaximoNs;
 
-    /** Pedidos registrados antes del arranque con plazo aún vigente (incluye el mes anterior). */
+    /**
+     * Pedidos registrados antes del arranque con plazo aún vigente (incluye el mes
+     * anterior).
+     */
     public int pedidosPendientesAlInicio;
     public int pedidosRegistrados;
     public int pedidosEntregados;
@@ -69,7 +80,10 @@ public class ResultadoSimulacion {
     /** Viajes despachados y unidades en la flota, por tipo de vehículo. */
     public final Map<String, Integer> viajesPorTipo = new LinkedHashMap<>();
     public final Map<String, Integer> unidadesPorTipo = new LinkedHashMap<>();
-    /** Ciclos cuyo plan reprogramó algún pedido y máximo de paquetes reprogramados en un ciclo. */
+    /**
+     * Ciclos cuyo plan reprogramó algún pedido y máximo de paquetes reprogramados
+     * en un ciclo.
+     */
     public int ciclosConPostergacion;
     public int maxPaquetesPostergados;
     public double kmRecorridos;
@@ -79,7 +93,10 @@ public class ResultadoSimulacion {
         return (minutoFinal - minutoInicial) / 1440.0;
     }
 
-    /** Promedio de viajes despachados por unidad y por día simulado del tipo indicado. */
+    /**
+     * Promedio de viajes despachados por unidad y por día simulado del tipo
+     * indicado.
+     */
     public double viajesPorUnidadDia(String tipo) {
         int unidades = unidadesPorTipo.getOrDefault(tipo, 0);
         double dias = diasSimulados();
@@ -132,7 +149,10 @@ public class ResultadoSimulacion {
         return m;
     }
 
-    /** Agrega una fila al CSV de resumen, escribiendo la cabecera si el archivo es nuevo. */
+    /**
+     * Agrega una fila al CSV de resumen, escribiendo la cabecera si el archivo es
+     * nuevo.
+     */
     public void agregarACsv(Path archivo) throws IOException {
         Map<String, String> fila = new LinkedHashMap<>();
         fila.put("fecha_ejecucion", LocalDateTime.now().withNano(0).toString());
@@ -156,8 +176,8 @@ public class ResultadoSimulacion {
         if (archivo.getParent() != null) {
             Files.createDirectories(archivo.getParent());
         }
-        Files.write(archivo, sb.toString().getBytes(StandardCharsets.UTF_8),
-                StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+        Files.write(archivo, sb.toString().getBytes(StandardCharsets.UTF_8), StandardOpenOption.CREATE,
+                StandardOpenOption.APPEND);
     }
 
     static String csv(String v) {
@@ -181,28 +201,31 @@ public class ResultadoSimulacion {
                 sb.append(String.format(" Diagnóstico          : %s%n", diagnosticoColapso));
             }
         }
-        sb.append(String.format(" Periodo simulado     : %s -> %s (%.2f días, %d meses cargados)%n",
-                instanteInicial, instanteFinal, diasSimulados(), mesesCargados));
-        sb.append(String.format(" Tiempo real          : %.2f s (planificador: %.2f s en %d ejecuciones;"
+        sb.append(String.format(" Periodo simulado     : %s -> %s (%.2f días, %d meses cargados)%n", instanteInicial,
+                instanteFinal, diasSimulados(), mesesCargados));
+        sb.append(String.format(
+                " Tiempo real          : %.2f s (planificador: %.2f s en %d ejecuciones;"
                         + " Ta prom. %.1f ms, máx. %.1f ms)%n",
-                tiempoRealMs / 1000.0, tiempoPlanificadorNs / 1e9, ejecucionesPlanificador,
-                taPromedioMs(), taMaximoNs / 1e6));
+                tiempoRealMs / 1000.0, tiempoPlanificadorNs / 1e9, ejecucionesPlanificador, taPromedioMs(),
+                taMaximoNs / 1e6));
         sb.append(String.format(" Ciclos               : %d%n", ciclos));
-        sb.append(String.format(" Pedidos              : %d registrados (%d pendientes al inicio) · %d entregados"
+        sb.append(String.format(
+                " Pedidos              : %d registrados (%d pendientes al inicio) · %d entregados"
                         + " · %d fraccionados · %d paquetes%n",
                 pedidosRegistrados, pedidosPendientesAlInicio, pedidosEntregados, pedidosFraccionados,
                 paquetesEntregados));
         sb.append(String.format(" Holgura entregas     : prom. %.1f min · mín. %d min%n",
                 holguraPromedioMin(), holguraMinimaMin()));
-        sb.append(String.format(" Rutas despachadas    : %d rutas · %d viajes · %.0f km · S/ %.2f%n",
-                rutasDespachadas, viajesDespachados, kmRecorridos, costoSoles));
+        sb.append(String.format(" Rutas despachadas    : %d rutas · %d viajes · %.0f km · S/ %.2f%n", rutasDespachadas,
+                viajesDespachados, kmRecorridos, costoSoles));
         StringBuilder porTipo = new StringBuilder();
         for (String tipo : unidadesPorTipo.keySet()) {
             porTipo.append(porTipo.length() == 0 ? "" : " · ")
                     .append(String.format("%s %.2f", tipo.toLowerCase(), viajesPorUnidadDia(tipo)));
         }
         sb.append(String.format(" Viajes/unidad/día    : %s%n", porTipo));
-        sb.append(String.format(" Reprogramación       : %d ciclos reprogramaron pedidos (máx. %d paquetes en un ciclo)%n",
+        sb.append(String.format(
+                " Reprogramación       : %d ciclos reprogramaron pedidos (máx. %d paquetes en un ciclo)%n",
                 ciclosConPostergacion, maxPaquetesPostergados));
         return sb.toString();
     }

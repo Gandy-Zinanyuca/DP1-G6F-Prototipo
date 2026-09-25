@@ -11,7 +11,7 @@ Este repositorio tiene dos partes independientes:
 | Carpeta        | Qué es                                                        | Lenguaje |
 | -------------- | ----------------------------------------------------------- | -------- |
 | `Prototipo/`   | Visualizador y simulador de las operaciones (mapa en vivo)  | HTML/CSS/JS |
-| `algoritmos/`  | Componente planificador: metaheurísticas de ruteo           | Java 11+ |
+| `algoritmos/`  | Componente planificador: metaheurísticas de ruteo           | Java 17+ |
 
 ## Equipo
 
@@ -72,33 +72,15 @@ un archivo por sección `/* === … === */` del `<script>` de la demo). Ver
 
 ## `algoritmos/` — componente planificador
 
-RNF01 exige **dos soluciones metaheurísticas en Java**, comparadas por experimentación
-numérica sobre la misma función objetivo y las mismas estructuras.
+ALNS experimental y Tabu Search comparten entrada, constructor inicial, restricciones, caminos y evaluación. Ambos se construyen con JDK 17 y sin Maven. El ALNS histórico de `algorithms` permanece separado como referencia.
 
-- `algoritmos/DISENO-ALGORITMOS.md` — formulación (MDVRPTW dinámico), función objetivo,
-  pseudocódigo y trazabilidad con la Lista de Exigencias.
-- `algoritmos/alns/` — **ALNS** (primera solución). Java 11, `javac` puro sin dependencias;
-  paquete `pe.pucp.paqrap`. Se compila con `compilar.sh` / `.bat`. Ver su `README.md`.
-- `algoritmos/tabu/` — **Búsqueda Tabú** (segunda solución). Java 17, **Maven** + JUnit 5;
-  paquete `pe.logistica`. Traducción del pseudocódigo de la §5.1 de la ISA. Ver su `README.md`
-  y `REFERENCIAS.md`.
+Consultar la [guía vigente de ejecución](algoritmos/README.md) y los [metadatos de pruebas](algoritmos/METADATOS-PRUEBAS.md).
 
-```bash
-# ALNS
-cd algoritmos/alns && ./compilar.sh      # .class en out/ (ignorado)
-java -cp out pe.pucp.paqrap.DemoPlanificador <ventas.txt> <bloqueos.txt> <mant.txt> --dia 1 --hora 6
-
-# Tabú
-cd algoritmos/tabu && mvn -q package     # target/ y el .jar están ignorados
-java -jar target/planificador-tabu-1.0.0.jar --config config/referencia-20260909.properties
+```bat
+algoritmos\compilar.bat -Pruebas
 ```
 
-> **Nota:** hoy son dos bases de código independientes (distinto paquete, distinto build). El
-> `DISENO-ALGORITMOS.md` plantea que compartan estructuras y función objetivo para que la
-> comparación de la experimentación numérica sea válida — esa unificación está **pendiente**.
-> Los datos de curso voluminosos (`algoritmos/tabu/datos/ventas/` y `.../bloqueos/`) **no se
-> versionan** (van aparte, igual que en ALNS); sí se conservan `inventario.json`,
-> `mant.preventivo.09.10.txt` y los `resultado-*.txt` publicados.
+Los lanzadores `algoritmos/ejecutar-alns.bat` y `algoritmos/ejecutar-tabu.bat` reciben los mismos argumentos y presentan un reporte final. `CompararAlgoritmos` ejecuta ambos sobre el mismo estado, audita las salidas y guarda metadatos y resultados; admite un presupuesto temporal común.
 
 ---
 
@@ -125,15 +107,14 @@ DP1-G6F-Prototipo/
 │     │          pedidos-module
 │     └─ main.js  bucle de animación + arranque (último)
 └─ algoritmos/
-   ├─ DISENO-ALGORITMOS.md
-   ├─ alns/                 ALNS · javac · paquete pe.pucp.paqrap
-   │  ├─ README.md · DISENO-ALGORITMOS.md · compilar.sh / .bat
-   │  └─ src/pe/pucp/paqrap/  DemoPlanificador · PruebaPlanificador ·
-   │                          alns/ · datos/ · mapa/ · modelo/ · planificador/ · solucion/
-   └─ tabu/                 Búsqueda Tabú · Maven + JUnit 5 · paquete pe.logistica
-      ├─ README.md · REFERENCIAS.md · pom.xml
-      ├─ config/            referencia-20260909.properties
-      ├─ datos/             inventario.json · mant.preventivo.09.10.txt  (ventas/ y bloqueos/ ignorados)
-      ├─ resultado-*.txt    salidas publicadas 09/09/2026
-      └─ src/{main,test}/java/pe/logistica/
+   ├─ README.md · METADATOS-PRUEBAS.md
+   ├─ compilar.bat · compilar.ps1
+   ├─ ejecutar-alns.bat · ejecutar-tabu.bat
+   ├─ alns/                 ALNS comparable y versión histórica
+   │  ├─ src/ · data/ · README.md
+   │  └─ simular.bat        arnés mensual simplificado
+   ├─ tabu/                 TS de dev/yaser · sin Maven
+   │  └─ src/main/java/pe/pucp/paqrap/tabu/
+   ├─ comun/                núcleo estricto compartido por TS y ALNS
+   └─ experimentacion/      lanzador TS y pruebas sin JUnit
 ```

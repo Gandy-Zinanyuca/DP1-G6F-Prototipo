@@ -3,18 +3,24 @@ package pe.pucp.paqrap.modelo;
 /**
  * Nodo de la retícula urbana de PaqRap.
  *
- * <p>El mapa es una retícula rectangular de 70 km (eje X) por 50 km (eje Y) con nodos
- * espaciados 1 km y origen (0,0) en la esquina inferior izquierda (LE037). Como todas las
- * calles son de doble sentido (RNF03) y solo existen tramos horizontales y verticales,
- * la distancia libre de bloqueos entre dos nodos es la distancia Manhattan.</p>
+ * <p>
+ * El mapa es una retícula rectangular de 70 km (eje X) por 50 km (eje Y) con
+ * nodos espaciados 1 km y origen (0,0) en la esquina inferior izquierda
+ * (LE037). Como todas las calles son de doble sentido (RNF03) y solo existen
+ * tramos horizontales y verticales, la distancia libre de bloqueos entre dos
+ * nodos es la distancia Manhattan.
+ * </p>
  *
- * <p>La clase es inmutable y se usa como clave de mapas: {@link #hashCode()} empaqueta
- * ambas componentes en un entero, lo que permite indexar la retícula en arreglos planos.</p>
+ * <p>
+ * La clase es inmutable y se usa como clave de mapas: {@link #hashCode()}
+ * empaqueta ambas componentes en un entero, lo que permite indexar la retícula
+ * en arreglos planos.
+ * </p>
  */
 public final class Coordenada {
 
-    public static final int ANCHO_MAX = 70;   // nodos 0..70 en X
-    public static final int ALTO_MAX = 50;    // nodos 0..50 en Y
+    public static final int ANCHO_MAX = 70; // nodos 0..70 en X
+    public static final int ALTO_MAX = 50; // nodos 0..50 en Y
 
     private final int x;
     private final int y;
@@ -32,7 +38,10 @@ public final class Coordenada {
         return y;
     }
 
-    /** Distancia Manhattan en kilómetros, válida cuando no hay bloqueos de por medio. */
+    /**
+     * Distancia Manhattan en kilómetros, válida cuando no hay bloqueos de por
+     * medio.
+     */
     public int distanciaManhattan(Coordenada otra) {
         return Math.abs(this.x - otra.x) + Math.abs(this.y - otra.y);
     }

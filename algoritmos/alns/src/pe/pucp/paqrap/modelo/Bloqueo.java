@@ -6,14 +6,18 @@ import java.util.List;
 /**
  * Cierre temporal de una secuencia de tramos de calle.
  *
- * <p>Formato del archivo mensual de bloqueos:
- * {@code DDdHHhMMm-DDdHHhMMm:x1,y1,x2,y2,...,xn,yn}. Los pares consecutivos describen una
- * polilínea de nodos; cada par de nodos vecinos define un tramo bloqueado en ambos sentidos
- * (RNF03) durante el intervalo indicado (LE075).</p>
+ * <p>
+ * Formato del archivo mensual de bloqueos:
+ * {@code DDdHHhMMm-DDdHHhMMm:x1,y1,x2,y2,...,xn,yn}. Los pares consecutivos
+ * describen una polilínea de nodos; cada par de nodos vecinos define un tramo
+ * bloqueado en ambos sentidos (RNF03) durante el intervalo indicado (LE075).
+ * </p>
  *
- * <p>Los nodos de la polilínea siempre difieren en una sola componente, por lo que el tramo
- * entre dos vértices se expande en los arcos unitarios de 1 km que lo componen. Esa expansión
- * es la que consume el A* del mapa.</p>
+ * <p>
+ * Los nodos de la polilínea siempre difieren en una sola componente, por lo que
+ * el tramo entre dos vértices se expande en los arcos unitarios de 1 km que lo
+ * componen. Esa expansión es la que consume el A* del mapa.
+ * </p>
  */
 public class Bloqueo {
 
@@ -43,15 +47,19 @@ public class Bloqueo {
         return minuto >= minutoInicio && minuto <= minutoFin;
     }
 
-    /** Duración del bloqueo en minutos, usada en los indicadores de incidencias (LE085). */
+    /**
+     * Duración del bloqueo en minutos, usada en los indicadores de incidencias
+     * (LE085).
+     */
     public int duracion() {
         return minutoFin - minutoInicio;
     }
 
     /**
-     * Expande la polilínea en los arcos unitarios de 1 km que quedan cerrados.
-     * Cada arco se devuelve como un par de índices lineales de nodo {@code {a, b}} con a &lt; b,
-     * de modo que el par identifica el tramo sin importar el sentido de circulación.
+     * Expande la polilínea en los arcos unitarios de 1 km que quedan cerrados. Cada
+     * arco se devuelve como un par de índices lineales de nodo {@code {a, b}} con a
+     * &lt; b, de modo que el par identifica el tramo sin importar el sentido de
+     * circulación.
      */
     public List<int[]> arcosUnitarios() {
         List<int[]> arcos = new ArrayList<>();
@@ -70,7 +78,7 @@ public class Bloqueo {
                 Coordenada siguiente = new Coordenada(actual.getX() + dx, actual.getY() + dy);
                 int a = actual.indice();
                 int b = siguiente.indice();
-                arcos.add(new int[]{Math.min(a, b), Math.max(a, b)});
+                arcos.add(new int[] { Math.min(a, b), Math.max(a, b) });
                 actual = siguiente;
             }
         }
@@ -79,7 +87,7 @@ public class Bloqueo {
 
     @Override
     public String toString() {
-        return "Bloqueo[" + Turnos.formatear(minutoInicio) + "-" + Turnos.formatear(minutoFin)
-                + " " + vertices.size() + " vértices]";
+        return "Bloqueo[" + Turnos.formatear(minutoInicio) + "-" + Turnos.formatear(minutoFin) + " " + vertices.size()
+                + " vértices]";
     }
 }

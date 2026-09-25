@@ -11,10 +11,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Primitiva compartida por la solución inicial y los operadores de reparación: dado un pedido,
- * enumerar las inserciones <b>factibles</b> (vehículo, posición) y su costo.
+ * Primitiva compartida por la solución inicial y los operadores de reparación:
+ * dado un pedido, enumerar las inserciones <b>factibles</b> (vehículo,
+ * posición) y su costo.
  *
- * <p>Sigue el bloque común de GENERAR_SOLUCIÓN_INICIAL y APLICAR_REPARACIÓN del ISA:</p>
+ * <p>
+ * Sigue el bloque común de GENERAR_SOLUCIÓN_INICIAL y APLICAR_REPARACIÓN del
+ * ISA:
+ * </p>
+ *
  * <pre>
  * PARA CADA vehículo disponible
  *     SI pedido.cantidad supera capacidad disponible → continuar
@@ -22,24 +27,35 @@ import java.util.List;
  *         candidato ← insertar pedido en posición ; evaluar candidato
  *         SI candidato es factible → registrar (candidato, costo)
  * </pre>
- * <p>Como insertar un pedido solo modifica una ruta, "evaluar candidato" se resuelve evaluando
- * esa ruta (restricciones duras de {@link Ruta#recalcular}) y el inventario del almacén de
- * origen; el costo del candidato difiere del de la solución en Δ = costo(ruta') − costo(ruta).
- * Para una unidad ociosa se prueba además cada almacén de origen con stock suficiente.</p>
+ * <p>
+ * Como insertar un pedido solo modifica una ruta, "evaluar candidato" se
+ * resuelve evaluando esa ruta (restricciones duras de {@link Ruta#recalcular})
+ * y el inventario del almacén de origen; el costo del candidato difiere del de
+ * la solución en Δ = costo(ruta') − costo(ruta). Para una unidad ociosa se
+ * prueba además cada almacén de origen con stock suficiente.
+ * </p>
  *
- * <p>Con recargas, la ruta de una unidad puede tener varios viajes: un pedido cabe en la unidad
- * si cabe en un viaje, y la posición donde se inserta determina si la unidad sigue repartiendo
- * o vuelve antes a recargar. El inventario se verifica después de insertar, porque una ruta puede
- * tomar stock de varios almacenes.</p>
+ * <p>
+ * Con recargas, la ruta de una unidad puede tener varios viajes: un pedido cabe
+ * en la unidad si cabe en un viaje, y la posición donde se inserta determina si
+ * la unidad sigue repartiendo o vuelve antes a recargar. El inventario se
+ * verifica después de insertar, porque una ruta puede tomar stock de varios
+ * almacenes.
+ * </p>
  *
- * <p>Una unidad que ya transporta una parte del mismo pedido no recibe otra: repartir el pedido
- * solo tiene sentido entre unidades distintas. Cuando ninguna unidad admite el pedido completo,
- * {@link #insertarFraccionado} lo reparte entre varias (los pedidos pueden dividirse entre
- * vehículos).</p>
+ * <p>
+ * Una unidad que ya transporta una parte del mismo pedido no recibe otra:
+ * repartir el pedido solo tiene sentido entre unidades distintas. Cuando
+ * ninguna unidad admite el pedido completo, {@link #insertarFraccionado} lo
+ * reparte entre varias (los pedidos pueden dividirse entre vehículos).
+ * </p>
  */
 public final class EvaluadorInsercion {
 
-    /** Inserción factible: dónde va el pedido y cuánto aumenta el costo de la solución. */
+    /**
+     * Inserción factible: dónde va el pedido y cuánto aumenta el costo de la
+     * solución.
+     */
     public static class Insercion {
         public final Vehiculo vehiculo;
         public final int posicion;
@@ -57,21 +73,21 @@ public final class EvaluadorInsercion {
     private EvaluadorInsercion() {
     }
 
-    /** Todas las inserciones factibles del pedido en la ruta de una unidad concreta. */
-    public static List<Insercion> factiblesEnUnidad(Solucion s, Pedido p, Vehiculo v,
-                                                    ContextoPlanificacion ctx) {
+    /**
+     * Todas las inserciones factibles del pedido en la ruta de una unidad concreta.
+     */
+    public static List<Insercion> factiblesEnUnidad(Solucion s, Pedido p, Vehiculo v, ContextoPlanificacion ctx) {
         List<Insercion> lista = new ArrayList<>();
         Ruta r = s.getRuta(v.getCodigo());
         if (r != null && r.contienePedido(p)) {
-            return lista;   // la unidad ya lleva una parte de este pedido
+            return lista; // la unidad ya lleva una parte de este pedido
         }
         if (p.getCantidad() > capacidadLibre(r, v, ctx)) {
-            return lista;   // no cabe ni en un viaje nuevo (o en la carga libre, sin recargas)
+            return lista; // no cabe ni en un viaje nuevo (o en la carga libre, sin recargas)
         }
-        if (r != null && ctx.getParametros().permitirRecargas
-                && r.getCargaTotal() + p.getCantidad()
-                   > (long) v.getCapacidad() * ctx.getParametros().maxViajesPorRuta) {
-            return lista;   // no cabe ni usando todos los viajes permitidos
+        if (r != null && ctx.getParametros().permitirRecargas && r.getCargaTotal()
+                + p.getCantidad() > (long) v.getCapacidad() * ctx.getParametros().maxViajesPorRuta) {
+            return lista; // no cabe ni usando todos los viajes permitidos
         }
 
         if (r == null || r.estaVacia()) {
@@ -99,7 +115,8 @@ public final class EvaluadorInsercion {
         int[] llegadasBase = r.getMinutosLlegada().clone();
         boolean baseFactible = r.esFactible();
         for (int pos = 0; pos <= r.tamanio(); pos++) {
-            // Si la parada previa ya llega después de la hora límite del pedido, insertarlo en
+            // Si la parada previa ya llega después de la hora límite del pedido, insertarlo
+            // en
             // esta posición o en cualquiera posterior lo haría llegar tarde.
             if (baseFactible && pos > 0 && pos - 1 < llegadasBase.length
                     && llegadasBase[pos - 1] > p.getMinutoLimite()) {
@@ -112,13 +129,14 @@ public final class EvaluadorInsercion {
             }
             r.remover(pos);
         }
-        r.recalcular(ctx);   // restaura los atributos derivados de la ruta original
+        r.recalcular(ctx); // restaura los atributos derivados de la ruta original
         return lista;
     }
 
     /**
-     * Cantidad máxima que la unidad puede recibir de una parte: su capacidad completa si puede
-     * recargar (la parte irá en algún viaje), o la capacidad libre de su único viaje si no.
+     * Cantidad máxima que la unidad puede recibir de una parte: su capacidad
+     * completa si puede recargar (la parte irá en algún viaje), o la capacidad
+     * libre de su único viaje si no.
      */
     static int capacidadLibre(Ruta r, Vehiculo v, ContextoPlanificacion ctx) {
         if (ctx.getParametros().permitirRecargas) {
@@ -127,7 +145,9 @@ public final class EvaluadorInsercion {
         return v.getCapacidad() - ((r == null) ? 0 : r.getCargaTotal());
     }
 
-    /** Todas las inserciones factibles del pedido en la solución, en orden estable. */
+    /**
+     * Todas las inserciones factibles del pedido en la solución, en orden estable.
+     */
     public static List<Insercion> insercionesFactibles(Solucion s, Pedido p, ContextoPlanificacion ctx) {
         List<Insercion> lista = new ArrayList<>();
         for (Vehiculo v : ctx.getUnidadesAsignables()) {
@@ -136,7 +156,10 @@ public final class EvaluadorInsercion {
         return lista;
     }
 
-    /** Mejor inserción factible (menor costo) del pedido, o {@code null} si no existe. */
+    /**
+     * Mejor inserción factible (menor costo) del pedido, o {@code null} si no
+     * existe.
+     */
     public static Insercion mejorInsercion(Solucion s, Pedido p, ContextoPlanificacion ctx) {
         Insercion mejor = null;
         for (Insercion ins : insercionesFactibles(s, p, ctx)) {
@@ -161,12 +184,14 @@ public final class EvaluadorInsercion {
      *     restante ← restante − q
      * </pre>
      *
-     * <p>Preferir la fracción más grande minimiza el número de partes. La capacidad es la única
-     * restricción que depende de la cantidad (además del stock), así que q no necesita
-     * explorarse por debajo de la capacidad libre.</p>
+     * <p>
+     * Preferir la fracción más grande minimiza el número de partes. La capacidad es
+     * la única restricción que depende de la cantidad (además del stock), así que q
+     * no necesita explorarse por debajo de la capacidad libre.
+     * </p>
      *
-     * @return verdadero si el pedido quedó completamente asignado en fracciones; si es falso,
-     *         la solución queda como estaba
+     * @return verdadero si el pedido quedó completamente asignado en fracciones; si
+     *         es falso, la solución queda como estaba
      */
     public static boolean insertarFraccionado(Solucion s, Pedido p, ContextoPlanificacion ctx) {
         int restante = p.getCantidad();
@@ -203,7 +228,7 @@ public final class EvaluadorInsercion {
             restante -= mejorFraccion.getCantidad();
         }
         if (!aplicadas.contains(p)) {
-            s.olvidar(p);   // el pedido quedó representado por sus fracciones
+            s.olvidar(p); // el pedido quedó representado por sus fracciones
         }
         return true;
     }

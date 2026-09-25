@@ -18,19 +18,29 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Datos estáticos de una ejecución: mapa, almacenes, flota, pedidos del mes y mantenimientos.
+ * Datos estáticos de una ejecución: mapa, almacenes, flota, pedidos del mes y
+ * mantenimientos.
  *
- * <p>El reloj de la simulación cuenta minutos desde el día 1, 00:00, del mes inicial
- * ({@link #getFechaInicio()}); el "día simulado" 1 es esa fecha, y los días siguientes pueden
- * pertenecer a meses posteriores cuando la simulación los encadena.</p>
+ * <p>
+ * El reloj de la simulación cuenta minutos desde el día 1, 00:00, del mes
+ * inicial ({@link #getFechaInicio()}); el "día simulado" 1 es esa fecha, y los
+ * días siguientes pueden pertenecer a meses posteriores cuando la simulación
+ * los encadena.
+ * </p>
  *
- * <p>Es el insumo común de los dos algoritmos del componente planificador; ninguno de ellos
- * modifica la instancia. El estado que cambia durante la simulación (posición de las unidades,
- * stock de los almacenes, pedidos pendientes) viaja en el contexto de cada ciclo.</p>
+ * <p>
+ * Es el insumo común de los dos algoritmos del componente planificador; ninguno
+ * de ellos modifica la instancia. El estado que cambia durante la simulación
+ * (posición de las unidades, stock de los almacenes, pedidos pendientes) viaja
+ * en el contexto de cada ciclo.
+ * </p>
  */
 public class Instancia {
 
-    /** Composición por defecto de la flota, derivada de los códigos del archivo de mantenimiento. */
+    /**
+     * Composición por defecto de la flota, derivada de los códigos del archivo de
+     * mantenimiento.
+     */
     public static final int AUTOS_POR_DEFECTO = 10;
     public static final int MOTOS_POR_DEFECTO = 15;
     public static final int BICICLETAS_POR_DEFECTO = 12;
@@ -47,9 +57,8 @@ public class Instancia {
     private final int mesSimulado;
     private final LocalDate fechaInicio;
 
-    public Instancia(MapaUrbano mapa, List<Almacen> almacenes, List<Vehiculo> flota,
-                     List<Pedido> pedidos, List<Mantenimiento> mantenimientos,
-                     int anioSimulado, int mesSimulado) {
+    public Instancia(MapaUrbano mapa, List<Almacen> almacenes, List<Vehiculo> flota, List<Pedido> pedidos,
+            List<Mantenimiento> mantenimientos, int anioSimulado, int mesSimulado) {
         this.mapa = mapa;
         this.almacenes = almacenes;
         this.flota = flota;
@@ -67,18 +76,19 @@ public class Instancia {
     }
 
     /**
-     * Construye la instancia estándar del curso a partir de los tres archivos de entrada.
+     * Construye la instancia estándar del curso a partir de los tres archivos de
+     * entrada.
      *
-     * @param archivoVentas         archivo mensual de ventas (ventas.AAAAMM.txt)
-     * @param archivoBloqueos       archivo mensual de bloqueos (bloqueo.AAMM.txt), opcional
-     * @param archivoMantenimiento  archivo de mantenimiento preventivo, opcional
-     * @param capacidadIntermedios  capacidad de cada almacén intermedio (LE031)
-     * @param autos, motos, bicis   composición de la flota (LE067, LE068)
+     * @param archivoVentas        archivo mensual de ventas (ventas.AAAAMM.txt)
+     * @param archivoBloqueos      archivo mensual de bloqueos (bloqueo.AAMM.txt),
+     *                             opcional
+     * @param archivoMantenimiento archivo de mantenimiento preventivo, opcional
+     * @param capacidadIntermedios capacidad de cada almacén intermedio (LE031)
+     * @param autos,               motos, bicis composición de la flota (LE067,
+     *                             LE068)
      */
-    public static Instancia construir(Path archivoVentas, Path archivoBloqueos,
-                                      Path archivoMantenimiento, int anio, int mes,
-                                      int capacidadIntermedios,
-                                      int autos, int motos, int bicis) throws IOException {
+    public static Instancia construir(Path archivoVentas, Path archivoBloqueos, Path archivoMantenimiento, int anio,
+            int mes, int capacidadIntermedios, int autos, int motos, int bicis) throws IOException {
 
         CargadorVentas.Resultado rv = CargadorVentas.cargar(archivoVentas);
 
@@ -96,27 +106,24 @@ public class Instancia {
 
         List<Vehiculo> flota = construirFlota(almacenes.get(0), autos, motos, bicis);
 
-        return new Instancia(new MapaUrbano(bloqueos), almacenes, flota, rv.pedidos,
-                mantenimientos, anio, mes);
+        return new Instancia(new MapaUrbano(bloqueos), almacenes, flota, rv.pedidos, mantenimientos, anio, mes);
     }
 
     /**
-     * Genera la flota con la nomenclatura del archivo de mantenimiento (TA/TM/TB + correlativo).
-     * Todas las unidades inician la jornada en el almacén central (LE020).
+     * Genera la flota con la nomenclatura del archivo de mantenimiento (TA/TM/TB +
+     * correlativo). Todas las unidades inician la jornada en el almacén central
+     * (LE020).
      */
     public static List<Vehiculo> construirFlota(Almacen almacenCentral, int autos, int motos, int bicis) {
         List<Vehiculo> flota = new ArrayList<>(autos + motos + bicis);
         for (int i = 1; i <= autos; i++) {
-            flota.add(new Vehiculo(String.format("TA%02d", i), TipoVehiculo.AUTO,
-                    almacenCentral.getUbicacion()));
+            flota.add(new Vehiculo(String.format("TA%02d", i), TipoVehiculo.AUTO, almacenCentral.getUbicacion()));
         }
         for (int i = 1; i <= motos; i++) {
-            flota.add(new Vehiculo(String.format("TM%02d", i), TipoVehiculo.MOTO,
-                    almacenCentral.getUbicacion()));
+            flota.add(new Vehiculo(String.format("TM%02d", i), TipoVehiculo.MOTO, almacenCentral.getUbicacion()));
         }
         for (int i = 1; i <= bicis; i++) {
-            flota.add(new Vehiculo(String.format("TB%02d", i), TipoVehiculo.BICICLETA,
-                    almacenCentral.getUbicacion()));
+            flota.add(new Vehiculo(String.format("TB%02d", i), TipoVehiculo.BICICLETA, almacenCentral.getUbicacion()));
         }
         return flota;
     }
@@ -158,7 +165,10 @@ public class Instancia {
         return mantenimientos;
     }
 
-    /** Códigos de unidad que están en mantenimiento preventivo el día simulado indicado. */
+    /**
+     * Códigos de unidad que están en mantenimiento preventivo el día simulado
+     * indicado.
+     */
     public List<String> unidadesEnMantenimiento(int diaSimulado) {
         List<String> codigos = new ArrayList<>();
         for (Mantenimiento m : mantenimientos) {
@@ -169,7 +179,9 @@ public class Instancia {
         return codigos;
     }
 
-    /** Día simulado (1 = primer día del mes inicial) en que cae el mantenimiento. */
+    /**
+     * Día simulado (1 = primer día del mes inicial) en que cae el mantenimiento.
+     */
     public int diaSimulado(Mantenimiento m) {
         return (int) ChronoUnit.DAYS.between(fechaInicio, m.getFecha()) + 1;
     }
@@ -189,7 +201,7 @@ public class Instancia {
 
     @Override
     public String toString() {
-        return "Instancia[" + pedidos.size() + " pedidos, " + flota.size() + " unidades, "
-                + mapa.getBloqueos().size() + " bloqueos, " + almacenes.size() + " almacenes]";
+        return "Instancia[" + pedidos.size() + " pedidos, " + flota.size() + " unidades, " + mapa.getBloqueos().size()
+                + " bloqueos, " + almacenes.size() + " almacenes]";
     }
 }
