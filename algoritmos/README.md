@@ -2,6 +2,21 @@
 
 JDK 17, sin Maven. Ejecutar desde la raiz del repositorio. Los dos motores usan el mismo EstadoOperacion inmutable, constructor inicial determinista, evaluador y caminos.
 
+## Mapa de comandos
+
+| Necesidad | Archivo o comando |
+| --- | --- |
+| Compilar y ejecutar regresiones | `algoritmos\compilar.bat -Pruebas` |
+| Probar una fotografia con TS | `algoritmos\ejecutar-tabu.bat` |
+| Probar una fotografia con ALNS | `algoritmos\ejecutar-alns.bat` |
+| Comparar ambos sobre un EstadoOperacion | `pe.pucp.paqrap.CompararAlgoritmos` |
+| Simular una fecha o una campaña cronologica | `pe.pucp.paqrap.SimulacionComparada` |
+| Ejecutar las 24 corridas ALNS100/TS300 | `algoritmos\experimentacion\campana-alns100-tabu300-4x3.ps1` |
+| Consolidar y analizar esa campaña | `algoritmos\experimentacion\analisis-alns100-tabu300-4x3.py` |
+| Analizar solo duración hasta colapso de campañas anteriores | `analisis_colapso_pareado.py` |
+
+La campaña oficial y su analizador están documentados en la [guía de simulación](experimentacion/SIMULACION-COMPARADA.md). `analisis_colapso.R` pertenece al ALNS histórico y no se usa para TS vs ALNS.
+
 ## Compilar y verificar
 
 ~~~bat

@@ -2,6 +2,28 @@
 
 Framework oficial de comparacion TS vs ALNS: [SimulacionComparada](SIMULACION-COMPARADA.md), sembrado y corriendo por defecto hasta el colapso o fin de datos (`maxCiclos=0`; use `maxCiclos=720` con `Sa=10` para una ventana acotada de 5 dias). Es el unico framework simetrico entre ambos motores (misma instancia y mismos bloqueos para TS y ALNS de cada semilla; averias y mantenimiento excluidos, ver nota en [SIMULACION-COMPARADA.md](SIMULACION-COMPARADA.md#incidencias-excluidas-de-experimentacion)) y sus resultados se versionan en Git.
 
+## Campaña ALNS100/TS300, diseño 4x3
+
+El diseño final usa cuatro fechas independientes, tres semillas comunes y dos algoritmos: 24 corridas y 12 pares. Cada fecha reinicia flota, almacenes y operaciones. La ventana es de 4320 ciclos de 10 minutos, equivalente a 30 días; TS usa 300 iteraciones y ALNS 100 con destrucción 2. El presupuesto temporal es 0 porque `Ta` es una respuesta del experimento.
+
+Desde la raíz:
+
+```powershell
+.\algoritmos\experimentacion\campana-alns100-tabu300-4x3.ps1 -DryRun
+.\algoritmos\experimentacion\campana-alns100-tabu300-4x3.ps1
+```
+
+Las corridas se ejecutan una por una. Dentro de cada bloque fecha-semilla se alterna cuál algoritmo va primero. La salida se guarda bajo `resultados/campana-alns100-tabu300-4x3`; los resultados de otras configuraciones se conservan en carpetas distintas y no se mezclan.
+
+El analizador vigente para este diseño es `analisis-alns100-tabu300-4x3.py`. Empareja por fecha y semilla, exige las 24 corridas y genera consolidados, diferencias, descriptivos y un informe final:
+
+```powershell
+$python = 'C:\Users\fenix\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe'
+& $python algoritmos\experimentacion\analisis-alns100-tabu300-4x3.py --entrada algoritmos\experimentacion\resultados\campana-alns100-tabu300-4x3
+```
+
+`analisis_colapso_pareado.py` sigue disponible para campañas cuyo único objetivo sea duración hasta colapso. `analisis_colapso.R` es histórico y no corresponde al formato actual.
+
 La ejecucion vigente TS/ALNS, las metricas de Ta y holgura, los CSV individuales y el protocolo de colapso de planificacion se describen en la [guia comun](../README.md) y los [metadatos](../METADATOS-PRUEBAS.md). Ambos motores usan la misma instancia y semillas. No mezclar estos CSV con el script R historico descrito abajo.
 
 Para el analisis estadistico de una campana de `SimulacionComparada` (comparacion **pareada** por semilla, ya que TS y ALNS de una misma semilla comparten instancia), use `analisis_colapso_pareado.py` (Python; no requiere R):

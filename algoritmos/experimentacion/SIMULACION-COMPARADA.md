@@ -41,7 +41,42 @@ java "-Dfile.encoding=UTF-8" -cp algoritmos/out pe.pucp.paqrap.SimulacionCompara
 
 Para ALNS o TS solo, usar ese algoritmo y otra carpeta. Para comparacion pareada usar `AMBOS`: ejecuta TS y despues ALNS para cada semilla, restaurando toda la simulacion. La carpeta debe ser nueva; no se sobrescriben corridas.
 
-Argumentos: algoritmo, carpeta de ventas, carpeta de bloqueos, -, mes inicial AAAA-MM, salida, iteraciones (300), semillas (1,2,3), maximo de ciclos (0), Sa en minutos (10), factor de demanda (1). Los parentesis indican valores predeterminados. El marcador - conserva la posicion del antiguo argumento de mantenimiento; una ruta antigua se ignora con aviso. No se acepta archivo de averias.
+### Campaña ALNS100/TS300 de 24 corridas
+
+Para el diseño de cuatro fechas por tres semillas use el orquestador, no `AMBOS`. El script ejecuta procesos secuenciales y alterna el orden de TS y ALNS por bloque fecha-semilla:
+
+```powershell
+.\algoritmos\experimentacion\campana-alns100-tabu300-4x3.ps1 -DryRun
+.\algoritmos\experimentacion\campana-alns100-tabu300-4x3.ps1
+```
+
+Fechas: 2026-02, 2026-08, 2027-03 y 2027-06. Semillas: 20262, 20263 y 20264. Cada fecha reinicia el estado y cubre 30 días (`4320 x 10 min`). La configuración fijada es TS=300, ALNS=100, destrucción=2 y presupuesto=0. Abril de 2027 se retiró por su similitud con marzo en demanda y bloqueos. `corridas.csv` registra orden, inicio, fin y tiempo real del proceso. Una corrida incompleta se preserva con sufijo y se vuelve a ejecutar; una completa se omite al reanudar.
+
+Para analizar los 12 pares:
+
+```powershell
+& 'C:\Users\fenix\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' algoritmos\experimentacion\analisis-alns100-tabu300-4x3.py --entrada algoritmos\experimentacion\resultados\campana-alns100-tabu300-4x3
+```
+
+Argumentos: algoritmo, carpeta de ventas, carpeta de bloqueos, -, mes inicial AAAA-MM, salida, iteraciones TS (300), semillas (1,2,3), maximo de ciclos (0), Sa en minutos (10), factor de demanda (1), iteraciones ALNS (igual a TS), presupuesto por llamada en ms (0) y destruccion ALNS (4). Los parentesis indican valores predeterminados. El marcador - conserva la posicion del antiguo argumento de mantenimiento; una ruta antigua se ignora con aviso. No se acepta archivo de averias.
+
+### Control del tiempo de ALNS
+
+El mismo numero de iteraciones no representa el mismo trabajo. Cada iteracion ALNS retira varias partes y prueba su reinsercion en vehiculos, almacenes y posiciones; cada alternativa usa el evaluador completo y el calculo de caminos. Para calibracion se recomienda comenzar con TS=300, ALNS=100 y destruccion=2:
+
+```powershell
+java "-Dfile.encoding=UTF-8" -cp algoritmos/out pe.pucp.paqrap.SimulacionComparada AMBOS $ventas $bloqueos - 2026-01 algoritmos/experimentacion/resultados/calibracion-tiempo 300 20262,20263,20264 720 10 1 100 0 2
+```
+
+Para comparar calidad bajo el mismo presupuesto de tiempo por llamada, agregar por ejemplo 1500 ms. El limite se revisa tambien dentro de la reparacion para evitar que una sola iteracion se prolongue durante minutos u horas:
+
+```powershell
+java "-Dfile.encoding=UTF-8" -cp algoritmos/out pe.pucp.paqrap.SimulacionComparada AMBOS $ventas $bloqueos - 2026-01 algoritmos/experimentacion/resultados/presupuesto-pareado 300 20262,20263,20264 720 10 1 300 1500 4
+```
+
+El presupuesto es cooperativo: la solucion inicial comun y una evaluacion de camino que ya comenzo deben terminar, por lo que Ta puede superar el limite por ese costo indivisible.
+
+No usar la segunda modalidad para contrastar estadisticamente Ta: el presupuesto vuelve esa metrica una condicion controlada. En ese caso comparar completitud, holgura y metricas complementarias. Para estudiar diferencias de Ta, calibrar los hiperparametros en instancias separadas, fijarlos antes de la campana final y usar presupuesto 0.
 
 ### Modo oficial de comparacion: hasta el colapso
 
@@ -78,10 +113,10 @@ Alimentacion: el INICIO permitido es 08:00-14:00, 16:00-22:00 o 00:00-06:00 segu
 ## Salidas e interpretacion
 
 - `TS-semilla.csv` / `ALNS-semilla.csv`: Ta por llamada, holgura media/minima del plan completo, distancia, tiempo de rutas, vehiculos, utilizacion, pendientes y entregas acumuladas. Las metricas del plan incluyen rutas aun no despachadas; no sumar esas distancias como recorrido real.
-- `resumen.csv`: fin, duracion simulada, pedidos/paquetes entregados, holgura real de pedidos completados, Ta total/medio/maximo y metricas de rutas comprometidas. La distancia despachada incluye el recorrido comprometido aun pendiente al detenerse la corrida. Utilizacion = carga despachada / capacidad acumulada de las salidas, no ocupacion media temporal.
+- `resumen.csv`: fin, duracion simulada, pedidos/paquetes entregados, holgura real de pedidos completados, Ta total/promedio/mediana/P90/maximo, tiempo real de la simulacion y metricas de rutas comprometidas. La distancia despachada incluye el recorrido comprometido aun pendiente al detenerse la corrida. Utilizacion = carga despachada / capacidad acumulada de las salidas, no ocupacion media temporal.
 - `metadatos.txt`: argumentos, parametros, Java y hash de la instancia procesada. Guardar junto a estos archivos el commit de Git y si habia cambios locales.
 
-La holgura real al colapsar solo describe pedidos completados, no atribuye cero a pendientes. Compararla sin considerar cobertura y duracion puede sesgar el estudio. Ta excluye carga de archivos y exportacion. El tiempo real varia entre repeticiones aunque la semilla sea igual. Los motores reinician su generador con la semilla configurada en cada llamada, como en los ejecutores existentes.
+La holgura real al colapsar solo describe pedidos completados, no atribuye cero a pendientes. Compararla sin considerar cobertura y duracion puede sesgar el estudio. `Ta` mide solo cada llamada al planificador. `tiempo_simulacion_real_ms` mide el cuerpo de la simulacion Java, incluida su exportacion; `tiempo_proceso_real_ms` se mide externamente e incluye arranque y carga. El tiempo real varia entre repeticiones aunque la semilla sea igual. Los motores reinician su generador con la semilla configurada en cada llamada, como en los ejecutores existentes.
 
 Ambas trayectorias parten de la misma demanda, flota, parametros y semilla; despues divergen por sus decisiones. Para comparar exactamente el mismo EstadoOperacion usar `CompararAlgoritmos`, descrito en la guia principal. Igual numero de iteraciones no implica igual esfuerzo computacional. Para medir Ta rigurosamente controlar calentamiento JVM, orden de ejecucion y entorno; la prueba corta es de funcionamiento.
 

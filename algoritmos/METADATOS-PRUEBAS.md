@@ -20,6 +20,10 @@ La busqueda puede explorar soluciones incompletas. Ambos motores conservan la me
 | Campo | Definicion |
 | --- | --- |
 | Ta_ms | Tiempo de inicializacion, construccion, busqueda y calculo del resultado; excluye carga, auditoria y exportacion |
+| Ta_promedio/mediana/P90_ms | Resumen, dentro de una corrida cronologica, de los Ta de cada llamada al planificador |
+| Ta_total_ms | Suma de los Ta de una corrida cronologica; depende de cuantas veces se invoco el planificador |
+| tiempo_simulacion_real_ms | Tiempo de pared dentro de `SimulacionComparada`; incluye reloj, despacho y escritura de sus CSV, pero no carga inicial |
+| tiempo_proceso_real_ms | Tiempo de pared medido por la campaña, desde que inicia hasta que termina el proceso Java |
 | holgura_promedio_min | Promedio por pedido de deadline menos fin de servicio de su ultima parte |
 | holgura_minima_min | Minimo de esos margenes |
 | Ta_primera_completa_ms | Tiempo hasta primera solucion completa encontrada; incluye inicial |
@@ -48,6 +52,10 @@ La ruta prueba horarios de descanso y prefiere menores tiempos finales por pedid
 ## Configuracion y trazabilidad
 
 TS: tenencia 7, hasta 400 candidatos por iteracion. ALNS: destruccion maxima 4 partes, segmento 5, reaccion 0.7, temperatura inicial 0.05 en unidades del nuevo objetivo, enfriamiento hasta el 1% al final. ALNS conserva dos destrucciones (aleatoria/cercania) y dos ordenes de reparacion (plazo/aleatorio). No incorpora aun los operadores especializados de incidencia del ALNS historico.
+
+La configuración fijada para la campaña ALNS100/TS300 es TS=300 iteraciones y ALNS=100 iteraciones con destrucción=2. Proviene de la calibración piloto y no se reajusta con las cuatro fechas finales. Aumentar iteraciones amplía la búsqueda y eleva Ta; aumentar destrucción hace que ALNS retire y reinserte más partes, aumentando especialmente su costo por iteración. Tenencia y candidatos controlan memoria y amplitud de TS; segmento, reacción y temperatura controlan adaptación y aceptación en ALNS. El presupuesto queda en 0 cuando Ta es respuesta; con presupuesto positivo se compara calidad bajo tiempo limitado.
+
+En la simulacion cronologica se pueden registrar por separado las iteraciones de TS y ALNS, el grado de destruccion ALNS y un presupuesto comun por llamada. El presupuesto se comprueba dentro de destruccion/reparacion para limitar valores extremos. Igualar el presupuesto sirve para comparar calidad bajo igual tiempo; no sirve para probar diferencias de Ta. Para usar Ta como variable de respuesta, los hiperparametros deben calibrarse previamente y permanecer fijos durante la campana.
 
 Las columnas identifican escenario, nivel, factor, instancia, hash del estado, semilla, repeticion, algoritmo, instante, limites y resultados. README generado incluye hashes de archivos, parametros operativos, version Java y entorno; estado.txt conserva la entrada. Registrar tambien git rev-parse HEAD y git status --short. CSV UTF-8, separador coma, punto decimal, comillas escapadas y ausentes como celdas vacias.
 

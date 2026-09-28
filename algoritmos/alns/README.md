@@ -8,6 +8,19 @@ El lanzador principal `algoritmos/ejecutar-alns.bat` ejecuta `EjecutarALNS` sobr
 
 Reutiliza `SelectorAdaptativo` y `CriterioAceptacion` del ALNS original. El objetivo prioriza completitud y luego holgura; la temperatura inicial es 0.05 en unidades de este objetivo. El contrato experimental no recibe Sa/K/Sc. La clase histórica ParametrosALNS se usa internamente únicamente como soporte del criterio de aceptación.
 
+## Hiperparametros experimentales
+
+| Parametro | Efecto principal |
+| --- | --- |
+| Iteraciones | Mas oportunidades de mejora y mayor Ta |
+| Destruccion | Mas partes retiradas y reinsertadas; aumenta diversidad y costo por iteracion |
+| Segmento | Frecuencia con que se actualizan los pesos de operadores |
+| Reaccion | Cuanto influyen los resultados recientes en esos pesos |
+| Temperatura | Probabilidad inicial de aceptar candidatos peores |
+| Presupuesto ms | Corte cooperativo por llamada; usar 0 cuando se estudia Ta |
+
+La campaña oficial fija 100 iteraciones y destrucción 2, manteniendo segmento 5, reacción 0.7 y temperatura 0.05. Cambiar estos valores crea otra configuración experimental y requiere una carpeta separada.
+
 ## Ejecución y reporte
 
 ```bat

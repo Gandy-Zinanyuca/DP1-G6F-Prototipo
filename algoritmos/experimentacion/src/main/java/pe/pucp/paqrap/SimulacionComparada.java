@@ -25,8 +25,9 @@ public final class SimulacionComparada {
     }
 
     public record Resumen(String fin, LocalDateTime instante, int ciclos, int completos, int paquetesEntregados,
-            double holguraMedia, double holguraMinima, int ejecuciones, double taTotalMs, double taMaxMs,
-            double distanciaKm, double minutosRutas, int vehiculos, double utilizacion) {
+            double holguraMedia, double holguraMinima, int ejecuciones, double taTotalMs, double taMedianaMs,
+            double taP90Ms, double taMaxMs, double tiempoSimulacionRealMs, double distanciaKm, double minutosRutas,
+            int vehiculos, double utilizacion) {
     }
 
     private record Entrega(PartePedido parte, LocalDateTime fin) {
@@ -76,6 +77,7 @@ public final class SimulacionComparada {
      */
     public static Resumen ejecutar(Datos datos, PlanificadorEstricto motor, int sa, int maxCiclos, Path archivo,
             long semilla, double factor) throws IOException {
+        long inicioRealNanos = System.nanoTime();
         if (sa <= 0 || maxCiclos < 0 || !Double.isFinite(factor) || factor <= 0)
             throw new IllegalArgumentException("Sa positivo, ciclos >= 0 y factor positivo requeridos");
         var base = datos.base();
@@ -106,6 +108,7 @@ public final class SimulacionComparada {
         int indice = 0, ciclos = 0, completos = 0, paquetes = 0;
         double sumaHolgura = 0, minima = Double.POSITIVE_INFINITY;
         double taTotal = 0, taMax = 0, distancia = 0, minutos = 0;
+        var tiemposTa = new ArrayList<Double>();
         int ejecuciones = 0, cargaDespachada = 0, capacidadDespachada = 0;
         Set<String> utilizados = new HashSet<>();
         String fin = "LIMITE_DE_CICLOS";
@@ -165,6 +168,7 @@ public final class SimulacionComparada {
                     ejecuciones++;
                     taTotal += resultado.metricas().taMs();
                     taMax = Math.max(taMax, resultado.metricas().taMs());
+                    tiemposTa.add(resultado.metricas().taMs());
                 }
                 if (resultado != null && !resultado.evaluacion().factible())
                     throw new IllegalStateException("Salida invalida: " + resultado.evaluacion().errores());
@@ -242,9 +246,27 @@ public final class SimulacionComparada {
                 t = siguiente;
             }
         }
+        double tiempoRealMs = (System.nanoTime() - inicioRealNanos) / 1_000_000.0;
         return new Resumen(fin, t, ciclos, completos, paquetes, completos == 0 ? Double.NaN : sumaHolgura / completos,
-                completos == 0 ? Double.NaN : minima, ejecuciones, taTotal, taMax, distancia, minutos,
-                utilizados.size(), capacidadDespachada == 0 ? 0 : (double) cargaDespachada / capacidadDespachada);
+                completos == 0 ? Double.NaN : minima, ejecuciones, taTotal, percentil(tiemposTa, .5),
+                percentil(tiemposTa, .9), taMax, tiempoRealMs, distancia, minutos, utilizados.size(),
+                capacidadDespachada == 0 ? 0 : (double) cargaDespachada / capacidadDespachada);
+    }
+
+    /** Percentil lineal sobre los Ta de las llamadas de planificacion. */
+    static double percentil(List<Double> valores, double q) {
+        if (valores.isEmpty())
+            return Double.NaN;
+        if (q < 0 || q > 1)
+            throw new IllegalArgumentException("Percentil fuera de [0,1]");
+        var ordenados = valores.stream().sorted().toList();
+        double posicion = q * (ordenados.size() - 1);
+        int inferior = (int) Math.floor(posicion);
+        int superior = (int) Math.ceil(posicion);
+        if (inferior == superior)
+            return ordenados.get(inferior);
+        double peso = posicion - inferior;
+        return ordenados.get(inferior) * (1 - peso) + ordenados.get(superior) * peso;
     }
 
     /**
@@ -318,9 +340,9 @@ public final class SimulacionComparada {
     }
 
     public static void main(String[] args) throws Exception {
-        if (args.length < 6 || args.length > 11)
+        if (args.length < 6 || args.length > 14)
             throw new IllegalArgumentException(
-                    "Uso: SimulacionComparada TS|ALNS|AMBOS carpetaVentas carpetaBloqueos - AAAA-MM salida [iteraciones=300] [semillas=1,2,3] [maxCiclos=0] [Sa=10] [factorCarga=1]\n"
+                    "Uso: SimulacionComparada TS|ALNS|AMBOS carpetaVentas carpetaBloqueos - AAAA-MM salida [iteracionesTS=300] [semillas=1,2,3] [maxCiclos=0] [Sa=10] [factorCarga=1] [iteracionesALNS=iteracionesTS] [presupuestoMs=0] [destruccionALNS=4]\n"
                             + "maxCiclos=0 (por defecto) es el modo oficial de comparacion 'hasta el colapso o fin de datos', sin limite de dias.\n"
                             + "Para una ventana acotada use maxCiclos=720 con Sa=10 (5 dias completos).\n"
                             + "Solo bloqueos; averias y mantenimiento excluidos de la experimentacion.");
@@ -332,8 +354,13 @@ public final class SimulacionComparada {
         int ciclos = args.length > 8 ? Integer.parseInt(args[8]) : 0;
         int sa = args.length > 9 ? Integer.parseInt(args[9]) : 10;
         double factor = args.length > 10 ? Double.parseDouble(args[10]) : 1;
-        if (iter <= 0 || ciclos < 0 || sa <= 0 || !Double.isFinite(factor) || factor <= 0)
-            throw new IllegalArgumentException("Iteraciones, Sa y factor positivos; ciclos >= 0");
+        int iterAlns = args.length > 11 ? Integer.parseInt(args[11]) : iter;
+        long presupuestoMs = args.length > 12 ? Long.parseLong(args[12]) : 0;
+        int destruccionAlns = args.length > 13 ? Integer.parseInt(args[13]) : 4;
+        if (iter <= 0 || iterAlns <= 0 || ciclos < 0 || sa <= 0 || !Double.isFinite(factor) || factor <= 0
+                || presupuestoMs < 0 || destruccionAlns <= 0)
+            throw new IllegalArgumentException(
+                    "Iteraciones, Sa, factor y destruccion positivos; ciclos y presupuesto >= 0");
         Set<Long> semillasValidas = new HashSet<>();
         for (String s : semillas.split(",", -1))
             if (!semillasValidas.add(Long.parseLong(s.trim())))
@@ -357,14 +384,16 @@ public final class SimulacionComparada {
         for (var pedido : datos.pedidos())
             digest.update(pedido.toString().getBytes(StandardCharsets.UTF_8));
         Files.writeString(salida.resolve("metadatos.txt"), "Instancia SHA-256: "
-                + HexFormat.of().formatHex(digest.digest()) + "\nIteraciones=" + iter + "; semillas=" + semillas
+                + HexFormat.of().formatHex(digest.digest()) + "\nIteraciones TS=" + iter + "; iteraciones ALNS="
+                + iterAlns + "; semillas=" + semillas
                 + "; Sa=" + sa + "; ciclos=" + ciclos + "; factor=" + factor
-                + "\nTS: tenencia=7, candidatos=400; ALNS: destruccion=4, segmento=5, reaccion=0.7, temperatura=0.05; presupuesto temporal=0"
+                + "\nTS: tenencia=7, candidatos=400; ALNS: destruccion=" + destruccionAlns
+                + ", segmento=5, reaccion=0.7, temperatura=0.05; presupuesto temporal por llamada=" + presupuestoMs
                 + "\nAverias: excluidas. Mantenimiento: excluido. Bloqueos: archivos mensuales suministrados.\n",
                 StandardOpenOption.APPEND);
         try (var resumen = Files.newBufferedWriter(salida.resolve("resumen.csv"), StandardCharsets.UTF_8)) {
             resumen.write(
-                    "algoritmo,semilla,factor_carga,fin,instante_final,duracion_dias,ciclos,pedidos_completos,paquetes_entregados,holgura_real_promedio_min,holgura_real_minima_min,ejecuciones,Ta_total_ms,Ta_promedio_ms,Ta_max_ms,distancia_despachada_km,tiempo_rutas_despachadas_min,vehiculos_utilizados,utilizacion_capacidad\n");
+                    "algoritmo,semilla,factor_carga,fin,instante_final,duracion_dias,ciclos,pedidos_completos,paquetes_entregados,holgura_real_promedio_min,holgura_real_minima_min,ejecuciones,Ta_total_ms,Ta_promedio_ms,Ta_mediana_ms,Ta_p90_ms,Ta_max_ms,tiempo_simulacion_real_ms,distancia_despachada_km,tiempo_rutas_despachadas_min,vehiculos_utilizados,utilizacion_capacidad\n");
             Set<Long> usadas = new HashSet<>();
             for (String s : semillas.split(",")) {
                 long semilla = Long.parseLong(s.trim());
@@ -373,9 +402,10 @@ public final class SimulacionComparada {
                 for (String algoritmo : seleccion.equals("AMBOS") ? List.of("TS", "ALNS") : List.of(seleccion)) {
                     PlanificadorEstricto motor = algoritmo.equals("TS")
                             // sinMejoraMax es el umbral de diversificacion de TS, no un corte.
-                            ? new TabuSearchPlanner(new ConfiguracionTabu(iter, 7, Math.max(5, iter / 10), 400, 0, semilla))
-                            : new ALNSPlanner(
-                                    new ConfiguracionALNS(iter, Math.max(1, iter), 4, 5, .7, .05, 0, semilla));
+                            ? new TabuSearchPlanner(
+                                    new ConfiguracionTabu(iter, 7, Math.max(5, iter / 10), 400, presupuestoMs, semilla))
+                            : new ALNSPlanner(new ConfiguracionALNS(iterAlns, Math.max(1, iterAlns), destruccionAlns, 5,
+                                    .7, .05, presupuestoMs, semilla));
                     System.out.println("Ejecutando " + algoritmo + " semilla=" + semilla);
                     var r = ejecutar(datos, motor, sa, ciclos, salida.resolve(algoritmo + "-" + semilla + ".csv"),
                             semilla, factor);
@@ -384,17 +414,22 @@ public final class SimulacionComparada {
                             + dias + "," + r.ciclos() + "," + r.completos() + "," + r.paquetesEntregados() + ","
                             + (Double.isNaN(r.holguraMedia()) ? "," : r.holguraMedia() + "," + r.holguraMinima()) + ","
                             + r.ejecuciones() + "," + r.taTotalMs() + ","
-                            + (r.ejecuciones() == 0 ? "" : r.taTotalMs() / r.ejecuciones()) + "," + r.taMaxMs() + ","
-                            + r.distanciaKm() + "," + r.minutosRutas() + "," + r.vehiculos() + "," + r.utilizacion()
-                            + "\n");
+                            + (r.ejecuciones() == 0 ? "" : r.taTotalMs() / r.ejecuciones()) + ","
+                            + (Double.isNaN(r.taMedianaMs()) ? "" : r.taMedianaMs()) + ","
+                            + (Double.isNaN(r.taP90Ms()) ? "" : r.taP90Ms()) + "," + r.taMaxMs() + ","
+                            + r.tiempoSimulacionRealMs() + "," + r.distanciaKm() + "," + r.minutosRutas() + ","
+                            + r.vehiculos() + "," + r.utilizacion() + "\n");
                     resumen.flush();
                     System.out.printf(Locale.ROOT,
                             "%s | %s | %.3f dias | %d pedidos entregados | %d paquetes | holgura real media/min: %s / %s min%n",
                             algoritmo, r.fin(), dias, r.completos(), r.paquetesEntregados(), minutos(r.holguraMedia()),
                             minutos(r.holguraMinima()));
                     System.out.printf(Locale.ROOT,
-                            "Ta total/media/max: %.2f / %.2f / %.2f ms | %.2f km | %.2f min rutas | %d vehiculos | capacidad %.1f%%%n",
-                            r.taTotalMs(), r.ejecuciones() == 0 ? 0 : r.taTotalMs() / r.ejecuciones(), r.taMaxMs(),
+                            "Ta total/media/mediana/P90/max: %.2f / %.2f / %.2f / %.2f / %.2f ms | tiempo real simulacion: %.2f ms%n",
+                            r.taTotalMs(), r.ejecuciones() == 0 ? 0 : r.taTotalMs() / r.ejecuciones(),
+                            r.taMedianaMs(), r.taP90Ms(), r.taMaxMs(), r.tiempoSimulacionRealMs());
+                    System.out.printf(Locale.ROOT,
+                            "Complementarias: %.2f km | %.2f min rutas | %d vehiculos | capacidad %.1f%%%n",
                             r.distanciaKm(), r.minutosRutas(), r.vehiculos(), 100 * r.utilizacion());
                 }
             }

@@ -78,7 +78,11 @@ public final class ALNSPlanner implements PlanificadorEstricto {
                 rutas.add(ruta.conPartes(lista));
             }
             var candidata = GeneradorSolucionInicial.reparar(new Solucion(rutas, pendientes), ev, repair.operador(r),
-                    random);
+                    random, () -> !tiempoAgotado(inicio));
+            if (tiempoAgotado(inicio)) {
+                parada = "TIEMPO";
+                break;
+            }
             var ec = ev.evaluar(candidata);
             candidatos += ev.evaluaciones() - antes;
             double premio = 0;
@@ -115,5 +119,9 @@ public final class ALNSPlanner implements PlanificadorEstricto {
         }
         return Resultados.crear("ALNS-estricto", mejor, ev, inicio, iter, iteracionMejor, candidatos, iniciales, parada,
                 primeraMs, primeraIter);
+    }
+
+    private boolean tiempoAgotado(long inicio) {
+        return config.presupuestoMs() > 0 && (System.nanoTime() - inicio) / 1_000_000 >= config.presupuestoMs();
     }
 }
