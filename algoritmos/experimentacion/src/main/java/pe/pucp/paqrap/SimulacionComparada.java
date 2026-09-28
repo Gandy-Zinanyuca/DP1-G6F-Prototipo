@@ -110,9 +110,22 @@ public final class SimulacionComparada {
         Set<String> utilizados = new HashSet<>();
         String fin = "LIMITE_DE_CICLOS";
         Files.createDirectories(archivo.toAbsolutePath().getParent());
-        try (var csv = Files.newBufferedWriter(archivo, StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW)) {
+        var archivoMovimientos = archivo
+                .resolveSibling(archivo.getFileName().toString().replace(".csv", "") + "-movimientos.csv");
+        var archivoEntregas = archivo
+                .resolveSibling(archivo.getFileName().toString().replace(".csv", "") + "-entregas.csv");
+        try (var csv = Files.newBufferedWriter(archivo, StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW);
+                var movimientos = Files.newBufferedWriter(archivoMovimientos, StandardCharsets.UTF_8,
+                        StandardOpenOption.CREATE_NEW);
+                var entregas = Files.newBufferedWriter(archivoEntregas, StandardCharsets.UTF_8,
+                        StandardOpenOption.CREATE_NEW)) {
             csv.write(
                     "semilla,factor_carga,ciclo,instante,estado,Ta_ms,holgura_plan_promedio_min,holgura_plan_minima_min,distancia_plan_km,tiempo_plan_rutas_min,vehiculos_plan,utilizacion_capacidad_plan,pedidos_plan,paquetes_sin_plan,rutas_despachadas,pedidos_entregados_acum,paquetes_entregados_acum,holgura_real_promedio_min,holgura_real_minima_min\n");
+            // Insumo para animar el movimiento de vehiculos en una cuadricula (front): un
+            // paso por cada arista cruzada, con nodo origen/destino y hora exacta.
+            movimientos.write("semilla,vehiculo,nodo_origen_x,nodo_origen_y,nodo_destino_x,nodo_destino_y,salida,llegada\n");
+            // Seguimiento por entrega: util como insumo de "tracking" para un front.
+            entregas.write("semilla,pedido_id,vehiculo,ubicacion_x,ubicacion_y,cantidad_parte,instante_entrega,deadline,holgura_min\n");
             while (true) {
                 for (var it = eventos.iterator(); it.hasNext();) {
                     var evento = it.next();
@@ -168,9 +181,21 @@ public final class SimulacionComparada {
                         utilizados.add(ruta.ruta().vehiculo());
                         cargaDespachada += ruta.ruta().carga();
                         capacidadDespachada += TipoVehiculo.desdeCodigo(ruta.ruta().vehiculo()).capacidad();
+                        for (var camino : ruta.caminos())
+                            for (var paso : camino.pasos())
+                                movimientos.write(semilla + "," + ruta.ruta().vehiculo() + "," + paso.origen().x()
+                                        + "," + paso.origen().y() + "," + paso.destino().x() + ","
+                                        + paso.destino().y() + "," + paso.salida() + "," + paso.llegada() + "\n");
                         for (var parada : ruta.paradas())
                             for (var parte : parada.partes()) {
                                 eventos.add(new Entrega(parte, parada.finServicio()));
+                                entregas.write(semilla + "," + parte.pedido().id() + "," + ruta.ruta().vehiculo() + ","
+                                        + parte.pedido().ubicacion().x() + "," + parte.pedido().ubicacion().y() + ","
+                                        + parte.cantidad() + "," + parada.finServicio() + ","
+                                        + parte.pedido().deadline() + ","
+                                        + (Duration.between(parada.finServicio(), parte.pedido().deadline()).toNanos()
+                                                / 60e9)
+                                        + "\n");
                                 var p = pendientes.get(parte.pedido().id());
                                 int restante = p.cantidad() - parte.cantidad();
                                 if (restante == 0)

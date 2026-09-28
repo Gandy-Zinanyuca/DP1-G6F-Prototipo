@@ -1,0 +1,47 @@
+===============================================================================
+ PaqRap - Comparacion pareada por semilla: TS vs ALNS
+===============================================================================
+ Fecha        : 2026-09-25 09:29
+ Metrica      : duracion_dias (comparacion pareada por semilla)
+ Factor carga : 1.0
+ Nivel alfa   : 0.05
+ Alternativa  : two-sided
+ Entrada      : resultados/campana-relevo-TS-20262, resultados/campana-relevo-TS-20263, resultados/campana-relevo-TS-20264, resultados/campana-relevo-ALNS-20262, resultados/campana-relevo-ALNS-20263, resultados/campana-relevo-ALNS-20264
+ Algoritmos   : ALNS vs TS (diferencia reportada = ALNS - TS)
+ Semillas pareadas totales: 3 | usadas en la prueba: 3 (incluye censuradas)
+
+ H0: la diferencia (ALNS - TS) tiene media/mediana 0
+ H1: la diferencia (ALNS - TS) es distinta de 0
+
+-- 1. Estadistica descriptiva ------------------------------------------------
+                        n    media     de     cv      min       q1  mediana       q3      max
+ALNS                  3.0  112.190  0.524  0.005  111.701  111.913  112.125  112.434  112.743
+TS                    3.0  134.963  7.105  0.053  130.861  130.861  130.861  137.014  143.167
+diferencia (ALNS-TS)  3.0  -22.773  7.534 -0.331  -31.465  -25.101  -18.736  -18.427  -18.118
+
+ AVISO: 3 semilla(s) con al menos un algoritmo SIN colapsar (duracion censurada, es una cota inferior):
+   semilla 20262: ALNS=EJECUCION_INTERRUMPIDA (111.701 d) | TS=COLAPSO_PLANIFICACION (143.167 d)
+   semilla 20263: ALNS=EJECUCION_INTERRUMPIDA (112.743 d) | TS=COLAPSO_PLANIFICACION (130.861 d)
+   semilla 20264: ALNS=EJECUCION_INTERRUMPIDA (112.125 d) | TS=COLAPSO_PLANIFICACION (130.861 d)
+
+-- 2. Normalidad de las diferencias pareadas ----------------------------------
+ Shapiro-Wilk sobre (ALNS - TS): p = 0.0784 -> no se rechaza normalidad
+
+-- 3. Prueba de hipotesis principal (pareada) ---------------------------------
+ Prueba principal: t pareada (diferencias compatibles con normalidad)
+ t pareada        : t = -5.236, gl = 2, p = 0.0346
+   diferencia media (ALNS - TS) = -22.773 (metrica: duracion_dias)
+ Wilcoxon (signo) : W = 0.0, p = 0.25
+
+-- 4. Tamano del efecto --------------------------------------------------------
+ d de Cohen pareado (dz)        = -3.023 (grande)
+ P(ALNS > TS) en la muestra      = 0.0 (0 de 3 semillas; 0 empate(s))
+
+-- 5. Potencia -------------------------------------------------------------------
+ Potencia alcanzada para la diferencia observada (-22.773): 0.750
+ N de semillas para potencia 0.80 con la diferencia observada: 4
+ N de semillas para detectar delta = 1.0 (potencia 0.80, asumiendo la dispersion observada): 448
+
+-- Decision ------------------------------------------------------------------
+ p = 0.0346 < 0.05 -> SE RECHAZA H0.
+ Hay evidencia estadistica de diferencia entre ALNS y TS en duracion_dias (alternativa: two-sided).
