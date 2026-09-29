@@ -1,0 +1,2 @@
+algoritmo,semilla,factor_carga,fin,instante_final,duracion_dias,ciclos,pedidos_completos,paquetes_entregados,holgura_real_promedio_min,holgura_real_minima_min,ejecuciones,Ta_total_ms,Ta_promedio_ms,Ta_max_ms,distancia_despachada_km,tiempo_rutas_despachadas_min,vehiculos_utilizados,utilizacion_capacidad
+ALNS,20263,1.0,COLAPSO_PLANIFICACION,2027-06-01T07:00,0.2916666666666667,43,42,203,903.5999999999999,33.0,42,2907404.008698,69223.904969,165166.1462,1947.0,6836.899999999999,24,0.34290540540540543

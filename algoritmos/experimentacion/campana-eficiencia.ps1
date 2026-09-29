@@ -38,8 +38,8 @@ function TieneResultado([string]$carpeta) {
     return ($lineas.Count -ge 2)
 }
 
-$meses = @('2026-02', '2026-08', '2027-03', '2027-04', '2027-06')
-$semillas = @(20262, 20263, 20264, 20265)
+$meses = @('2026-02', '2026-08', '2027-03', '2027-06')
+$semillas = @(20263, 20264, 20265)
 $algoritmos = @('ALNS', 'TS')
 
 $jobs = @()

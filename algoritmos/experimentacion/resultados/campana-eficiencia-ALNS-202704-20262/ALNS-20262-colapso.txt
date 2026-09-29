@@ -1,0 +1,45 @@
+Colapso en instante 2027-04-01T02:00 (semilla 20262)
+Pedidos sin plan factible en este ciclo: 1
+
+Pedido V202704-L00028 | deadline=2027-04-01T05:59 | aun dentro de plazo, pero infactible con la flota/rutas disponibles | cantidad total=7 | cantidad sin planificar=7 | ubicacion=(55,25)
+
+Pedidos pendientes totales en el sistema al momento del colapso: 15
+
+Estado de la flota:
+  TA01 tipo=TA ubicacion=(57,27) disponible=true disponibleDesde=2027-04-01T06:11:30
+  TA02 tipo=TA ubicacion=(27,14) disponible=true disponibleDesde=2027-04-01T05:29
+  TA03 tipo=TA ubicacion=(57,27) disponible=true disponibleDesde=2027-04-01T03:34:30
+  TA04 tipo=TA ubicacion=(57,27) disponible=true disponibleDesde=2027-04-01T03:49:30
+  TA05 tipo=TA ubicacion=(57,27) disponible=true disponibleDesde=2027-04-01T05:20:30
+  TA06 tipo=TA ubicacion=(27,14) disponible=true disponibleDesde=2027-04-01T04:01
+  TA07 tipo=TA ubicacion=(57,27) disponible=true disponibleDesde=2027-04-01T04:35:30
+  TA08 tipo=TA ubicacion=(57,27) disponible=true disponibleDesde=2027-04-01T04:48:30
+  TA09 tipo=TA ubicacion=(57,27) disponible=true disponibleDesde=2027-04-01T04:05:30
+  TA10 tipo=TA ubicacion=(57,27) disponible=true disponibleDesde=2027-04-01T03:54:30
+  TM01 tipo=TM ubicacion=(12,38) disponible=true disponibleDesde=2027-04-01T05:26
+  TM02 tipo=TM ubicacion=(27,14) disponible=true disponibleDesde=-999999999-01-01T00:00
+  TM03 tipo=TM ubicacion=(27,14) disponible=true disponibleDesde=-999999999-01-01T00:00
+  TM04 tipo=TM ubicacion=(27,14) disponible=true disponibleDesde=-999999999-01-01T00:00
+  TM05 tipo=TM ubicacion=(27,14) disponible=true disponibleDesde=-999999999-01-01T00:00
+  TM06 tipo=TM ubicacion=(27,14) disponible=true disponibleDesde=-999999999-01-01T00:00
+  TM07 tipo=TM ubicacion=(27,14) disponible=true disponibleDesde=-999999999-01-01T00:00
+  TM08 tipo=TM ubicacion=(27,14) disponible=true disponibleDesde=-999999999-01-01T00:00
+  TM09 tipo=TM ubicacion=(27,14) disponible=true disponibleDesde=-999999999-01-01T00:00
+  TM10 tipo=TM ubicacion=(27,14) disponible=true disponibleDesde=-999999999-01-01T00:00
+  TM11 tipo=TM ubicacion=(27,14) disponible=true disponibleDesde=-999999999-01-01T00:00
+  TM12 tipo=TM ubicacion=(27,14) disponible=true disponibleDesde=-999999999-01-01T00:00
+  TM13 tipo=TM ubicacion=(27,14) disponible=true disponibleDesde=-999999999-01-01T00:00
+  TM14 tipo=TM ubicacion=(27,14) disponible=true disponibleDesde=-999999999-01-01T00:00
+  TM15 tipo=TM ubicacion=(27,14) disponible=true disponibleDesde=-999999999-01-01T00:00
+  TB01 tipo=TB ubicacion=(27,14) disponible=true disponibleDesde=-999999999-01-01T00:00
+  TB02 tipo=TB ubicacion=(27,14) disponible=true disponibleDesde=-999999999-01-01T00:00
+  TB03 tipo=TB ubicacion=(27,14) disponible=true disponibleDesde=-999999999-01-01T00:00
+  TB04 tipo=TB ubicacion=(27,14) disponible=true disponibleDesde=-999999999-01-01T00:00
+  TB05 tipo=TB ubicacion=(27,14) disponible=true disponibleDesde=-999999999-01-01T00:00
+  TB06 tipo=TB ubicacion=(27,14) disponible=true disponibleDesde=-999999999-01-01T00:00
+  TB07 tipo=TB ubicacion=(27,14) disponible=true disponibleDesde=-999999999-01-01T00:00
+  TB08 tipo=TB ubicacion=(27,14) disponible=true disponibleDesde=-999999999-01-01T00:00
+  TB09 tipo=TB ubicacion=(27,14) disponible=true disponibleDesde=-999999999-01-01T00:00
+  TB10 tipo=TB ubicacion=(27,14) disponible=true disponibleDesde=-999999999-01-01T00:00
+  TB11 tipo=TB ubicacion=(27,14) disponible=true disponibleDesde=-999999999-01-01T00:00
+  TB12 tipo=TB ubicacion=(27,14) disponible=true disponibleDesde=-999999999-01-01T00:00

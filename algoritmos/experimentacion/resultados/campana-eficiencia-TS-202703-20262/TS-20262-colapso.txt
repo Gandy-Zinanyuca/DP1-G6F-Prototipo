@@ -1,0 +1,45 @@
+Colapso en instante 2027-03-02T00:50 (semilla 20262)
+Pedidos sin plan factible en este ciclo: 1
+
+Pedido V202703-L00269 | deadline=2027-03-02T04:41 | aun dentro de plazo, pero infactible con la flota/rutas disponibles | cantidad total=4 | cantidad sin planificar=4 | ubicacion=(8,42)
+
+Pedidos pendientes totales en el sistema al momento del colapso: 20
+
+Estado de la flota:
+  TA01 tipo=TA ubicacion=(57,27) disponible=true disponibleDesde=2027-03-02T06:27
+  TA02 tipo=TA ubicacion=(57,27) disponible=true disponibleDesde=2027-03-02T06:18
+  TA03 tipo=TA ubicacion=(27,14) disponible=true disponibleDesde=2027-03-02T05:28:30
+  TA04 tipo=TA ubicacion=(12,38) disponible=true disponibleDesde=2027-03-02T05:57
+  TA05 tipo=TA ubicacion=(27,14) disponible=true disponibleDesde=2027-03-02T05:46:30
+  TA06 tipo=TA ubicacion=(57,27) disponible=true disponibleDesde=2027-03-02T06:36
+  TA07 tipo=TA ubicacion=(57,27) disponible=true disponibleDesde=2027-03-02T05:36
+  TA08 tipo=TA ubicacion=(57,27) disponible=true disponibleDesde=2027-03-02T07:24
+  TA09 tipo=TA ubicacion=(57,27) disponible=true disponibleDesde=2027-03-02T06:27
+  TA10 tipo=TA ubicacion=(12,38) disponible=true disponibleDesde=2027-03-02T06:45
+  TM01 tipo=TM ubicacion=(12,38) disponible=true disponibleDesde=2027-03-02T04:48
+  TM02 tipo=TM ubicacion=(57,27) disponible=true disponibleDesde=2027-03-02T06:20
+  TM03 tipo=TM ubicacion=(27,14) disponible=true disponibleDesde=2027-03-02T02:36:48
+  TM04 tipo=TM ubicacion=(57,27) disponible=true disponibleDesde=2027-03-02T05:19:12
+  TM05 tipo=TM ubicacion=(57,27) disponible=true disponibleDesde=2027-03-02T05:19:12
+  TM06 tipo=TM ubicacion=(57,27) disponible=true disponibleDesde=2027-03-02T07:04:48
+  TM07 tipo=TM ubicacion=(12,38) disponible=true disponibleDesde=2027-03-02T06:55:36
+  TM08 tipo=TM ubicacion=(27,14) disponible=true disponibleDesde=2027-03-02T04:19:12
+  TM09 tipo=TM ubicacion=(27,14) disponible=true disponibleDesde=2027-03-02T05:43:12
+  TM10 tipo=TM ubicacion=(27,14) disponible=true disponibleDesde=2027-03-02T06:00
+  TM11 tipo=TM ubicacion=(57,27) disponible=true disponibleDesde=2027-03-02T02:48
+  TM12 tipo=TM ubicacion=(57,27) disponible=true disponibleDesde=2027-03-02T06:33:36
+  TM13 tipo=TM ubicacion=(57,27) disponible=true disponibleDesde=2027-03-02T03:55:12
+  TM14 tipo=TM ubicacion=(12,38) disponible=true disponibleDesde=2027-03-02T03:57:36
+  TM15 tipo=TM ubicacion=(57,27) disponible=true disponibleDesde=2027-03-02T05:16:48
+  TB01 tipo=TB ubicacion=(57,27) disponible=true disponibleDesde=2027-03-02T06:55
+  TB02 tipo=TB ubicacion=(12,38) disponible=true disponibleDesde=2027-03-02T04:25
+  TB03 tipo=TB ubicacion=(12,38) disponible=true disponibleDesde=2027-03-02T05:05
+  TB04 tipo=TB ubicacion=(57,27) disponible=true disponibleDesde=2027-03-02T06:25
+  TB05 tipo=TB ubicacion=(27,14) disponible=true disponibleDesde=2027-03-02T04:30
+  TB06 tipo=TB ubicacion=(57,27) disponible=true disponibleDesde=2027-03-02T06:25
+  TB07 tipo=TB ubicacion=(57,27) disponible=true disponibleDesde=2027-03-02T07:25
+  TB08 tipo=TB ubicacion=(27,14) disponible=true disponibleDesde=2027-03-02T04:00
+  TB09 tipo=TB ubicacion=(57,27) disponible=true disponibleDesde=2027-03-02T06:20
+  TB10 tipo=TB ubicacion=(12,38) disponible=true disponibleDesde=2027-03-02T05:55
+  TB11 tipo=TB ubicacion=(57,27) disponible=true disponibleDesde=2027-03-02T06:00
+  TB12 tipo=TB ubicacion=(57,27) disponible=true disponibleDesde=2027-03-02T05:55

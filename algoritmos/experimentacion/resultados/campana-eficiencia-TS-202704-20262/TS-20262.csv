@@ -1,0 +1,6 @@
+semilla,factor_carga,ciclo,instante,estado,Ta_ms,holgura_plan_promedio_min,holgura_plan_minima_min,distancia_plan_km,tiempo_plan_rutas_min,vehiculos_plan,utilizacion_capacidad_plan,pedidos_plan,paquetes_sin_plan,rutas_despachadas,pedidos_entregados_acum,paquetes_entregados_acum,holgura_real_promedio_min,holgura_real_minima_min
+20262,1.0,0,2027-04-01T00:00,SIN_DEMANDA,0,,,,,,,0,0,0,0,0,,
+20262,1.0,1,2027-04-01T00:10,COMPLETA,4355.6348,571.0,563.0,288.0,912.0,4,0.15625,2,0,4,0,0,,
+20262,1.0,2,2027-04-01T00:20,COMPLETA,4459.5026,1646.625,359.5,203.0,1024.5,6,0.18055555555555555,4,0,6,0,0,,
+20262,1.0,3,2027-04-01T00:30,COMPLETA,2872.4546,874.0,317.6,309.0,1341.6,5,0.35,3,0,5,0,0,,
+20262,1.0,4,2027-04-01T00:40,COLAPSO_PLANIFICACION,2826.6415,,,131.0,554.4000000000001,2,0.375,3,8,0,0,0,,
