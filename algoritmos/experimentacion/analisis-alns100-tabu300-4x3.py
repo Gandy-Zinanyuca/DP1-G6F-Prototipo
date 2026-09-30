@@ -40,6 +40,8 @@ METRICAS = (
 def argumentos() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Analisis pareado de la campana oficial TS vs ALNS")
     p.add_argument("--entrada", required=True, help="Carpeta de campana que contiene corridas/")
+    p.add_argument("--repeticiones",
+                   help="Carpeta con repeticiones temporales; reemplaza la misma fecha/semilla/algoritmo")
     p.add_argument("--salida", help="Carpeta de analisis; por defecto <entrada>/analisis")
     p.add_argument("--permitir-incompleta", action="store_true",
                    help="Analiza solo pares completos, dejando constancia de faltantes")
@@ -56,10 +58,10 @@ def fecha_desde_ruta(archivo: Path) -> str:
     raise ValueError(f"No se pudo deducir la fecha experimental de {archivo}")
 
 
-def cargar(entrada: Path) -> pd.DataFrame:
+def cargar_raiz(entrada: Path, origen: str) -> pd.DataFrame:
     archivos = sorted((entrada / "corridas").glob("**/resumen.csv"))
     if not archivos:
-        raise SystemExit(f"No hay resumen.csv bajo {entrada / 'corridas'}")
+        return pd.DataFrame()
     filas = []
     for archivo in archivos:
         tabla = pd.read_csv(archivo)
@@ -75,15 +77,33 @@ def cargar(entrada: Path) -> pd.DataFrame:
     if duplicadas.any():
         raise SystemExit("Hay corridas duplicadas:\n" + datos.loc[duplicadas, claves + ["archivo"]].to_string(index=False))
 
+    datos["origen_resultado"] = origen
     manifiesto = entrada / "corridas.csv"
     if manifiesto.exists():
         m = pd.read_csv(manifiesto)
         m = m.sort_values("fin_real").drop_duplicates(claves, keep="last")
-        datos = datos.merge(m[[*claves, "orden_en_bloque", "tiempo_proceso_real_ms"]], on=claves, how="left")
+        columnas = [*claves, "tiempo_proceso_real_ms"]
+        if "orden_en_bloque" in m.columns:
+            columnas.append("orden_en_bloque")
+        datos = datos.merge(m[columnas], on=claves, how="left")
     else:
-        datos["orden_en_bloque"] = np.nan
         datos["tiempo_proceso_real_ms"] = np.nan
+    if "orden_en_bloque" not in datos.columns:
+        datos["orden_en_bloque"] = np.nan
     return datos
+
+
+def cargar(entrada: Path, repeticiones: Path | None = None) -> pd.DataFrame:
+    original = cargar_raiz(entrada, "original")
+    if original.empty:
+        raise SystemExit(f"No hay resumen.csv bajo {entrada / 'corridas'}")
+    if repeticiones is None:
+        return original
+    nuevas = cargar_raiz(repeticiones, "repeticion_sin_suspension")
+    if nuevas.empty:
+        return original
+    claves = ["fecha", "semilla", "algoritmo"]
+    return pd.concat([original, nuevas], ignore_index=True).drop_duplicates(claves, keep="last")
 
 
 def validar_diseno(datos: pd.DataFrame, permitir_incompleta: bool) -> list[tuple[str, int, str]]:
@@ -119,7 +139,7 @@ def p_permutacion_pareada(diferencias: np.ndarray) -> float:
         return 1.0
     total = 1 << len(d)
     extremos = 0
-    # Con el diseno oficial n=20: 1 048 576 combinaciones, calculo exacto.
+    # Con el diseno oficial n=12 se enumeran exactamente las 4096 combinaciones.
     if len(d) <= 22:
         for inicio in range(0, total, 65_536):
             bits = np.arange(inicio, min(inicio + 65_536, total), dtype=np.uint32)
@@ -235,7 +255,8 @@ def main() -> int:
         return 0
     entrada = Path(args.entrada)
     salida = Path(args.salida) if args.salida else entrada / "analisis"
-    datos = cargar(entrada)
+    repeticiones = Path(args.repeticiones) if args.repeticiones else None
+    datos = cargar(entrada, repeticiones)
     faltantes = validar_diseno(datos, args.permitir_incompleta)
     analizar(datos, salida, faltantes)
     print(f"\nArchivos generados en {salida.resolve()}")

@@ -40,3 +40,22 @@ El script omite una corrida cuando encuentra su `resumen.csv` completo. Si una c
 ```
 
 El análisis considera como unidad experimental el par `fecha + semilla`. Los ciclos internos no se utilizan como repeticiones independientes. Se informan `Ta` promedio, mediana y P90, tiempos reales, holguras, completitud, colapso y métricas complementarias.
+
+## Repetición de tiempos afectados por suspensión
+
+Se identificaron seis corridas dominadas por una sola llamada temporal extrema. Para repetirlas sin sobrescribir los originales y evitando que Windows suspenda el equipo:
+
+```powershell
+.\algoritmos\experimentacion\repetir-tiempos-sesgados.ps1 -DryRun
+.\algoritmos\experimentacion\repetir-tiempos-sesgados.ps1 -NoCompilar
+```
+
+La solicitud para mantener el sistema activo existe solo mientras vive ese orquestador y se libera en `finally`, incluso ante un error. Los resultados se guardan en `resultados/campana-alns100-tabu300-4x3-repeticiones-tiempo`.
+
+Al finalizar, el análisis reemplaza únicamente las seis claves repetidas y conserva las otras dieciocho originales:
+
+```powershell
+& 'C:\Users\fenix\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' algoritmos\experimentacion\analisis-alns100-tabu300-4x3.py `
+  --entrada algoritmos\experimentacion\resultados\campana-alns100-tabu300-4x3 `
+  --repeticiones algoritmos\experimentacion\resultados\campana-alns100-tabu300-4x3-repeticiones-tiempo
+```
