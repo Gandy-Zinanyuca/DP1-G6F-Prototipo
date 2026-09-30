@@ -30,6 +30,18 @@ Utiliza `algoritmos/out`. Argumentos opcionales: iteraciones (100), semilla (202
 
 TS puede avanzar a un vecino peor para explorar, pero siempre devuelve el mejor encontrado. Se conservan partes predefinidas y rutas activas completas; todavía no divide cantidades durante los movimientos.
 
+## Hiperparametros experimentales
+
+| Parametro | Efecto principal |
+| --- | --- |
+| Iteraciones | Mas exploracion y mayor Ta |
+| Tenencia tabu | Tiempo que un movimiento permanece prohibido; evita ciclos, pero un valor alto restringe el vecindario |
+| Candidatos | Cantidad maxima de vecinos evaluados por iteracion; aumenta amplitud y costo |
+| Sin mejora | Activa diversificacion; no termina por si solo la busqueda |
+| Presupuesto ms | Corte cooperativo por llamada; usar 0 cuando se estudia Ta |
+
+La campaña oficial fija 300 iteraciones, tenencia 7 y hasta 400 candidatos. Cambiar estos valores requiere una campaña y una carpeta distintas.
+
 ```mermaid
 sequenceDiagram
     participant CLI as EjecutarTabu

@@ -27,6 +27,10 @@ public final class ExperimentacionTest {
     }
 
     public static void main(String[] args) throws Exception {
+        ok(SimulacionComparada.percentil(List.of(1.0, 4.0, 2.0, 3.0), .5) == 2.5,
+                "Mediana de Ta con cantidad par");
+        ok(Math.abs(SimulacionComparada.percentil(List.of(1.0, 2.0, 3.0, 4.0, 5.0), .9) - 4.6) < 1e-9,
+                "P90 de Ta con interpolacion lineal");
         var p = new Pedido("p", T, N, 8, 4);
         var a = new PartePedido("a", p, 4);
         var b = new PartePedido("b", p, 4);
@@ -72,6 +76,8 @@ public final class ExperimentacionTest {
         var parcial = new Solucion(List.of(new Ruta("TA01", "A", List.of(partes.get(0)), false)),
                 List.of(partes.get(1)));
         ok(rapido.evaluar(sol).objetivo() < rapido.evaluar(parcial).objetivo(), "Completitud tiene prioridad");
+        ok(GeneradorSolucionInicial.reparar(parcial, rapido, true, new Random(1), () -> false).equals(parcial),
+                "La reparacion debe respetar el presupuesto antes de evaluar candidatos");
         var tarde = new EstadoOperacion(T, e.pedidos(),
                 List.of(new Vehiculo("TA01", TipoVehiculo.TA, N, true, T.plusMinutes(20))), e.almacenes(), List.of(),
                 List.of(), List.of(), List.of(), Set.of());

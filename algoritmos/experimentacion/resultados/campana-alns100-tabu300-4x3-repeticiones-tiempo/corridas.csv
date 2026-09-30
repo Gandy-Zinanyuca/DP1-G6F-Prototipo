@@ -1,0 +1,2 @@
+fecha,semilla,algoritmo,inicio_real,fin_real,tiempo_proceso_real_ms,exit_code,resultado_valido,iteraciones_ts,iteraciones_alns,destruccion_alns,presupuesto_ms,max_ciclos,sa_min,factor_carga,suspension_inhibida,motivo,carpeta
+2026-02,20263,ALNS,2026-09-29T19:13:37-05:00,2026-09-29T20:00:31.5840008-05:00,2814584.001,0,True,300,100,2,0,4320,10,1,True,repeticion_tiempo_atipico,algoritmos\experimentacion\resultados\campana-alns100-tabu300-4x3-repeticiones-tiempo\corridas\202602\20263\ALNS

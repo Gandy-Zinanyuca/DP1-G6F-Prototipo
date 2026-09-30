@@ -72,7 +72,7 @@ public final class TabuSearchPlanner implements PlanificadorEstricto {
                     parada = "TIEMPO";
                     break;
                 }
-                var sacudida = diversificar(actual, ev, random);
+                var sacudida = diversificar(actual, ev, random, inicio);
                 if (sacudida == null) {
                     parada = "SIN_VECINO_ADMISIBLE";
                     break;
@@ -97,7 +97,7 @@ public final class TabuSearchPlanner implements PlanificadorEstricto {
             } else
                 sinMejora++;
             if (sinMejora >= config.sinMejoraMax()) {
-                var sacudida = diversificar(actual, ev, random);
+                var sacudida = diversificar(actual, ev, random, inicio);
                 if (sacudida == null) {
                     parada = "ESTANCAMIENTO";
                     break;
@@ -116,7 +116,7 @@ public final class TabuSearchPlanner implements PlanificadorEstricto {
      * Permite abandonar un optimo local en vez de terminar la busqueda; el mejor
      * global se conserva aparte. Devuelve null si no hay nada movible.
      */
-    private Solucion diversificar(Solucion s, EvaluadorFactibilidad ev, Random random) {
+    private Solucion diversificar(Solucion s, EvaluadorFactibilidad ev, Random random, long inicio) {
         var movibles = new ArrayList<PartePedido>();
         for (var ruta : s.rutas())
             if (!ruta.enCurso())
@@ -136,7 +136,8 @@ public final class TabuSearchPlanner implements PlanificadorEstricto {
                     lista.add(parte);
             rutas.add(ruta.conPartes(lista));
         }
-        return GeneradorSolucionInicial.reparar(new Solucion(rutas, pendientes), ev, true, random);
+        return GeneradorSolucionInicial.reparar(new Solucion(rutas, pendientes), ev, true, random,
+                () -> !tiempoAgotado(inicio));
     }
 
     private boolean tiempoAgotado(long inicio) {

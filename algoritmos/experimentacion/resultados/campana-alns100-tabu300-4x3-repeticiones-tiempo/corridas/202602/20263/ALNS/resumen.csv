@@ -1,0 +1,2 @@
+algoritmo,semilla,factor_carga,fin,instante_final,duracion_dias,ciclos,pedidos_completos,paquetes_entregados,holgura_real_promedio_min,holgura_real_minima_min,ejecuciones,Ta_total_ms,Ta_promedio_ms,Ta_mediana_ms,Ta_p90_ms,Ta_max_ms,tiempo_simulacion_real_ms,distancia_despachada_km,tiempo_rutas_despachadas_min,vehiculos_utilizados,utilizacion_capacidad
+ALNS,20263,1.0,LIMITE_DE_CICLOS,2026-03-03T00:00,30.0,4320,1023,5542,974.6738025415445,0.0,3745,2807499.2785999966,749.6660289986639,663.754,1136.1558599999998,2507.8147,2808092.7245,53243.0,170186.8,12,0.2813251804330393

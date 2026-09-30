@@ -4,6 +4,9 @@
 *.class
 *.jar
 *.log
+*.pid
+**/__pycache__/
+*.py[cod]
 # sources.txt lo regenera compilar.sh en cada compilación
 **/sources.txt
 
